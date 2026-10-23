@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.11
+
+- You can drag the terminal's scroll bar. It shows when you scroll or
+  point at the right edge of a pane, even at the bottom, widens under
+  the pointer, and fades out a second after you stop.
+- In panes on Windows, Ctrl+C ends programs such as `vite` or
+  `ping -t`. Windows hosts get it with their next update.
+
 ## 2.1.10
 
 - On Windows, pasting with Ctrl+V into a text field, such as a host's
