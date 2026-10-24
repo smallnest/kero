@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -288,4 +289,25 @@ func TestAgentPane(t *testing.T) {
 	}
 	a.shellPID = os.Getpid()
 	check("under the app server a's Codex started", server.Process.Pid, "", "b", true)
+}
+
+func TestEnded(t *testing.T) {
+	d := &Daemon{}
+	a := &proto.AgentSession{Agent: "claude", ID: "a"}
+	d.endedLocked(a, "/repo", "one", "", 1)
+	d.endedLocked(&proto.AgentSession{Agent: "codex", ID: "b"}, "/repo", "", "", 2)
+	d.endedLocked(&proto.AgentSession{Agent: "claude", ID: "x; rm"}, "/repo", "", "", 3)
+	d.endedLocked(nil, "/repo", "", "", 3)
+	d.endedLocked(a, "/wt", "two", "", 4)
+	d.endedLocked(&proto.AgentSession{Agent: "codex", ID: "b"}, "/repo", "", "Fix bug", 2)
+	if len(d.ended) != 2 || d.ended[0].ID != "a" || d.ended[0].Dir != "/wt" || d.ended[0].Titled || d.ended[1].ID != "b" || d.ended[1].Name != "Fix bug" || !d.ended[1].Titled {
+		t.Fatalf("ended %+v", d.ended)
+	}
+	d.ended[1].Archived = true
+	for i := range endedCap + 5 {
+		d.endedLocked(&proto.AgentSession{Agent: "claude", ID: fmt.Sprint("n", i)}, "/repo", "", "", int64(10+i))
+	}
+	if len(d.ended) != endedCap+1 || !d.ended[endedCap].Archived || d.ended[0].ID != fmt.Sprint("n", endedCap+4) {
+		t.Fatalf("capped to %d, last %+v", len(d.ended), d.ended[len(d.ended)-1])
+	}
 }

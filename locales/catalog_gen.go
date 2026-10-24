@@ -2078,6 +2078,26 @@ func (msgs Messages) SetResumeAgentsDetail() string {
 	return Catalog.Format(msgs.locale, "setResumeAgentsDetail", nil)
 }
 
+// SetSessionHistory says "Session history"
+// in the language the app shows.
+func SetSessionHistory() string { return In(i18n.Locale()).SetSessionHistory() }
+
+// SetSessionHistory says "Session history"
+// in the language of msgs.
+func (msgs Messages) SetSessionHistory() string {
+	return Catalog.Format(msgs.locale, "setSessionHistory", nil)
+}
+
+// SetSessionHistoryDetail says "List ended agent sessions in the sidebar, to resume them later or archive them."
+// in the language the app shows.
+func SetSessionHistoryDetail() string { return In(i18n.Locale()).SetSessionHistoryDetail() }
+
+// SetSessionHistoryDetail says "List ended agent sessions in the sidebar, to resume them later or archive them."
+// in the language of msgs.
+func (msgs Messages) SetSessionHistoryDetail() string {
+	return Catalog.Format(msgs.locale, "setSessionHistoryDetail", nil)
+}
+
 // SetStartup says "Startup"
 // in the language the app shows.
 func SetStartup() string { return In(i18n.Locale()).SetStartup() }
@@ -3574,6 +3594,116 @@ func SideClose() string { return In(i18n.Locale()).SideClose() }
 // in the language of msgs.
 func (msgs Messages) SideClose() string {
 	return Catalog.Format(msgs.locale, "sideClose", nil)
+}
+
+// EndedTitle says "Ended"
+// in the language the app shows.
+func EndedTitle() string { return In(i18n.Locale()).EndedTitle() }
+
+// EndedTitle says "Ended"
+// in the language of msgs.
+func (msgs Messages) EndedTitle() string {
+	return Catalog.Format(msgs.locale, "endedTitle", nil)
+}
+
+// EndedArchived says "Archived"
+// in the language the app shows.
+func EndedArchived() string { return In(i18n.Locale()).EndedArchived() }
+
+// EndedArchived says "Archived"
+// in the language of msgs.
+func (msgs Messages) EndedArchived() string {
+	return Catalog.Format(msgs.locale, "endedArchived", nil)
+}
+
+// EndedArchive says "Archive"
+// in the language the app shows.
+func EndedArchive() string { return In(i18n.Locale()).EndedArchive() }
+
+// EndedArchive says "Archive"
+// in the language of msgs.
+func (msgs Messages) EndedArchive() string {
+	return Catalog.Format(msgs.locale, "endedArchive", nil)
+}
+
+// EndedShowAll says "Show all {n}"
+// in the language the app shows.
+func EndedShowAll(n int) string { return In(i18n.Locale()).EndedShowAll(n) }
+
+// EndedShowAll says "Show all {n}"
+// in the language of msgs.
+func (msgs Messages) EndedShowAll(n int) string {
+	return Catalog.Format(msgs.locale, "endedShowAll", map[string]any{"n": n})
+}
+
+// EndedResume says "Resume"
+// in the language the app shows.
+func EndedResume() string { return In(i18n.Locale()).EndedResume() }
+
+// EndedResume says "Resume"
+// in the language of msgs.
+func (msgs Messages) EndedResume() string {
+	return Catalog.Format(msgs.locale, "endedResume", nil)
+}
+
+// EndedRestore says "Restore"
+// in the language the app shows.
+func EndedRestore() string { return In(i18n.Locale()).EndedRestore() }
+
+// EndedRestore says "Restore"
+// in the language of msgs.
+func (msgs Messages) EndedRestore() string {
+	return Catalog.Format(msgs.locale, "endedRestore", nil)
+}
+
+// EndedDelete says "Delete"
+// in the language the app shows.
+func EndedDelete() string { return In(i18n.Locale()).EndedDelete() }
+
+// EndedDelete says "Delete"
+// in the language of msgs.
+func (msgs Messages) EndedDelete() string {
+	return Catalog.Format(msgs.locale, "endedDelete", nil)
+}
+
+// EndedArchiveAll says "Archive All"
+// in the language the app shows.
+func EndedArchiveAll() string { return In(i18n.Locale()).EndedArchiveAll() }
+
+// EndedArchiveAll says "Archive All"
+// in the language of msgs.
+func (msgs Messages) EndedArchiveAll() string {
+	return Catalog.Format(msgs.locale, "endedArchiveAll", nil)
+}
+
+// EndedDeleteAll says "Delete All…"
+// in the language the app shows.
+func EndedDeleteAll() string { return In(i18n.Locale()).EndedDeleteAll() }
+
+// EndedDeleteAll says "Delete All…"
+// in the language of msgs.
+func (msgs Messages) EndedDeleteAll() string {
+	return Catalog.Format(msgs.locale, "endedDeleteAll", nil)
+}
+
+// EndedDeleteAllTitle says "Delete {n} archived sessions?"
+// in the language the app shows.
+func EndedDeleteAllTitle(n int) string { return In(i18n.Locale()).EndedDeleteAllTitle(n) }
+
+// EndedDeleteAllTitle says "Delete {n} archived sessions?"
+// in the language of msgs.
+func (msgs Messages) EndedDeleteAllTitle(n int) string {
+	return Catalog.Format(msgs.locale, "endedDeleteAllTitle", map[string]any{"n": n})
+}
+
+// EndedDeleteAllDetail says "Kero forgets them; each agent keeps its own history of the conversation."
+// in the language the app shows.
+func EndedDeleteAllDetail() string { return In(i18n.Locale()).EndedDeleteAllDetail() }
+
+// EndedDeleteAllDetail says "Kero forgets them; each agent keeps its own history of the conversation."
+// in the language of msgs.
+func (msgs Messages) EndedDeleteAllDetail() string {
+	return Catalog.Format(msgs.locale, "endedDeleteAllDetail", nil)
 }
 
 // ChangesTurn says "Last Turn"

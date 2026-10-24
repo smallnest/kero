@@ -350,6 +350,8 @@
   "setRestoreSessionsDetail": "If the background service stops, as when the Mac restarts, sessions start again in their folders, under their history.",
   "setResumeAgents": "Resume agents",
   "setResumeAgentsDetail": "Claude Code, Codex, Pi and OpenCode pick up their conversation where it was, once Kero’s skill is set up for them in Agents.",
+  "setSessionHistory": "Session history",
+  "setSessionHistoryDetail": "List ended agent sessions in the sidebar, to resume them later or archive them.",
   "setStartup": "Startup",
   "setOpenAtLogin": "Open Kero at login",
   "setLoginFailed": "Couldn’t change it: {error}",
@@ -499,6 +501,31 @@
   "actionToggleChanges": "Toggle Changes",
   "sideChanges": "Changes",
   "sideClose": "Close Panel",
+  "endedTitle": "Ended",
+  "endedArchived": "Archived",
+  "endedArchive": "Archive",
+  "endedShowAll": "Show all {n}",
+  "@endedShowAll": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "endedResume": "Resume",
+  "endedRestore": "Restore",
+  "endedDelete": "Delete",
+  "endedArchiveAll": "Archive All",
+  "endedDeleteAll": "Delete All…",
+  "endedDeleteAllTitle": "Delete {n} archived sessions?",
+  "@endedDeleteAllTitle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "endedDeleteAllDetail": "Kero forgets them; each agent keeps its own history of the conversation.",
   "changesTurn": "Last Turn",
   "changesUncommitted": "Uncommitted",
   "changesBranch": "Branch",

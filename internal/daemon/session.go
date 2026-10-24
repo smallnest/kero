@@ -64,10 +64,11 @@ type pane struct {
 	// programs' status reports (OSC 7501), by id, and reported tells that
 	// one came; progress is the last OSC 9;4 after "9;", as "4;1;40",
 	// which only agents' rules read.
-	osc      oscScanner
-	records  map[string]proto.Record
-	reported bool
-	progress string
+	osc       oscScanner
+	records   map[string]proto.Record
+	reported  bool
+	progress  string
+	lastTitle string
 	// awaiting tells that the command the pane started with runs, whose
 	// end its shell will tell (OSC 133;D, see shellArgs).
 	awaiting bool
@@ -222,6 +223,9 @@ func (s *pane) onTitle(title string) {
 	// s.mu is held (see session.mu).
 	if s.info.Title != title {
 		s.info.Title = title
+		if t := proto.ProgramTitle(title); t != "" {
+			s.lastTitle = t
+		}
 		s.looked = false
 		s.d.changed()
 	}
@@ -334,9 +338,12 @@ func (s *pane) tick(now time.Time) bool {
 		// session is no more to resume.
 		s.dropLive()
 		s.progress = ""
+		title := s.lastTitle
+		s.lastTitle = ""
 		if s.info.AgentSession != nil {
+			a, dir := s.agentLocked()
 			s.info.AgentSession = nil
-			s.d.save()
+			go s.d.agentExited(s, a, dir, title)
 		}
 	}
 	if proc != s.info.Process || agent != s.info.Agent || runtime != s.info.Runtime {

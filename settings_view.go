@@ -497,6 +497,9 @@ func (a *App) generalPage(c *ui.Context, pal *palette) {
 				toggle(c.Key("resume"), &s.ResumeAgents, pal)
 			})
 		}
+		settingRow(c, pal, locales.SetSessionHistory(), locales.SetSessionHistoryDetail(), func() {
+			toggle(c.Key("session-history"), &s.SessionHistory, pal)
+		})
 	})
 	settingsGroup(c, pal, locales.SetGit(), locales.SetGitDetail(), func() {
 		settingRow(c, pal, locales.SetGitStatus(), locales.SetGitStatusDetail(), func() {

@@ -354,14 +354,33 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 			return nil, fmt.Errorf("no pane runs %s session %q", p.Agent, p.Session)
 		}
 		pn.mu.Lock()
+		old, dir := pn.agentLocked()
+		title := pn.lastTitle
 		pn.info.AgentSession = as
 		id := pn.info.ID
 		pn.mu.Unlock()
-		d.changed()
 		d.mu.Lock()
 		sid := pn.sid
+		d.ended = slices.DeleteFunc(d.ended, func(e proto.EndedSession) bool { return e.AgentSession == *as })
 		d.mu.Unlock()
+		if old != nil && *old != *as {
+			d.agentExited(pn, old, dir, title)
+		} else {
+			d.changed()
+		}
 		return proto.AgentSessionResult{Pane: id, Session: sid, Away: away}, nil
+
+	case "ended":
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		return slices.Clone(d.ended), nil
+
+	case "ended.resume", "ended.archive", "ended.unarchive", "ended.delete":
+		var p proto.IDParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return d.endedCall(method, p.ID)
 
 	case "project.create":
 		var p proto.ProjectParams

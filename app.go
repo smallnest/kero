@@ -48,8 +48,10 @@ type prefs struct {
 	FontSize      float32         `json:"fontSize,omitempty"`
 	// Side is the view the side panel shows, "" while it is hidden, and
 	// SideWidth its width.
-	Side      string  `json:"side,omitempty"`
-	SideWidth float32 `json:"sideWidth,omitempty"`
+	Side         string  `json:"side,omitempty"`
+	SideWidth    float32 `json:"sideWidth,omitempty"`
+	EndedOpen    bool    `json:"endedOpen,omitempty"`
+	ArchivedOpen bool    `json:"archivedOpen,omitempty"`
 }
 
 const (
@@ -77,6 +79,8 @@ type App struct {
 	win     *mygo.Window
 	winOpen bool
 	tray    *mygo.Tray // the icon in the menu bar or notification area, while it shows
+
+	endedAll bool
 
 	// hosts are the kerods the app shows, this machine's first; st is
 	// what they hold, each host's sessions and projects after the one's
@@ -279,6 +283,7 @@ func (a *App) event(h *host, cl *client.Client, m proto.Message) {
 func (a *App) setState(h *host, st proto.State) {
 	first, hostFirst := !a.loaded, !h.loaded
 	h.loaded = true
+	h.ended = st.Ended
 	// A divider dragged keeps the ratios it set, which the daemon hears of
 	// only once it is let go.
 	var dragged *proto.Layout

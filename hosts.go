@@ -45,6 +45,7 @@ type host struct {
 	dialing   bool   // a connection attempt is under way
 	kerod     string // which kerod it is (kerodID), once connected
 	loaded    bool   // a state came
+	ended     []proto.EndedSession
 	viewSent  *string
 	// busy is what the app does on the host for the user: install, update
 	// or restart.

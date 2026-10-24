@@ -30,6 +30,7 @@ type Settings struct {
 	ResumeAgents      bool   `json:"resumeAgents"`      // as it restores sessions: the agents' own
 	QuitConfirm       bool   `json:"quitConfirm"`       // tell, the first time, that quitting keeps sessions
 	AppIcon           string `json:"appIcon"`           // macOS: AppIcons; elsewhere the icon is always in the notification area
+	SessionHistory    bool   `json:"sessionHistory"`
 
 	// Appearance
 	Appearance string `json:"appearance"` // "system", "light" or "dark"

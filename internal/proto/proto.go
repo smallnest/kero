@@ -136,8 +136,9 @@ type State struct {
 	Projects []Project `json:"projects"`
 	Sessions []Session `json:"sessions"`
 	// Viewed is the session a client shows in a focused window.
-	Viewed  string `json:"viewed,omitempty"`
-	Started int64  `json:"started"` // unix ms, the daemon's start
+	Viewed  string         `json:"viewed,omitempty"`
+	Started int64          `json:"started"` // unix ms, the daemon's start
+	Ended   []EndedSession `json:"ended,omitempty"`
 }
 
 // Project groups sessions, usually those of one repository.
@@ -246,6 +247,15 @@ type Turn struct {
 type AgentSession struct {
 	Agent string `json:"agent"` // "claude", "codex", "pi" or "opencode"
 	ID    string `json:"id"`
+}
+
+type EndedSession struct {
+	AgentSession
+	Dir      string `json:"dir"`
+	Name     string `json:"name,omitempty"`
+	Titled   bool   `json:"titled,omitempty"`
+	EndedAt  int64  `json:"endedAt"`
+	Archived bool   `json:"archived,omitempty"`
 }
 
 // Session is a row of the sidebar: one task, with its terminals, its
@@ -481,6 +491,13 @@ func DirName(dir string) string {
 		return t
 	}
 	return dir
+}
+
+func ProgramTitle(t string) string {
+	if t = CleanTitle(t); !looksLikePath(t) {
+		return t
+	}
+	return ""
 }
 
 func looksLikePath(t string) bool {

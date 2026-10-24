@@ -39,6 +39,19 @@ Until you or an agent name a session, the `session-name` setting (**Name session
 - `lead`: the title of the program in the pane that needs you most, such as an agent that's working or waiting on you
 - `folder`: the first pane's folder, whatever runs in it
 
+### Ended sessions
+
+Turn this on in Settings › General › **Session history**, or with `session-history = true`.
+
+When Claude Code, Codex, Pi or OpenCode exits, or you close its pane or session, Kero keeps its conversation for later, in the **Ended** section at the bottom of the sidebar. Click its header to unfold it:
+
+- Ended lists agent sessions newest first, with the agent, name, folder and how long ago it ended: the five newest, then **Show all**. Kero keeps the last 50. Those of your other hosts are among them, tagged with the host's name.
+- Click one to open a new session in its folder that resumes the conversation, as `claude --resume <id>` or `codex resume <id>` would.
+- Hover one and click the archive button to move it to **Archived**, below, where it can still be resumed.
+- Right-click one to resume, archive or restore it, copy its id or folder, show the folder, or delete it. Right-click **Ended** to archive them all, or **Archived** to delete them all.
+
+This needs [Kero's skill](./agents.md#install-the-skill) set up for the agent, which tells Kero the conversation's id.
+
 ## Projects
 
 A **project** is a folder. Kero groups sessions under their project in the sidebar. Open one with <kbd>⌘</kbd> <kbd>O</kbd>, or let `kero new` pick it by the directory a session starts in.
