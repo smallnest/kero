@@ -292,8 +292,17 @@ func TestAgentPane(t *testing.T) {
 }
 
 func TestEnded(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "config")
+	t.Setenv("KERO_CONFIG", cfg)
 	d := &Daemon{}
 	a := &proto.AgentSession{Agent: "claude", ID: "a"}
+	d.endedLocked(a, "/repo", "off", "", 1)
+	if len(d.ended) != 0 {
+		t.Fatalf("recorded with session history off: %+v", d.ended)
+	}
+	if err := os.WriteFile(cfg, []byte("session-history = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	d.endedLocked(a, "/repo", "one", "", 1)
 	d.endedLocked(&proto.AgentSession{Agent: "codex", ID: "b"}, "/repo", "", "", 2)
 	d.endedLocked(&proto.AgentSession{Agent: "claude", ID: "x; rm"}, "/repo", "", "", 3)

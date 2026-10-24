@@ -238,7 +238,7 @@ var agentSessionRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
 const endedCap = 50
 
 func (d *Daemon) endedLocked(a *proto.AgentSession, dir, name, title string, at int64) {
-	if resumeCommand(a) == nil {
+	if resumeCommand(a) == nil || !settings.Load().SessionHistory {
 		return
 	}
 	titled := name == "" && title != ""
