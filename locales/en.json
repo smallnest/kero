@@ -526,6 +526,7 @@
     }
   },
   "endedDeleteAllDetail": "Kero forgets them; each agent keeps its own history of the conversation.",
+  "endedSetUpSkill": "Set up Kero's skill for your agents to list their ended sessions here",
   "changesTurn": "Last Turn",
   "changesUncommitted": "Uncommitted",
   "changesBranch": "Branch",

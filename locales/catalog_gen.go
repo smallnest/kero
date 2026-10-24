@@ -3706,6 +3706,16 @@ func (msgs Messages) EndedDeleteAllDetail() string {
 	return Catalog.Format(msgs.locale, "endedDeleteAllDetail", nil)
 }
 
+// EndedSetUpSkill says "Set up Kero's skill for your agents to list their ended sessions here"
+// in the language the app shows.
+func EndedSetUpSkill() string { return In(i18n.Locale()).EndedSetUpSkill() }
+
+// EndedSetUpSkill says "Set up Kero's skill for your agents to list their ended sessions here"
+// in the language of msgs.
+func (msgs Messages) EndedSetUpSkill() string {
+	return Catalog.Format(msgs.locale, "endedSetUpSkill", nil)
+}
+
 // ChangesTurn says "Last Turn"
 // in the language the app shows.
 func ChangesTurn() string { return In(i18n.Locale()).ChangesTurn() }

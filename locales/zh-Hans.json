@@ -364,6 +364,7 @@
   "endedDeleteAll": "全部删除…",
   "endedDeleteAllTitle": "删除 {n} 个已归档的会话？",
   "endedDeleteAllDetail": "Kero 会忘记它们；对话历史仍保留在各个智能体中。",
+  "endedSetUpSkill": "设置智能体技能后，已结束的智能体会话会显示在这里",
   "changesTurn": "上一轮",
   "changesUncommitted": "未提交",
   "changesBranch": "分支",

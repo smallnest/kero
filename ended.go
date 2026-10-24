@@ -7,6 +7,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
+	"kero/internal/cli"
 	"kero/internal/proto"
 	"kero/locales"
 )
@@ -32,6 +33,10 @@ func (a *App) endedSections(c *ui.Context, pal *palette) {
 	newest := func(x, y hostEnded) int { return cmp.Compare(y.e.EndedAt, x.e.EndedAt) }
 	slices.SortStableFunc(ended, newest)
 	slices.SortStableFunc(archived, newest)
+	if len(ended)+len(archived) == 0 {
+		a.skillHint(c, pal)
+		return
+	}
 	a.endedSection(c, pal, "ended", locales.EndedTitle(), ended, &a.prefs.EndedOpen)
 	a.endedSection(c, pal, "archived", locales.EndedArchived(), archived, &a.prefs.ArchivedOpen)
 }
@@ -191,4 +196,26 @@ func (a *App) resumeEnded(h *host, e proto.EndedSession) {
 			a.selectSession(s.ID)
 		})
 	}()
+}
+
+// skillHint tells, while nothing has ended, that ended sessions need
+// Kero's skill, which tells kerod each conversation's id.
+func (a *App) skillHint(c *ui.Context, pal *palette) {
+	if now := c.Now(); now.Sub(a.skillsAt) > 5*time.Second {
+		a.skillsAt = now
+		a.skillMissing = slices.ContainsFunc(cli.SkillStates(), func(st cli.SkillState) bool { return st.State == "missing" })
+	}
+	if !a.skillMissing {
+		return
+	}
+	hint := ui.Row(c.Key("ended-hint")).Margin(18, 0, 3, 0).Padding(6, 6, 6, rowInset).Radius(6)
+	if hint.Hovered() {
+		hint.Background(pal.rowHover)
+	}
+	if hint.Clicked() {
+		a.openSettings("agents")
+	}
+	hint.Children(func() {
+		ui.Text(c, locales.EndedSetUpSkill()).FontSize(12).TextColor(pal.textFaint).Grow(1).MinWidth(0)
+	})
 }

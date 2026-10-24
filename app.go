@@ -80,7 +80,9 @@ type App struct {
 	winOpen bool
 	tray    *mygo.Tray // the icon in the menu bar or notification area, while it shows
 
-	endedAll bool
+	endedAll     bool
+	skillMissing bool // a kind of agent lacks Kero's skill, as skillsAt found
+	skillsAt     time.Time
 
 	// hosts are the kerods the app shows, this machine's first; st is
 	// what they hold, each host's sessions and projects after the one's
