@@ -303,6 +303,9 @@ func TestEnded(t *testing.T) {
 	if len(d.ended) != 2 || d.ended[0].ID != "a" || d.ended[0].Dir != "/wt" || d.ended[0].Titled || d.ended[1].ID != "b" || d.ended[1].Name != "Fix bug" || !d.ended[1].Titled {
 		t.Fatalf("ended %+v", d.ended)
 	}
+	if n, f := endedName(&session{name: "Fix bug", agentNamed: true}, "vim"); n != "" || f != "Fix bug" {
+		t.Fatalf("an agent's name %q, %q", n, f)
+	}
 	d.ended[1].Archived = true
 	for i := range endedCap + 5 {
 		d.endedLocked(&proto.AgentSession{Agent: "claude", ID: fmt.Sprint("n", i)}, "/repo", "", "", int64(10+i))

@@ -138,7 +138,8 @@ func (d *Daemon) restore() {
 	if !set.RestoreSessions || !set.ResumeAgents {
 		for _, ss := range st.Sessions {
 			for _, sp := range ss.Panes {
-				d.endedLocked(sp.Agent, sp.Dir, ss.Name, "", st.Saved)
+				name, title := endedName(&session{name: ss.Name, agentNamed: ss.AgentNamed}, "")
+				d.endedLocked(sp.Agent, sp.Dir, name, title, st.Saved)
 			}
 		}
 	}
@@ -261,10 +262,20 @@ func (p *pane) agentLocked() (*proto.AgentSession, string) {
 	return p.info.AgentSession, p.info.Dir
 }
 
-func (d *Daemon) paneEndedLocked(p *pane, name string) {
+func endedName(s *session, title string) (name, fallback string) {
+	if s == nil {
+		return "", title
+	}
+	if s.agentNamed {
+		return "", s.name
+	}
+	return s.name, title
+}
+
+func (d *Daemon) paneEndedLocked(p *pane, s *session) {
 	p.mu.Lock()
 	a, dir := p.agentLocked()
-	title := p.lastTitle
+	name, title := endedName(s, p.lastTitle)
 	p.mu.Unlock()
 	d.endedLocked(a, dir, name, title, time.Now().UnixMilli())
 }
