@@ -76,9 +76,13 @@ if [ "$merge_dev" = 1 ]; then
 	rm -f /tmp/kero-sync-merge.$$
 fi
 
+# From here a check that stops the run leaves a branch moved, for the
+# next run to find.
 if [ "$ff_main" = 1 ]; then
 	git checkout --quiet main || die "checkout main failed"
 	git merge --ff-only --quiet upstream/main || die "main can't fast-forward"
+	# main may change its own files (a released mygo.json), so try the
+	# merge again, over it.
 	log "main: fast-forwarded to $(git log -1 --oneline upstream/main)"
 else
 	log "main: up to date"
@@ -86,8 +90,13 @@ fi
 
 git checkout --quiet dev || die "checkout dev failed"
 if [ "$merge_dev" = 1 ]; then
-	git merge --no-edit --quiet upstream/main || die "merging into dev failed; merge by hand"
-	log "dev: merged $(git rev-list --count dev@\{1\}..dev) commit(s) of upstream/main"
+	if ! git merge --no-edit --quiet upstream/main >/tmp/kero-sync-merge.$$ 2>&1; then
+		git merge --abort || true
+		rm -f /tmp/kero-sync-merge.$$
+		die "merging upstream/main into dev conflicts over main's new commits; merge by hand"
+	fi
+	rm -f /tmp/kero-sync-merge.$$
+	log "dev: merged upstream/main into $(git rev-parse --short dev)"
 	log "dev: checking"
 	go vet ./... || die "go vet failed; dev has the merge, unpushed; fix by hand"
 	CGO_ENABLED=0 go test ./internal/... || die "go test failed; dev has the merge, unpushed; fix by hand"
