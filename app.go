@@ -67,6 +67,8 @@ type prefs struct {
 	// agents' ended conversations unfolded (session-history).
 	EndedOpen    bool `json:"endedOpen,omitempty"`
 	ArchivedOpen bool `json:"archivedOpen,omitempty"`
+	// QuickSession is the session the quick terminal shows (quick.go).
+	QuickSession string `json:"quickSession,omitempty"`
 }
 
 const (
@@ -179,6 +181,7 @@ type App struct {
 	// quitting is set while the quit quit-ends-sessions makes ends the
 	// sessions, either while it asks or once its answer does.
 	quitting bool
+	quick  quickTerm    // the terminal the global shortcut drops down
 }
 
 // confirmation is a question the app asks before something it cannot undo.
@@ -365,6 +368,7 @@ func (a *App) setState(h *host, st proto.State) {
 			h.convs, h.convKnown, h.convAsked = nil, false, false
 		}
 	}
+	a.quickChanged()
 	if a.session(a.selected) == nil {
 		a.reselect()
 	} else if first || hostFirst && a.hostOf(a.selected) == h {
@@ -778,7 +782,10 @@ func (a *App) reportView() {
 			continue
 		}
 		id := ""
-		if a.active && a.focused && h == shown {
+		switch {
+		case a.quick.shown && h == a.local():
+			id = a.prefs.QuickSession
+		case a.active && a.focused && h == shown:
 			id = a.selected
 		}
 		if h.viewSent != nil && *h.viewSent == id {
@@ -1014,11 +1021,11 @@ func (a *App) termOptions(id string, conn *gated) terminal.Options {
 			if !ok {
 				return false
 			}
-			e := a.terms[id]
-			if e == nil || e.term == nil {
+			t := a.termFor(id)
+			if t == nil {
 				return false
 			}
-			e.term.Send([]byte{b})
+			t.Send([]byte{b})
 			return true
 		},
 		// The wheel, the user's even over a window not focused, tells they
@@ -1087,6 +1094,24 @@ func (a *App) apply(s settings.Settings, save bool) {
 	anew := old.Cursor != s.Cursor || old.CursorBlink != s.CursorBlink || old.OptionAsAlt != s.OptionAsAlt ||
 		old.Clipboard != s.Clipboard || old.RightClick != s.RightClick
 	light, dark := a.termThemes()
+	retune := func(t *terminal.Terminal) {
+		if font {
+			t.SetFont(a.termFont())
+		}
+		if themes {
+			t.SetTheme(light, dark)
+		}
+		if old.MinContrast != s.MinContrast {
+			t.SetMinimumContrast(s.MinContrast)
+		}
+		if old.CopyOnSelect != s.CopyOnSelect {
+			mode := terminal.CopyOnSelectNone
+			if s.CopyOnSelect {
+				mode = terminal.CopyOnSelectClipboard
+			}
+			t.SetCopyOnSelect(mode)
+		}
+	}
 	for id, e := range a.terms {
 		if e.term == nil {
 			continue
@@ -1095,21 +1120,16 @@ func (a *App) apply(s settings.Settings, save bool) {
 			a.dropTerm(id) // attached again as it shows
 			continue
 		}
-		if font {
-			e.term.SetFont(a.termFont())
-		}
-		if themes {
-			e.term.SetTheme(light, dark)
-		}
-		if old.MinContrast != s.MinContrast {
-			e.term.SetMinimumContrast(s.MinContrast)
-		}
-		if old.CopyOnSelect != s.CopyOnSelect {
-			mode := terminal.CopyOnSelectNone
-			if s.CopyOnSelect {
-				mode = terminal.CopyOnSelectClipboard
+		retune(e.term)
+	}
+	if t := a.quickTermFor(a.quick.pane); t != nil {
+		if anew {
+			a.dropQuick()
+			if a.quick.shown {
+				a.attachQuick()
 			}
-			e.term.SetCopyOnSelect(mode)
+		} else {
+			retune(t)
 		}
 	}
 	if old.Appearance != s.Appearance && a.win != nil {
@@ -1129,6 +1149,7 @@ func (a *App) apply(s settings.Settings, save bool) {
 	}
 	if !maps.Equal(old.Shortcuts, s.Shortcuts) && a.win != nil {
 		mygo.App.SetMenu(a.menu())
+		a.applyGlobalShortcuts()
 	}
 	if old.DockBadge != s.DockBadge {
 		a.notify(true)
@@ -1160,6 +1181,9 @@ func (a *App) apply(s settings.Settings, save bool) {
 	}
 	if a.setWin != nil {
 		a.setWin.Invalidate()
+	}
+	if a.quick.win != nil {
+		a.quick.win.Invalidate()
 	}
 }
 

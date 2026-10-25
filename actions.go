@@ -107,6 +107,8 @@ func (a *App) run(id string, args map[string]string) {
 		a.zoom(-1, false)
 	case "text.reset":
 		a.zoom(0, true)
+	case quickAction:
+		a.toggleQuick()
 	}
 	if a.win != nil {
 		a.win.Invalidate()
@@ -133,42 +135,45 @@ func (a *App) item(id string) *mygo.MenuItem {
 // actionTitles are the actions' titles in the language the app shows;
 // an Action's Title stays English, for `kero actions`.
 var actionTitles = map[string]func() string{
-	"settings.open":     locales.ActionSettings,
-	"cli.install":       locales.ActionInstallCli,
-	"app.quitAll":       locales.ActionQuitAll,
-	"session.new":       locales.ActionNewSession,
-	"session.newHome":   locales.ActionNewSessionHome,
-	"project.open":      locales.ActionOpenProject,
-	"palette.open":      locales.ActionGoToSession,
-	"session.attention": locales.ActionJumpToAttention,
-	"session.next":      locales.ActionNextSession,
-	"session.previous":  locales.ActionPreviousSession,
-	"session.rename":    locales.ActionRenameSession,
-	"pane.restart":      locales.ActionRestartPane,
-	"pane.close":        locales.ActionClose,
-	"session.close":     locales.ActionCloseSession,
-	"find.open":         locales.ActionFind,
-	"find.next":         locales.ActionFindNext,
-	"find.previous":     locales.ActionFindPrevious,
-	"pane.split.right":  locales.ActionSplitRight,
-	"pane.split.down":   locales.ActionSplitDown,
-	"pane.browser":      locales.ActionNewBrowser,
-	"browser.address":   locales.ActionOpenLocation,
-	"pane.zoom":         locales.ActionZoomPane,
-	"pane.next":         locales.ActionNextPane,
-	"pane.previous":     locales.ActionPreviousPane,
-	"pane.left":         locales.ActionPaneLeft,
-	"pane.right":        locales.ActionPaneRight,
-	"pane.up":           locales.ActionPaneAbove,
-	"pane.down":         locales.ActionPaneBelow,
-	"sidebar.toggle":    locales.ActionToggleSidebar,
-	"side.toggle":       locales.ActionTogglePanel,
-	"changes.toggle":    locales.ActionToggleChanges,
-	"files.toggle":      locales.ActionToggleFiles,
-	"pet.toggle":        locales.ActionTogglePet,
-	"text.bigger":       locales.ActionBigger,
-	"text.smaller":      locales.ActionSmaller,
-	"text.reset":        locales.ActionActualSize,
+	"settings.open":       locales.ActionSettings,
+	"cli.install":         locales.ActionInstallCli,
+	"app.quitAll":         locales.ActionQuitAll,
+	"session.new":         locales.ActionNewSession,
+	"session.newHome":     locales.ActionNewSessionHome,
+	"session.newWorktree": locales.ActionNewSessionWorktree,
+	"project.open":        locales.ActionOpenProject,
+	"palette.open":        locales.ActionGoToSession,
+	"conversation.resume": locales.ActionResumeConversation,
+	"session.attention":   locales.ActionJumpToAttention,
+	"session.next":        locales.ActionNextSession,
+	"session.previous":    locales.ActionPreviousSession,
+	"session.rename":      locales.ActionRenameSession,
+	"pane.restart":        locales.ActionRestartPane,
+	"pane.close":          locales.ActionClose,
+	"session.close":       locales.ActionCloseSession,
+	"find.open":           locales.ActionFind,
+	"find.next":           locales.ActionFindNext,
+	"find.previous":       locales.ActionFindPrevious,
+	"pane.split.right":    locales.ActionSplitRight,
+	"pane.split.down":     locales.ActionSplitDown,
+	"pane.browser":        locales.ActionNewBrowser,
+	"browser.address":     locales.ActionOpenLocation,
+	"pane.zoom":           locales.ActionZoomPane,
+	"pane.next":           locales.ActionNextPane,
+	"pane.previous":       locales.ActionPreviousPane,
+	"pane.left":           locales.ActionPaneLeft,
+	"pane.right":          locales.ActionPaneRight,
+	"pane.up":             locales.ActionPaneAbove,
+	"pane.down":           locales.ActionPaneBelow,
+	"sidebar.toggle":      locales.ActionToggleSidebar,
+	"side.toggle":         locales.ActionTogglePanel,
+	"changes.toggle":      locales.ActionToggleChanges,
+	"files.toggle":        locales.ActionToggleFiles,
+	"text.bigger":         locales.ActionBigger,
+	"text.smaller":        locales.ActionSmaller,
+	"text.reset":          locales.ActionActualSize,
+	"pet.toggle":          locales.ActionTogglePet,
+	quickAction:           locales.ActionQuickTerminal,
 }
 
 // actionTitle is an action's title as the menus, the palette and
@@ -182,9 +187,10 @@ func actionTitle(id string) string {
 }
 
 // accelerator is an action's shortcut in the menus: none while the user
-// types a new one in Settings.
+// types a new one in Settings, and none of a global one, which the system
+// takes before the menus.
 func (a *App) accelerator(act actions.Action) string {
-	if a.ss.recording != "" {
+	if a.ss.recording != "" || act.Global {
 		return ""
 	}
 	return actions.Keys(act, a.set.Shortcuts)
@@ -218,7 +224,7 @@ func (a *App) menu() *mygo.Menu {
 			{Label: locales.MenuQuit(), Accelerator: quitKeys, ToolTip: locales.MenuQuitTip(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
 			a.item("app.quitAll")}}
 	}
-	view := append(a.items("View", []string{"sidebar.toggle", "side.toggle", "changes.toggle", "files.toggle", "pet.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}),
+	view := append(a.items("View", []string{"sidebar.toggle", "side.toggle", "changes.toggle", "files.toggle", "pet.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}, []string{quickAction}),
 		mygo.Separator(), &mygo.MenuItem{Role: mygo.RoleToggleFullScreen}, &mygo.MenuItem{Role: mygo.RoleToggleDevTools})
 	return mygo.NewMenu([]*mygo.MenuItem{
 		kero,
@@ -305,6 +311,8 @@ func (a *App) fromMay(id string, args map[string]string) bool {
 		return p == "" || a.hostOf(p) == h
 	case strings.HasPrefix(id, "pane.") || id == "side.toggle" || id == "changes.toggle" || id == "files.toggle":
 		return a.session(a.selected) != nil && a.selectedHost() == h
+	case id == quickAction:
+		return false // this machine's screen is no other's to drop on
 	}
 	return true
 }

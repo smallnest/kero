@@ -135,6 +135,7 @@ func runApp() {
 	mygo.App.WhenReady(func() {
 		a.openWindow()
 		a.applyTray()
+		a.applyGlobalShortcuts()
 		a.idleTime = mygo.Power.IdleTime
 		a.syncPet()
 		go a.watchReturn()

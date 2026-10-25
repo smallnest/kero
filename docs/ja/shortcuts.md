@@ -58,7 +58,20 @@ Windows と Linux では、<kbd>Ctrl</kbd> と文字キーの組み合わせは�
 | アクション             | macOS                                  | Windows と Linux                              | アクション ID    |
 | ---------------------- | -------------------------------------- | --------------------------------------------- | ---------------- |
 | サイドバーの切り替え   | <kbd>⌘</kbd> <kbd>B</kbd>              | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>B</kbd> | `sidebar.toggle` |
+| サイドパネルの切り替え | <kbd>⇧</kbd> <kbd>⌘</kbd> <kbd>E</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>E</kbd> | `side.toggle` |
+| ファイルの切り替え（このフォークではサイドパネルを開く） | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>F</kbd> | <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F</kbd> | `files.toggle` |
 | 変更の切り替え         | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>G</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>G</kbd> | `changes.toggle` |
 | 拡大                   | <kbd>⌘</kbd> <kbd>=</kbd>              | <kbd>Ctrl</kbd> <kbd>=</kbd>                  | `text.bigger`    |
 | 縮小                   | <kbd>⌘</kbd> <kbd>-</kbd>              | <kbd>Ctrl</kbd> <kbd>-</kbd>                  | `text.smaller`   |
 | 実際のサイズ           | <kbd>⌘</kbd> <kbd>0</kbd>              | <kbd>Ctrl</kbd> <kbd>0</kbd>                  | `text.reset`     |
+| クイックターミナル     | –                                      | –                                             | `quickTerminal.toggle` |
+
+## クイックターミナル
+
+クイックターミナルは、Ghostty のクイックターミナルや Quake 風のコンソールのように、どのアプリの上でも画面の上端から降りてきて、ショートカットをもう一度押すか別の場所をクリックすると戻ります。ショートカットはどのアプリでも効くため、**設定 › キーボード** か[設定ファイル](./configuration.md#キーボード)で割り当てるまでは何も割り当てられていません:
+
+```ini
+keybind = ctrl+`=quickTerminal.toggle
+```
+
+専用のセッション「クイックターミナル」を表示し、隠している間も Kero を終了した後も動き続け、サイドバーにも他のセッションと一緒に表示されます。シェルが終了すると、次に押したときに新しいシェルが始まります。**表示 › クイックターミナル** やメニューバーのアイコンのメニューからも開け、`kero do quickTerminal.toggle` でスクリプトから切り替えられます。
