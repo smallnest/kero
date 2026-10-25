@@ -28,6 +28,8 @@ upstream releases it includes follow its own.
 - Chinese text keeps its monospaced font on Windows. Upstream took this
   fix out of 2.1.19; this fork keeps it.
 - The window has more strings in Japanese.
+- Updates come from this fork's releases again, and they take their key
+  from this fork.
 
 ## 2.1.19 (smallnest/kero)
 

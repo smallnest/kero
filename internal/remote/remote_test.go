@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -462,6 +463,13 @@ func TestBridgeScript(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
+	// The apps' paths, which are no words of HOME, are not of this test:
+	// the bridge finds Kero there with no HOME to make first.
+	saved := BridgeLocations
+	t.Cleanup(func() { BridgeLocations = saved })
+	BridgeLocations = slices.DeleteFunc(slices.Clone(saved), func(l string) bool {
+		return !strings.HasPrefix(l, "$HOME")
+	})
 	for _, loc := range []string{"", ".local/bin/kero", "Library/Application Support/kero/bin/kero"} {
 		home := t.TempDir()
 		if loc != "" {
