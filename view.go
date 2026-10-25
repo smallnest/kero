@@ -301,6 +301,9 @@ func (a *App) sidebar(c *ui.Context, pal *palette, bar ui.TitleBar) {
 				gi++
 			}
 		}
+		if a.set.SessionHistory {
+			a.endedSections(c, pal)
+		}
 	})
 	a.sidebarFooter(c, pal)
 	c.After(20 * time.Second) // times ago move on

@@ -48,6 +48,7 @@ type Daemon struct {
 	projects []proto.Project
 	sessions []*session
 	panes    map[string]*pane
+	ended    []proto.EndedSession
 	subs     map[*controlConn]struct{}
 	// watchers are the connections that follow the state and notices,
 	// as kero events does, but are no app: no action, select or browser

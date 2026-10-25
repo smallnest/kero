@@ -62,7 +62,9 @@ type prefs struct {
 	// FileOpen is what a click on a file of the side panel's Files view
 	// does: "" or "pane" opens it in a file pane, "editor" in the host's
 	// editor and "preview" under the tree.
-	FileOpen string `json:"fileOpen,omitempty"`
+	FileOpen     string `json:"fileOpen,omitempty"`
+	EndedOpen    bool   `json:"endedOpen,omitempty"`
+	ArchivedOpen bool   `json:"archivedOpen,omitempty"`
 }
 
 const (
@@ -90,6 +92,10 @@ type App struct {
 	win     *mygo.Window
 	winOpen bool
 	tray    *mygo.Tray // the icon in the menu bar or notification area, while it shows
+
+	endedAll     bool
+	skillMissing bool // a kind of agent lacks Kero's skill, as skillsAt found
+	skillsAt     time.Time
 
 	// hosts are the kerods the app shows, this machine's first; st is
 	// what they hold, each host's sessions and projects after the one's
@@ -303,6 +309,7 @@ func (a *App) event(h *host, cl *client.Client, m proto.Message) {
 func (a *App) setState(h *host, st proto.State) {
 	first, hostFirst := !a.loaded, !h.loaded
 	h.loaded = true
+	h.ended = st.Ended
 	// A divider dragged keeps the ratios it set, which the daemon hears of
 	// only once it is let go.
 	var dragged *proto.Layout

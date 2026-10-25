@@ -31,6 +31,7 @@ type Settings struct {
 	QuitEndsSessions  bool   `json:"quitEndsSessions"`  // quitting ends this machine's sessions, as app.quitAll
 	QuitConfirm       bool   `json:"quitConfirm"`       // tell, the first time, that quitting keeps sessions
 	AppIcon           string `json:"appIcon"`           // macOS: AppIcons; elsewhere the icon is always in the notification area
+	SessionHistory    bool   `json:"sessionHistory"`
 
 	// Appearance
 	Appearance    string  `json:"appearance"`    // "system", "light" or "dark"

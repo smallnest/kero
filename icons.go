@@ -57,6 +57,7 @@ var (
 	linkIcon        = glyph("f7-arrow-up-right")
 	editIcon        = glyph("f7-pencil")
 	sortIcon        = icon(`<path d="M3 4.5h9M3 8h6M3 11.5h3"/><path d="M12 4.5v7M9.5 9 12 11.5 14.5 9"/>`)
+	archiveIcon     = icon(`<rect x="2" y="3" width="12" height="3" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6M6.5 9h3"/>`)
 )
 
 // programIcons are the logos of programs a pane may run, by the name kerod

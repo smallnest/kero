@@ -1,10 +1,12 @@
 package daemon
 
 import (
+	"cmp"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"time"
 
 	"kero/internal/proto"
@@ -17,10 +19,11 @@ import (
 // session again where it was, with what it showed.
 
 type savedState struct {
-	Version  int             `json:"version"`
-	Projects []proto.Project `json:"projects"`
-	Sessions []savedSession  `json:"sessions"`
-	Saved    int64           `json:"saved"`
+	Version  int                  `json:"version"`
+	Projects []proto.Project      `json:"projects"`
+	Sessions []savedSession       `json:"sessions"`
+	Ended    []proto.EndedSession `json:"ended,omitempty"`
+	Saved    int64                `json:"saved"`
 }
 
 type savedSession struct {
@@ -74,7 +77,7 @@ func (d *Daemon) saveLoop() {
 
 func (d *Daemon) saveState() {
 	d.mu.Lock()
-	st := savedState{Version: 2, Projects: d.projects, Saved: time.Now().UnixMilli()}
+	st := savedState{Version: 2, Projects: d.projects, Ended: d.ended, Saved: time.Now().UnixMilli()}
 	for _, s := range d.sessions {
 		ss := savedSession{ID: s.id, Project: s.project, Name: s.name, AgentNamed: s.agentNamed, Created: s.created, Layout: s.layout, Focus: s.focus}
 		for _, p := range s.panes {
@@ -132,12 +135,19 @@ func (d *Daemon) restore() {
 		return
 	}
 	set := settings.Load()
+	d.projects, d.ended = st.Projects, st.Ended
+	if !set.RestoreSessions || !set.ResumeAgents {
+		for _, ss := range st.Sessions {
+			for _, sp := range ss.Panes {
+				name, title := endedName(&session{name: ss.Name, agentNamed: ss.AgentNamed}, "")
+				d.endedLocked(sp.Agent, sp.Dir, name, title, st.Saved)
+			}
+		}
+	}
 	if !set.RestoreSessions {
 		// The projects stay; the sessions of the last daemon do not.
-		d.projects = st.Projects
 		return
 	}
-	d.projects = st.Projects
 	when := time.UnixMilli(st.Saved).Format("Mon Jan 2 15:04")
 	for _, ss := range st.Sessions {
 		s := &session{id: ss.ID, project: ss.Project, name: ss.Name, agentNamed: ss.AgentNamed, created: ss.Created, restored: true, focus: ss.Focus}
@@ -226,3 +236,48 @@ func resumeCommand(a *proto.AgentSession) []string {
 }
 
 var agentSessionRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
+
+const endedCap = 50
+
+func (d *Daemon) endedLocked(a *proto.AgentSession, dir, name, title string, at int64) {
+	if resumeCommand(a) == nil || !settings.Load().SessionHistory {
+		return
+	}
+	titled := name == "" && title != ""
+	if titled {
+		name = title
+	}
+	d.ended = slices.DeleteFunc(d.ended, func(e proto.EndedSession) bool { return e.AgentSession == *a })
+	d.ended = slices.Insert(d.ended, 0, proto.EndedSession{AgentSession: *a, Dir: dir, Name: name, Titled: titled, EndedAt: at})
+	slices.SortStableFunc(d.ended, func(x, y proto.EndedSession) int { return cmp.Compare(y.EndedAt, x.EndedAt) })
+	kept := map[bool]int{}
+	d.ended = slices.DeleteFunc(d.ended, func(e proto.EndedSession) bool {
+		kept[e.Archived]++
+		return kept[e.Archived] > endedCap
+	})
+}
+
+func (p *pane) agentLocked() (*proto.AgentSession, string) {
+	if p.info.ProcessDir != "" {
+		return p.info.AgentSession, p.info.ProcessDir
+	}
+	return p.info.AgentSession, p.info.Dir
+}
+
+func endedName(s *session, title string) (name, fallback string) {
+	if s == nil {
+		return "", title
+	}
+	if s.agentNamed {
+		return "", s.name
+	}
+	return s.name, title
+}
+
+func (d *Daemon) paneEndedLocked(p *pane, s *session) {
+	p.mu.Lock()
+	a, dir := p.agentLocked()
+	name, title := endedName(s, p.lastTitle)
+	p.mu.Unlock()
+	d.endedLocked(a, dir, name, title, time.Now().UnixMilli())
+}
