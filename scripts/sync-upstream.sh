@@ -37,24 +37,14 @@ if [ "${1:-}" = --install ] || [ "${1:-}" = --uninstall ]; then
 	exit 0
 fi
 
-maybe_merge() {
-	if ! git merge --no-edit upstream/main >/tmp/kero-sync-merge.$$ 2>&1; then
-		log "error: merging upstream/main into dev conflicts:"
-		sed 's/^/    /' /tmp/kero-sync-merge.$$ | tail -20
-		git merge --abort || true
-		rm -f /tmp/kero-sync-merge.$$
-		die "dev left as it was; merge by hand"
-	fi
-	rm -f /tmp/kero-sync-merge.$$
-}
-
 [ -f mygo.json ] && [ -f internal/daemon/daemon.go ] || die "not in the kero repository"
 git remote get-url upstream >/dev/null 2>&1 || die "the upstream remote is missing"
 [ -z "$(git status --porcelain)" ] || die "the tree is not clean"
-[ "$(git rev-parse --abbrev-ref HEAD)" = dev ] || die "dev is not the checked-out branch"
-# A check that stops the run moves no branch and touches no file, so main
-# and dev may both be elsewhere (origin/dev is where dev goes back to).
 start=$(git rev-parse --abbrev-ref HEAD)
+[ "$start" = dev ] || die "dev is not the checked-out branch"
+# A run that stops before its first write moves no branch and touches no
+# file, so the merge can be tried over, and the branch put back, on a
+# remote one.
 trap 'git checkout --quiet "$start" 2>/dev/null || true' EXIT
 
 log "fetching"
@@ -62,8 +52,6 @@ git fetch --quiet --prune origin
 git fetch --quiet --prune upstream
 
 [ "$(git rev-parse dev)" = "$(git rev-parse origin/dev)" ] || die "dev is not origin/dev"
-# Nothing below runs on a main or dev another machine moved, so the checks
-# come before the first checkout.
 ff_main=0
 if git merge-base --is-ancestor upstream/main main; then
 	if [ "$(git rev-list --count main..upstream/main)" -gt 0 ]; then
@@ -74,8 +62,18 @@ else
 	log "main: has commits of its own; leaving it"
 fi
 merge_dev=0
-if ! git merge-base --is-ancestor upstream/main dev; then
-	merge_dev=1
+git merge-base --is-ancestor upstream/main dev || merge_dev=1
+
+# Try the merge on a remote one, before anything changes: a conflict
+# leaves the tree clean, and main untouched.
+if [ "$merge_dev" = 1 ]; then
+	if ! git merge-tree --write-tree dev upstream/main >/tmp/kero-sync-merge.$$ 2>&1; then
+		log "error: merging upstream/main into dev conflicts; merge by hand:"
+		grep -E '^(CONFLICT|Auto-merging)' /tmp/kero-sync-merge.$$ | grep -v Auto-merging | sed 's/^/    /' | head -20
+		rm -f /tmp/kero-sync-merge.$$
+		die "nothing changed"
+	fi
+	rm -f /tmp/kero-sync-merge.$$
 fi
 
 if [ "$ff_main" = 1 ]; then
@@ -88,9 +86,9 @@ fi
 
 git checkout --quiet dev || die "checkout dev failed"
 if [ "$merge_dev" = 1 ]; then
-	merge_base=$(git rev-parse HEAD)
-	maybe_merge
-	log "dev: merged $(git rev-list --count "$merge_base"..upstream/main) commit(s) of upstream/main"
+	git merge --no-edit --quiet upstream/main || die "merging into dev failed; merge by hand"
+	log "dev: merged $(git rev-list --count dev@\{1\}..dev) commit(s) of upstream/main"
+	log "dev: checking"
 	go vet ./... || die "go vet failed; dev has the merge, unpushed; fix by hand"
 	CGO_ENABLED=0 go test ./internal/... || die "go test failed; dev has the merge, unpushed; fix by hand"
 	log "dev: vet and tests pass"
