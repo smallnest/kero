@@ -10,6 +10,8 @@ upstream releases it includes follow its own.
   app, as Ghostty's does. Give it a shortcut in **Settings › Keyboard**,
   which works in every app, or bind it in the configuration file. It
   keeps a session of its own while it is hidden.
+- **Background blur** off now leaves the background translucent, as the
+  setting says: it used to make the window opaque.
 
 ## 2.1.20 (smallnest/kero)
 

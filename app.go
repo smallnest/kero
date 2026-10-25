@@ -1241,8 +1241,10 @@ func (a *App) reloadConfig() {
 	})
 }
 
+// vibrancyFor is the window's material, if Background blur is on: off,
+// the desktop shows behind the wash without it.
 func vibrancyFor(s settings.Settings) mygo.Vibrancy {
-	if s.Vibrancy {
+	if s.Vibrancy && s.WindowBlur {
 		return mygo.VibrancySidebar
 	}
 	return mygo.VibrancyNone
