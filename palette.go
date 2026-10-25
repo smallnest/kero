@@ -270,19 +270,22 @@ func confirmDialog(c *ui.Context, pal *palette, pending **confirmation) bool {
 		ui.Row(c).Gap(8).Justify(ui.End).Margin(14, 0, 0, 0).Children(func() {
 			if cf.ends {
 				// Return may be what a program reads, so this question
-				// takes a click: the focus goes to Cancel, which Space
-				// takes and Return does not.
-				buttonEl(c, "cancel", locales.CommonCancel(), "esc", false, pal).AutoFocus()
+				// takes a click, or Escape: the focus goes to the panel,
+				// not to Cancel, which a Return would press.
+				ui.Box(c).Focus()
+				if button(c, "cancel", locales.CommonCancel(), "esc", false, pal) {
+					cf.open = false
+				}
 				if button(c, "ok", cf.action, "", true, pal) {
 					run = true
 				}
 				return
 			}
-			if button(c, "cancel", locales.CommonCancel(), "esc", false, pal) {
-				cf.open = false
-			}
 			if button(c, "ok", cf.action, "↩", true, pal) {
 				run = true
+			}
+			if button(c, "cancel", locales.CommonCancel(), "esc", false, pal) {
+				cf.open = false
 			}
 		})
 		if !cf.ends && c.Shortcut(0, ui.KeyEnter) {

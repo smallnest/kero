@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+
+	"kero/locales"
 )
 
 // quit-ends-sessions, off by default, makes every quit end this machine's
@@ -55,6 +57,33 @@ func TestQuitEndsSessions(t *testing.T) {
 	}
 	if a.quitting {
 		t.Fatal("the quit the answer made was taken back after all")
+	}
+}
+
+// The question that ends programs goes at a click on Cancel, or Escape:
+// it stays until an answer.
+func TestQuitAllQuestionCancel(t *testing.T) {
+	for _, answer := range []string{"click", "esc"} {
+		a := testApp(t)
+		a.own(a.local(), a.st.Sessions[0])
+		a.local().conn, a.local().loaded = connReady, true
+		a.set.QuitEndsSessions, a.st.Sessions[0].Process = true, "claude"
+		if a.quitRequested() || a.confirm == nil {
+			t.Fatalf("%s: the quit did not ask: %+v", answer, a.confirm)
+		}
+		tt := ui.NewTester(a.view, 1100, 640)
+		tt.Frame()
+		if answer == "click" {
+			if err := tt.Click(locales.CommonCancel()); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			tt.Key(0, ui.KeyEscape)
+		}
+		tt.Frame()
+		if a.confirm != nil {
+			t.Fatalf("%s: the question stayed open: %+v", answer, a.confirm)
+		}
 	}
 }
 
