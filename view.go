@@ -438,10 +438,10 @@ func (a *App) sessionRow(c *ui.Context, pal *palette, s *proto.Session, n *int) 
 	bg := ui.Transparent
 	switch {
 	case selected:
-		bg = pal.rowSelected
+		bg = translucentGlass(pal.rowSelected, pal, a.set)
 		chosen(row, pal)
 	case hovered:
-		bg = pal.rowHover
+		bg = translucentGlass(pal.rowHover, pal, a.set)
 	}
 	row.Background(row.AnimateColor("bg", bg, ui.Animation{Duration: 110 * time.Millisecond}))
 	// A session of a host the app lost shows as it was, faded, until the
@@ -790,7 +790,7 @@ func (a *App) card(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32) 
 		return
 	}
 	// No session: one card, for what the app has to say.
-	card := raised(ui.Column(c).Grow(1).MinHeight(0).Radius(14).Background(pal.card), pal).Clip()
+	card := raised(ui.Column(c).Grow(1).MinHeight(0).Radius(14).Background(translucentGlass(pal.card, pal, a.set)), pal).Clip()
 	card.Children(func() {
 		left := a.chrome.headerPad
 		ui.Row(c).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, left).DragWindow().Children(func() {

@@ -180,7 +180,7 @@ func (a *App) sideEdge(c *ui.Context, pal *palette, row float32) {
 // tell that it touches the window's top and right edges, where its header
 // drags the window and holds the window's controls (windowControls).
 func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width float32, right bool) {
-	card := ui.Column(c.Key("side")).Width(width).Shrink(0).MinHeight(0).Radius(14).Clip().Background(pal.card).
+	card := ui.Column(c.Key("side")).Width(width).Shrink(0).MinHeight(0).Radius(14).Clip().Background(translucentGlass(pal.card, pal, a.set)).
 		Focusable().Bind(a.paneRef("side-card"))
 	raised(card, pal)
 	a.side.focused = card.FocusWithin()
@@ -477,7 +477,7 @@ func (a *App) changesView(c *ui.Context, pal *palette, s *proto.Session, width f
 				if i+1 < len(rows) && rows[i+1].diff {
 					gap = 0
 				}
-				ui.Column(c).FillWidth().AlignItems(ui.Stretch).Padding(0, 0, gap, 0).Background(pal.card).Children(func() {
+				ui.Column(c).FillWidth().AlignItems(ui.Stretch).Padding(0, 0, gap, 0).Background(translucentGlass(pal.card, pal, a.set)).Children(func() {
 					a.fileHeader(c, pal, scope, res.Root, r.f, func() {
 						// Folding it as the list pins it brings it back where
 						// it stays: at the top.
