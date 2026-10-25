@@ -52,46 +52,53 @@ maybe_merge() {
 git remote get-url upstream >/dev/null 2>&1 || die "the upstream remote is missing"
 [ -z "$(git status --porcelain)" ] || die "the tree is not clean"
 [ "$(git rev-parse --abbrev-ref HEAD)" = dev ] || die "dev is not the checked-out branch"
+# A check that stops the run moves no branch and touches no file, so main
+# and dev may both be elsewhere (origin/dev is where dev goes back to).
+start=$(git rev-parse --abbrev-ref HEAD)
+trap 'git checkout --quiet "$start" 2>/dev/null || true' EXIT
 
 log "fetching"
 git fetch --quiet --prune origin
 git fetch --quiet --prune upstream
 
-changed=0
-
+[ "$(git rev-parse dev)" = "$(git rev-parse origin/dev)" ] || die "dev is not origin/dev"
+# Nothing below runs on a main or dev another machine moved, so the checks
+# come before the first checkout.
+ff_main=0
 if git merge-base --is-ancestor upstream/main main; then
-	new=$(git rev-list --count main..upstream/main)
-	if [ "$new" -gt 0 ]; then
+	if [ "$(git rev-list --count main..upstream/main)" -gt 0 ]; then
 		[ "$(git rev-parse main)" = "$(git rev-parse origin/main)" ] || die "main is not origin/main"
-		git checkout --quiet main || die "checkout main failed"
-		git merge --ff-only --quiet upstream/main || die "main can't fast-forward"
-		log "main: fast-forwarded $new commit(s) to $(git log -1 --oneline upstream/main)"
-		changed=1
-	else
-		log "main: up to date"
+		ff_main=1
 	fi
 else
 	log "main: has commits of its own; leaving it"
 fi
+merge_dev=0
+if ! git merge-base --is-ancestor upstream/main dev; then
+	merge_dev=1
+fi
+
+if [ "$ff_main" = 1 ]; then
+	git checkout --quiet main || die "checkout main failed"
+	git merge --ff-only --quiet upstream/main || die "main can't fast-forward"
+	log "main: fast-forwarded to $(git log -1 --oneline upstream/main)"
+else
+	log "main: up to date"
+fi
 
 git checkout --quiet dev || die "checkout dev failed"
-[ "$(git rev-parse dev)" = "$(git rev-parse origin/dev)" ] || die "dev is not origin/dev"
-if [ "$changed" = 1 ] || ! git merge-base --is-ancestor upstream/main dev; then
+if [ "$merge_dev" = 1 ]; then
 	merge_base=$(git rev-parse HEAD)
 	maybe_merge
-	if [ "$(git rev-parse HEAD)" = "$merge_base" ]; then
-		log "dev: already holds upstream/main"
-	else
-		log "dev: merged upstream/main ($(git rev-list --count "$merge_base"..HEAD) commit(s) of history, $(git rev-list --count "$merge_base"..upstream/main) new)"
-		go vet ./... || die "go vet failed; dev has the merge, unpushed; fix by hand"
-		CGO_ENABLED=0 go test ./internal/... || die "go test failed; dev has the merge, unpushed; fix by hand"
-		log "dev: vet and tests pass"
-	fi
+	log "dev: merged $(git rev-list --count "$merge_base"..upstream/main) commit(s) of upstream/main"
+	go vet ./... || die "go vet failed; dev has the merge, unpushed; fix by hand"
+	CGO_ENABLED=0 go test ./internal/... || die "go test failed; dev has the merge, unpushed; fix by hand"
+	log "dev: vet and tests pass"
 else
 	log "dev: up to date"
 fi
 
-if [ "$(git rev-parse dev)" != "$(git rev-parse origin/dev)" ]; then
+if [ "$ff_main" = 1 ] || [ "$merge_dev" = 1 ]; then
 	git push --quiet origin main || die "pushing main failed"
 	git push --quiet origin dev || die "pushing dev failed"
 	log "pushed main and dev"
