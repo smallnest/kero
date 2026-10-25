@@ -2660,11 +2660,11 @@ func (msgs Messages) SetFont() string {
 	return Catalog.Format(msgs.locale, "setFont", nil)
 }
 
-// SetFontDetail says "JetBrains Mono with Nerd Fonts’ icons comes with Kero. CJK uses a monospaced fallback, such as NSimSun on Windows. …"
+// SetFontDetail says "JetBrains Mono with Nerd Fonts’ icons comes with Kero. Any installed monospaced font works; names separated by comm…"
 // in the language the app shows.
 func SetFontDetail() string { return In(i18n.Locale()).SetFontDetail() }
 
-// SetFontDetail says "JetBrains Mono with Nerd Fonts’ icons comes with Kero. CJK uses a monospaced fallback, such as NSimSun on Windows. …"
+// SetFontDetail says "JetBrains Mono with Nerd Fonts’ icons comes with Kero. Any installed monospaced font works; names separated by comm…"
 // in the language of msgs.
 func (msgs Messages) SetFontDetail() string {
 	return Catalog.Format(msgs.locale, "setFontDetail", nil)
