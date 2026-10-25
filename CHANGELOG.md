@@ -4,6 +4,13 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## Unreleased (smallnest/kero)
+
+- A **quick terminal** drops down from the top of the screen over any
+  app, as Ghostty's does. Give it a shortcut in **Settings › Keyboard**,
+  which works in every app, or bind it in the configuration file. It
+  keeps a session of its own while it is hidden.
+
 ## 2.1.20 (smallnest/kero)
 
 - This release has everything upstream's 2.1.19 has, whose notes
