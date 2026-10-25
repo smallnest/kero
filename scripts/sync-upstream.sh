@@ -76,18 +76,48 @@ else
 	log "main: has commits of its own, or is behind origin; leaving it"
 fi
 merge_dev=0
-git merge-base --is-ancestor upstream/main dev || merge_dev=1
+# A later merge of main into dev hides upstream/main behind it, so dev can
+# hold all of upstream's commits yet not have upstream/main in it.
+git merge-base --is-ancestor upstream/main dev ||
+	{ git merge-base --is-ancestor upstream/main main && git merge-base --is-ancestor main dev; } ||
+	merge_dev=1
 
-# Try the merge on a remote one, before anything changes: a conflict
-# leaves the tree clean, and main untouched.
-if [ "$merge_dev" = 1 ]; then
-	if ! git merge-tree --write-tree dev upstream/main >/tmp/kero-sync-merge.$$ 2>&1; then
+# merge_tree tries the merge on a remote one, before anything changes, so
+# that a conflict leaves the tree clean and main untouched.
+#
+# CHANGELOG.md always conflicts: this fork writes its own notes in it,
+# under its own title, where upstream writes a new release at the top,
+# and the merge takes "Unreleased (smallnest/kero)" and "2.1.21
+# (smallnest/kero)" to be the same entry. That one conflict is not a
+# conflict of the code, so the merge takes this fork's CHANGELOG.md
+# whole, and says so. Any other file that conflicts stops the run.
+merge_try=/tmp/kero-sync-merge.$$
+merge_tree() {
+	if git merge-tree --write-tree dev upstream/main >"$merge_try" 2>&1; then
+		return 0
+	fi
+	conflicts=$(grep -E '^CONFLICT' "$merge_try" | sed -e 's/.* in /    /' -e 's/.*: /    /')
+	others=$(printf '%s\n' "$conflicts" | grep -v '^    CHANGELOG\.md$' || true)
+	if [ -n "$conflicts" ] && [ -z "$others" ]; then
+		log "CHANGELOG.md conflicts, as it always does; the merge keeps this fork's"
+		merged=$(head -1 "$merge_try")
+		if [ "$(git rev-parse "$merged^{tree}")" != "$(git rev-parse dev^{tree})" ]; then
+			git read-tree -u --reset "$merged" || die "the merge could not be read"
+			git checkout --quiet dev -- CHANGELOG.md || die "CHANGELOG.md could not be kept"
+			merge_dev=2 # merged, but not committed
+		fi
+		return 0
+	fi
+	if [ -n "$conflicts" ]; then
 		log "error: merging upstream/main into dev conflicts; merge by hand:"
-		grep -E '^(CONFLICT|Auto-merging)' /tmp/kero-sync-merge.$$ | grep -v Auto-merging | sed 's/^/    /' | head -20
-		rm -f /tmp/kero-sync-merge.$$
+		printf '%s\n' "$conflicts" | head -20
 		die "nothing changed"
 	fi
-	rm -f /tmp/kero-sync-merge.$$
+	die "merging upstream/main into dev conflicts; merge by hand"
+}
+if [ "$merge_dev" = 1 ]; then
+	merge_tree
+	rm -f "$merge_try"
 fi
 
 # From here a check that stops the run leaves a branch moved, for the
@@ -104,12 +134,19 @@ fi
 
 git checkout --quiet dev || die "checkout dev failed"
 if [ "$merge_dev" = 1 ]; then
-	if ! git merge --no-edit --quiet upstream/main >/tmp/kero-sync-merge.$$ 2>&1; then
-		git merge --abort || true
-		rm -f /tmp/kero-sync-merge.$$
-		die "merging upstream/main into dev conflicts over main's new commits; merge by hand"
-	fi
-	rm -f /tmp/kero-sync-merge.$$
+	git merge --no-edit --quiet upstream/main >/dev/null 2>&1 && merge_dev=2 ||
+		{ git merge --abort 2>/dev/null || true; merge_tree; }
+	rm -f "$merge_try"
+fi
+if [ "$merge_dev" = 2 ]; then
+	# The tree holds the merge already, with this fork's CHANGELOG.md.
+	git status --porcelain | grep -q . ||
+		die "the merge changes nothing: up to date, and the merge's second parent hides it"
+	git commit --no-edit --quiet -m "Merge upstream/main into dev, with this fork's CHANGELOG" ||
+		die "the merge could not be committed; dev has the merge, unpushed; fix by hand"
+fi
+if [ "$merge_dev" != 0 ]; then
+	merge_dev=1
 	log "dev: merged upstream/main into $(git rev-parse --short dev)"
 	log "dev: checking"
 	go vet ./... || die "go vet failed; dev has the merge, unpushed; fix by hand"
