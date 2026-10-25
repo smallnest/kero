@@ -59,7 +59,7 @@ if git merge-base --is-ancestor upstream/main main; then
 		ff_main=1
 	fi
 else
-	log "main: has commits of its own; leaving it"
+	log "main: has commits of its own, or is behind origin; leaving it"
 fi
 merge_dev=0
 git merge-base --is-ancestor upstream/main dev || merge_dev=1
