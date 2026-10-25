@@ -10,6 +10,8 @@ upstream releases it includes follow its own.
   file does: show it under the tree, open it in a file pane with Kero's
   editor and its syntax highlighting, or open it in the host's editor.
   Kero keeps the choice.
+- This release also has what upstream's 2.1.18 has, whose notes
+  follow, credited to those who reported it.
 - This release takes in upstream's 2.1.15 to 2.1.17, whose notes follow:
   Kero's icon in the menu bar and the menu it opens, `kero events`, the
   browser's snapshots and saved cookies, programs that can ask for the
@@ -53,6 +55,19 @@ upstream releases it includes follow its own.
 - Remote hosts find `kero` when the path to it has a space in it, on
   macOS and Windows, whose `sh` is bash and splits a list of paths at
   spaces.
+
+## 2.1.18 (egoist/kero)
+
+- On a Mac, programs run in Kero can use the microphone and the camera,
+  and control other apps: macOS asks first, as it does for other
+  terminals. Thanks @jamdaniels for the report
+- Kero reaches SSH hosts with the SSH agent your shell sets up, such as
+  1Password's, as `ssh` in a terminal does. Thanks @frankittee for the
+  report
+- **Close All Sessions** in a project's menu ends every session in the
+  project and keeps the project. Thanks @netube99
+- Pressing Command while a trackpad scroll is still coasting no longer
+  changes the font size. Thanks @iamvicliu
 
 ## 2.1.17
 
