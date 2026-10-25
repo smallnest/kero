@@ -4,6 +4,23 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.19 (smallnest/kero)
+
+- **Session history**, off until you turn it on in **Settings › General**,
+  or with `session-history = true`: when Claude Code, Codex, Pi or OpenCode
+  ends, Kero keeps its conversation, in an **Ended** section at the bottom
+  of the sidebar. A click on one starts a session in its folder that
+  resumes the conversation; **Archived**, below it, holds the ones you put
+  aside. Kero keeps the last 50 of each, from every host, and the
+  section's menus resume, archive, restore, copy or delete them. Ended
+  sessions of this host come with the next update of kerod. Thanks
+  @ak4duy
+- Kero the frog has the colors of the icon's frog.
+- The question that **Quit and End All Sessions** asks no longer takes
+  Return, which a program may be reading: it takes a click or Escape, and
+  **Cancel** closes it.
+- The window has settings in Japanese.
+
 ## 2.1.18
 
 - A row above the tree of the **Files** view picks what a click on a
