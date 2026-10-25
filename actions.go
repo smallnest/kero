@@ -76,6 +76,10 @@ func (a *App) run(id string, args map[string]string) {
 	case "find.previous":
 		a.findStep(true)
 	case "pane.split.right":
+		if s == nil {
+			a.run("session.new", args)
+			return
+		}
 		a.splitPane(s, "", "right")
 	case "pane.split.down":
 		a.splitPane(s, "", "down")

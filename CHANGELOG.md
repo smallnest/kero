@@ -10,6 +10,12 @@ upstream releases it includes follow its own.
   the desktop through as much as the background does, so that it shows
   through the window rather than only at its edges.
 
+## 2.1.22 (smallnest/kero)
+
+- This release takes upstream's 2.1.21 and 2.1.22: a session's time and
+  its ⌘ number show whole in a narrow sidebar, and a client's reset
+  connection counts as its close. Upstream's 2.1.21 notes follow.
+
 ## 2.1.21 (smallnest/kero)
 
 - A **quick terminal** drops down from the top of the screen over any
