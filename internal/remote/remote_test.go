@@ -452,7 +452,7 @@ func TestTailnetAddr(t *testing.T) {
 	}
 }
 
-// The bridge's sh runs the kero a host names, a path with a space too, and
+// The bridge's sh finds kero where it looks, a path with a space too, and
 // says when there is none.
 func TestBridgeScript(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -462,30 +462,25 @@ func TestBridgeScript(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	home := t.TempDir()
-	kero := filepath.Join(home, "Library/Application Support/kero/bin/kero")
-	os.MkdirAll(filepath.Dir(kero), 0o755)
-	os.WriteFile(kero, []byte("#!/bin/sh\necho \"$0 $*\"\n"), 0o755)
-	script := bridgeScript(Addr{Scheme: "ssh", Host: "x", Kero: kero}, "ssh")
-	cmd := exec.Command(sh, "-c", script)
-	cmd.Env = []string{"HOME=" + home, "PATH=" + home + "/none"}
-	out, err := cmd.Output()
-	if want := kero + " __bridge --via ssh\n"; err != nil || string(out) != want {
-		t.Errorf("%q, %v; want %q", out, err, want)
-	}
-}
-
-// The script of a bridge that looks for kero names each path of the
-// bridge, and no colon of IFS, which a sh of bash splits no list at.
-func TestBridgeScriptLocations(t *testing.T) {
-	script := bridgeScript(Addr{Scheme: "ssh", Host: "x"}, "ssh")
-	for _, l := range BridgeLocations {
-		if !strings.Contains(script, shellQuote(l)) {
-			t.Errorf("the script does not look in %q: %s", l, script)
+	for _, loc := range []string{"", ".local/bin/kero", "Library/Application Support/kero/bin/kero"} {
+		home := t.TempDir()
+		if loc != "" {
+			os.MkdirAll(filepath.Dir(filepath.Join(home, loc)), 0o755)
+			os.WriteFile(filepath.Join(home, loc), []byte("#!/bin/sh\necho \"$0 $*\"\n"), 0o755)
 		}
-	}
-	if strings.Contains(script, "IFS=") {
-		t.Errorf("the script splits its paths at a colon: %s", script)
+		cmd := exec.Command(sh, "-c", bridgeScript(Addr{Scheme: "ssh", Host: "x"}, "ssh"))
+		cmd.Env = []string{"HOME=" + home, "PATH=" + home + "/none"}
+		out, err := cmd.Output()
+		if loc == "" {
+			var ee *exec.ExitError
+			if !errors.As(err, &ee) || ee.ExitCode() != bridgeNotFound {
+				t.Errorf("no kero: %q, %v", out, err)
+			}
+			continue
+		}
+		if want := filepath.Join(home, loc) + " __bridge --via ssh\n"; err != nil || string(out) != want {
+			t.Errorf("%s: %q, %v; want %q", loc, out, err, want)
+		}
 	}
 }
 

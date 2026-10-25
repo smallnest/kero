@@ -199,7 +199,7 @@ func (a *App) sessionOfPane(id string) *proto.Session {
 }
 
 // shows reports whether the app draws a pane itself, rather than a
-// terminal's cells: a browser's page, or a file's.
+// terminal's cells: a browser's page, or a file's text.
 func (a *App) shows(id string) bool {
 	if s := a.sessionOfPane(id); s != nil {
 		return s.PaneByID(id).Shown()

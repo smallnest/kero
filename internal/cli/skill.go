@@ -38,8 +38,11 @@ prefix works), or a session's name; a session stands for its focused pane.
     kero prompt <target> "run the tests"      # send + Enter, wait, print screen
     kero wait <target> [--for idle,waiting,error,exited] [--timeout 10m]
     kero wait <target> --exit                 # until its command ends; exits with its status
+    kero new --worktree <branch> -- claude    # an agent on a new branch, in a worktree of its own
     kero events [target] [--for waiting,error] [--json]
                                               # a line per change, as it happens
+    kero history [query] [--json]             # agents' past conversations, to resume
+    kero resume <conversation>                # a session resuming one
     kero read <target> [-n 40] [-a]           # the screen, or with scrollback
     kero status <target> --json               # status, program, directory
     kero ls                                   # every session and pane

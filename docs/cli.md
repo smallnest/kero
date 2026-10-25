@@ -28,6 +28,7 @@ kero split --url localhost:3000  # a browser pane showing a page
 kero rename api backend          # rename a session
 kero focus backend               # show it in the app
 kero close backend               # end a session (or, given a pane, the pane)
+kero close fix-login --remove-worktree   # and remove its own worktree
 kero restart <pane>              # start an exited pane's shell again
 ```
 
@@ -41,6 +42,8 @@ kero restart <pane>              # start an exited pane's shell again
 | `-f`, `--focus`             | Show it in the app                              |
 | `-w`, `--wait`              | Wait for its command to end, and exit with its status |
 | `-u`, `--url <url>`         | Open a browser showing the page instead of a shell |
+| `--worktree <branch>`       | Start it in a git worktree of its own, on a new branch ([more](./changes.md#sessions-in-their-own-worktree)) |
+| `--base <ref>`              | The branch the worktree's starts from (default: the default branch) |
 
 ## Typing and reading
 
@@ -158,6 +161,18 @@ Clicking and typing send the events a real mouse and keyboard would, so pages bu
 Browser panes share their cookies, and keep them when Kero restarts. `cookies` saves them in Playwright's storage state, as JSON, or for a file named `.txt`, as a Netscape `cookies.txt`, which curl and browser extensions write; `load` reads either. Cookies sign you in to sites: share their file only with what you'd trust with your logins. They stay on this Mac, so programs on a host can't save or load them.
 
 Like `kero do`, `kero browser` needs Remote Control, in **Settings › Agents**, and the app to be open.
+
+## Past conversations
+
+```sh
+kero history                     # agents' conversations panes ran, the last to run first
+kero history -p kero -n 50       # one project's, up to 50
+kero history login --json        # those matching "login", as JSON
+kero resume 13b9                 # resume one: its id, a prefix of it, or its name
+kero resume fix-login -f         # and show it in the app
+```
+
+`kero resume` starts a session that resumes the conversation, in its directory and project, and prints the session's id. A conversation a pane still runs gives that session instead. See [Past conversations](./sessions.md#past-conversations).
 
 ## Status
 

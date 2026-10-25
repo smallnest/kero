@@ -16,6 +16,7 @@ A **session** is a unit of work: one task, one agent, one long-running process. 
 | New session                | <kbd>⌘</kbd> <kbd>T</kbd>                    |
 | New session in home folder | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>T</kbd>       |
 | Go to session…             | <kbd>⌘</kbd> <kbd>P</kbd>                    |
+| Resume a conversation…     | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd>       |
 | Jump to session needing you | <kbd>⌘</kbd> <kbd>J</kbd>                   |
 | Next / previous session    | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>]</kbd> / <kbd>[</kbd> |
 | Rename session             | <kbd>⌘</kbd> <kbd>R</kbd>                    |
@@ -38,19 +39,6 @@ Until you or an agent name a session, the `session-name` setting (**Name session
 - `focused` (default): the title of the program in the pane you're in. A pane running only its shell defers to the pane that needs you most.
 - `lead`: the title of the program in the pane that needs you most, such as an agent that's working or waiting on you
 - `folder`: the first pane's folder, whatever runs in it
-
-### Ended sessions
-
-Turn this on in Settings › General › **Session history**, or with `session-history = true`.
-
-When Claude Code, Codex, Pi or OpenCode exits, or you close its pane or session, Kero keeps its conversation for later, in the **Ended** section at the bottom of the sidebar. Click its header to unfold it:
-
-- Ended lists agent sessions newest first, with the agent, name, folder and how long ago it ended: the five newest, then **Show all**. Kero keeps the last 50. Those of your other hosts are among them, tagged with the host's name.
-- Click one to open a new session in its folder that resumes the conversation, as `claude --resume <id>` or `codex resume <id>` would.
-- Hover one and click the archive button to move it to **Archived**, below, where it can still be resumed.
-- Right-click one to resume, archive or restore it, copy its id or folder, show the folder, or delete it. Right-click **Ended** to archive them all, or **Archived** to delete them all.
-
-This needs [Kero's skill](./agents.md#install-the-skill) set up for the agent, which tells Kero the conversation's id.
 
 ## Projects
 
@@ -78,8 +66,17 @@ kero daemon stop         # stop it and end every session
 
 ### Quitting
 
-Quitting Kero keeps the sessions running, so that opening it again shows them, as they were. To have quitting end them, as **Quit and End All Sessions** does, set `quit-ends-sessions = true`: then every quit, from the window's close button, ⌘Q or the menu, ends this machine's sessions and their programs, and stops kerod, asking first while a program runs, as `confirm-close` says. Sessions on other machines keep running.
+Quitting Kero keeps the sessions running, so that opening it again shows them, as they were. To have quitting end them, as **Quit and End All Sessions** does, set `quit-ends-sessions = true`. Then every quit ends this machine's sessions and their programs, and stops kerod. This applies to the close button, ⌘Q and the menu. Kero asks first while a program runs, as `confirm-close` says. Sessions on other machines keep running.
 
 ```ini
 quit-ends-sessions = true
 ```
+
+### Ended sessions
+
+Turn on Settings › General › **Session history**, or `session-history = true`, to list the conversations no pane runs now at the bottom of the sidebar. A conversation leaves the list [when it runs again](#past-conversations), from any of the places that resume it. **Ended** shows the five newest. Click its header to unfold it, or **Show all** to list them all. Ended keeps the last 50 of each host. The conversations of your other hosts are among them, tagged with the host name.
+
+- Click one to start a session in its folder and project, under its session name, that resumes the conversation, as the palette does.
+- Hover over a conversation and click the archive button. The conversation moves to **Archived**.
+- Right-click a conversation to resume, archive, or forget it. You can also copy its id or folder, or show its folder.
+- Right-click **Ended** to archive them all, or **Archived** to forget them all. Forgetting a conversation only removes it from Kero. The agent keeps its own files.

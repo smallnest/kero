@@ -60,11 +60,13 @@ type prefs struct {
 	Side      string  `json:"side,omitempty"`
 	SideWidth float32 `json:"sideWidth,omitempty"`
 	// FileOpen is what a click on a file of the side panel's Files view
-	// does: "" or "pane" opens it in a file pane, "editor" in the host's
-	// editor and "preview" under the tree.
-	FileOpen     string `json:"fileOpen,omitempty"`
-	EndedOpen    bool   `json:"endedOpen,omitempty"`
-	ArchivedOpen bool   `json:"archivedOpen,omitempty"`
+	// does: "preview" or "" shows it under the tree, "pane" opens it in a
+	// file pane, and "editor" in the host's editor.
+	FileOpen string `json:"fileOpen,omitempty"`
+	// EndedOpen and ArchivedOpen tell the sidebar's sections of the
+	// agents' ended conversations unfolded (session-history).
+	EndedOpen    bool `json:"endedOpen,omitempty"`
+	ArchivedOpen bool `json:"archivedOpen,omitempty"`
 }
 
 const (
@@ -92,10 +94,6 @@ type App struct {
 	win     *mygo.Window
 	winOpen bool
 	tray    *mygo.Tray // the icon in the menu bar or notification area, while it shows
-
-	endedAll     bool
-	skillMissing bool // a kind of agent lacks Kero's skill, as skillsAt found
-	skillsAt     time.Time
 
 	// hosts are the kerods the app shows, this machine's first; st is
 	// what they hold, each host's sessions and projects after the one's
@@ -140,9 +138,15 @@ type App struct {
 	renameFrames int
 	chrome       chrome // where the sidebar's animation puts things
 
-	pal          paletteState
-	find         findState
-	confirm      *confirmation
+	pal     paletteState
+	find    findState
+	confirm *confirmation
+	wtAsk   *worktreeAsk
+	// endedAll shows all of the sidebar's Ended; skillMissing tells, as
+	// of skillsAt, that no kind of agent has Kero's skill (ended.go).
+	endedAll     bool
+	skillMissing bool
+	skillsAt     time.Time
 	sideDrag     float32 // the width as a drag of the sidebar's edge began
 	pendingToast string
 	// later are actions that change what the view is building, run once
@@ -184,10 +188,15 @@ type confirmation struct {
 	detail  string
 	action  string
 	destroy bool
-	// ends marks a question whose answer ends programs: it takes a click,
-	// not the Return a key typed in a program sends.
+	run     func()
+	// ends marks the question as one before a quit: Return may be what a
+	// program reads, so it takes a click or Escape.
 	ends bool
-	run  func()
+	// alt is a second answer besides action and Cancel, which runs
+	// altRun; altDestroy marks it as one that destroys.
+	alt        string
+	altRun     func()
+	altDestroy bool
 }
 
 func newApp() *App {
@@ -309,7 +318,13 @@ func (a *App) event(h *host, cl *client.Client, m proto.Message) {
 func (a *App) setState(h *host, st proto.State) {
 	first, hostFirst := !a.loaded, !h.loaded
 	h.loaded = true
-	h.ended = st.Ended
+	if st.Conversations != h.convGen || hostFirst {
+		// The sidebar's conversations are asked for anew, as they changed.
+		h.convGen, h.convKnown = st.Conversations, false
+		if a.set.SessionHistory {
+			a.loadHostConversations(h, st.Conversations)
+		}
+	}
 	// A divider dragged keeps the ratios it set, which the daemon hears of
 	// only once it is let go.
 	var dragged *proto.Layout
@@ -343,6 +358,13 @@ func (a *App) setState(h *host, st proto.State) {
 			delete(a.files, id)
 		}
 	}
+	if a.set.SessionHistory {
+		a.syncEnded()
+	} else {
+		for _, h := range a.hosts {
+			h.convs, h.convKnown, h.convAsked = nil, false, false
+		}
+	}
 	if a.session(a.selected) == nil {
 		a.reselect()
 	} else if first || hostFirst && a.hostOf(a.selected) == h {
@@ -350,7 +372,6 @@ func (a *App) setState(h *host, st proto.State) {
 	}
 	a.notify(first)
 	a.updateTitle()
-	a.petNote(time.Now())
 }
 
 // showNotification shows a notification about a session, which a click
@@ -1189,7 +1210,7 @@ func (a *App) reloadConfig() {
 }
 
 func vibrancyFor(s settings.Settings) mygo.Vibrancy {
-	if s.Vibrancy && s.WindowBlur {
+	if s.Vibrancy {
 		return mygo.VibrancySidebar
 	}
 	return mygo.VibrancyNone
@@ -1469,6 +1490,10 @@ func (a *App) closeSession(id string, ask bool) {
 	if s == nil {
 		return
 	}
+	if ask && s.Worktree != nil && a.hostOf(id).cl != nil {
+		a.askCloseWorktree(id)
+		return
+	}
 	if ask && a.set.ConfirmClose && busy(s) {
 		name := s.DisplayName(a.set.SessionName)
 		a.confirm = &confirmation{
@@ -1479,6 +1504,15 @@ func (a *App) closeSession(id string, ask bool) {
 			destroy: true,
 			run:     func() { a.closeSession(id, false) },
 		}
+		return
+	}
+	a.endSession(id, proto.CloseParams{ID: id})
+}
+
+// endSession closes a session, as p says, without asking.
+func (a *App) endSession(id string, p proto.CloseParams) {
+	s := a.session(id)
+	if s == nil {
 		return
 	}
 	h := a.hostOf(id)
@@ -1501,7 +1535,7 @@ func (a *App) closeSession(id string, ask bool) {
 		a.dropTerm(p.ID)
 	}
 	a.st.Sessions = slices.DeleteFunc(a.st.Sessions, func(x proto.Session) bool { return x.ID == id })
-	a.callOn(h, "close", proto.IDParams{ID: id}, nil)
+	a.callOn(h, "close", p, nil)
 }
 
 // closeAllSessions closes every session of a group, leaving its
@@ -1628,40 +1662,6 @@ func (a *App) toggleProject(id string) {
 		delete(a.prefs.Collapsed, id)
 	}
 	a.savePrefs()
-}
-
-// quitAndEnd ends every session of this machine, and its kerod, then
-// quits: other machines' keep running.
-func (a *App) quitAndEnd() {
-	n := len(a.sessionsOf(a.local()))
-	a.confirm = &confirmation{
-		open:    true,
-		title:   locales.ConfirmQuitAllTitle(),
-		detail:  quitAllDetail(n, len(a.hosts) > 1),
-		action:  locales.ConfirmQuitAllAction(),
-		destroy: true,
-		ends:    true,
-		run:     a.endSessionsAndQuit,
-	}
-}
-
-// endSessionsAndQuit ends every session of this machine, and its kerod,
-// then quits: other machines' keep running. A shutdown that takes a
-// while is the daemon's to finish, as it is for Quit and End All
-// Sessions: the app does not wait on it.
-func (a *App) endSessionsAndQuit() {
-	h := a.local()
-	cl := h.cl
-	go func() {
-		if cl == nil {
-			a.quitEndsSession()
-		} else if cl.Call("shutdown", nil, nil) != nil {
-			// kerod went before it answered, or speaks another version:
-			// stop the one this machine runs.
-			stopDaemon()
-		}
-		mygo.App.Quit()
-	}()
 }
 
 // quitRequested is mygo's quit request, from Cmd+Q, the menu, the window's
@@ -1801,8 +1801,43 @@ func (a *App) restartDaemon() {
 	}()
 }
 
+// quitAndEnd ends every session of this machine, and its kerod, then
+// quits: other machines' keep running.
+func (a *App) quitAndEnd() {
+	n := len(a.sessionsOf(a.local()))
+	a.confirm = &confirmation{
+		open:    true,
+		title:   locales.ConfirmQuitAllTitle(),
+		detail:  quitAllDetail(n, len(a.hosts) > 1),
+		action:  locales.ConfirmQuitAllAction(),
+		destroy: true,
+		ends:    true,
+		run:     a.endSessionsAndQuit,
+	}
+}
+
+// endSessionsAndQuit ends every session of this machine, and its kerod,
+// then quits: other machines' keep running. A shutdown that takes a
+// while is the daemon's to finish, as it is for Quit and End All
+// Sessions: the app does not wait on it.
+func (a *App) endSessionsAndQuit() {
+	h := a.local()
+	cl := h.cl
+	go func() {
+		if cl == nil {
+			a.quitEndsSession()
+		} else if cl.Call("shutdown", nil, nil) != nil {
+			// kerod went before it answered, or speaks another version:
+			// stop the one this machine runs.
+			stopDaemon()
+		}
+		mygo.App.Quit()
+	}()
+}
+
 // quitAllDetail says what Quit and End All ends: this machine's sessions,
 // as other machines' keep running.
+
 func quitAllDetail(n int, hosts bool) string {
 	d := locales.ConfirmQuitAllDetail(n)
 	if hosts {

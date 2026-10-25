@@ -56,7 +56,6 @@ var (
 	copyIcon        = glyph("f7-doc-on-doc")
 	linkIcon        = glyph("f7-arrow-up-right")
 	editIcon        = glyph("f7-pencil")
-	sortIcon        = icon(`<path d="M3 4.5h9M3 8h6M3 11.5h3"/><path d="M12 4.5v7M9.5 9 12 11.5 14.5 9"/>`)
 	archiveIcon     = icon(`<rect x="2" y="3" width="12" height="3" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6M6.5 9h3"/>`)
 )
 
@@ -79,13 +78,13 @@ func init() {
 // programIcon is the logo of the pane's foreground program, as Claude's
 // for Claude Code and Node.js's for a script node runs; the terminal's
 // while the shell is in the foreground or the program has none; a globe
-// for a browser.
+// for a browser, a page for a file.
 func programIcon(p *proto.Pane) *ui.SVG {
-	if p.Browser() {
-		return globeIcon
-	}
 	if p.FilePane() {
 		return docIcon
+	}
+	if p.Browser() {
+		return globeIcon
 	}
 	for _, name := range []string{p.Agent, p.Process, p.Runtime} {
 		if i := programIcons[name]; i != nil {

@@ -25,13 +25,13 @@ Sessions on the host keep running while its app is closed, as they do on your ow
 On a Linux box, a cloud VM or any machine without the app, install the server build of Kero. It needs no root or administrator, no display and no GTK. On Linux or macOS:
 
 ```sh
-curl -fsSL https://github.com/smallnest/kero/releases/latest/download/install-server.sh | sh
+curl -fsSL https://github.com/egoist/kero/releases/latest/download/install-server.sh | sh
 ```
 
 On Windows, in PowerShell:
 
 ```powershell
-irm https://github.com/smallnest/kero/releases/latest/download/install-server.ps1 | iex
+irm https://github.com/egoist/kero/releases/latest/download/install-server.ps1 | iex
 ```
 
 ### Adding the host

@@ -14,23 +14,65 @@ import (
 
 const endedShown = 5
 
+// hostEnded is a conversation of a host, for the sidebar.
 type hostEnded struct {
 	h *host
-	e proto.EndedSession
+	c proto.Conversation
+}
+
+// loadHostConversations asks a host's kerod for the conversations it
+// remembers, for the sidebar, as of the host's count of the changes to
+// them gen: a later answer, or a turn of Session history off, drops it.
+func (a *App) loadHostConversations(h *host, gen uint64) {
+	h.convAsked = true
+	cl := h.cl
+	if cl == nil {
+		h.convAsked = false
+		return
+	}
+	go func() {
+		var list []proto.Conversation
+		err := cl.Call("conversations", nil, &list)
+		a.update(func() {
+			if h.convGen != gen || !h.convAsked {
+				return
+			}
+			h.convAsked = false
+			if err != nil {
+				return
+			}
+			h.convs, h.convKnown = list, true
+		})
+	}()
+}
+
+// syncEnded keeps the sidebar's ended conversations asking for those of
+// every host, while Session history is on.
+func (a *App) syncEnded() {
+	for _, h := range a.hosts {
+		if h.cl == nil || h.convAsked || h.convKnown {
+			continue
+		}
+		a.loadHostConversations(h, h.convGen)
+	}
 }
 
 func (a *App) endedSections(c *ui.Context, pal *palette) {
 	var ended, archived []hostEnded
 	for _, h := range a.hosts {
-		for _, e := range h.ended {
-			if e.Archived {
-				archived = append(archived, hostEnded{h, e})
+		for _, cv := range h.convs {
+			// A conversation a pane runs is in the sidebar's sessions.
+			if cv.Session != "" {
+				continue
+			}
+			if cv.Archived {
+				archived = append(archived, hostEnded{h, cv})
 			} else {
-				ended = append(ended, hostEnded{h, e})
+				ended = append(ended, hostEnded{h, cv})
 			}
 		}
 	}
-	newest := func(x, y hostEnded) int { return cmp.Compare(y.e.EndedAt, x.e.EndedAt) }
+	newest := func(x, y hostEnded) int { return cmp.Compare(y.c.Updated, x.c.Updated) }
 	slices.SortStableFunc(ended, newest)
 	slices.SortStableFunc(archived, newest)
 	if len(ended)+len(archived) == 0 {
@@ -70,7 +112,7 @@ func (a *App) endedSection(c *ui.Context, pal *palette, key, title string, list 
 	}
 	now := c.Now()
 	for _, he := range shown {
-		a.endedRow(c, pal, he.h, he.e, now)
+		a.endedRow(c, pal, he.h, he.c, now)
 	}
 	if len(shown) < len(list) {
 		more := ui.Row(c.Key("show-all")).Height(26).Padding(0, 6, 0, inset).AlignItems(ui.Center).Radius(6)
@@ -86,83 +128,95 @@ func (a *App) endedSection(c *ui.Context, pal *palette, key, title string, list 
 	}
 }
 
-func (a *App) endedRow(c *ui.Context, pal *palette, h *host, e proto.EndedSession, now time.Time) {
-	key := "e-" + h.name + "-" + e.Agent + "-" + e.ID
+func (a *App) endedRow(c *ui.Context, pal *palette, h *host, cv proto.Conversation, now time.Time) {
+	key := "e-" + h.name + "-" + cv.Agent + "-" + cv.ID
 	row := ui.Row(c.Key(key)).Height(44).Padding(0, 6, 0, rowInset).Gap(10).Radius(8).AlignItems(ui.Center)
-	pointerTooltip(c, row, "tip-"+key, h.shortDir(e.Dir))
+	pointerTooltip(c, row, "tip-"+key, h.shortDir(cv.Dir))
 	hovered := row.Hovered()
 	if hovered {
 		row.Background(pal.rowHover)
 	}
 	if row.Clicked() {
-		a.resumeEnded(h, e)
+		a.resumeConversation(h, cv)
 	}
-	row.ContextMenu(func(m *ui.Menu) { a.endedMenu(m, h, e) })
+	row.ContextMenu(func(m *ui.Menu) { a.endedMenu(m, h, cv) })
 	row.Children(func() {
-		i := programIcons[e.Agent]
+		i := programIcons[cv.Agent]
 		if i == nil {
 			i = terminalIcon
 		}
 		ui.Icon(c, i).Size(16, 16).TextColor(pal.textMuted).Shrink(0)
-		name := e.Name
-		if name == "" {
-			name = e.Agent
-		}
 		ui.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, name).FontSize(13).TextColor(pal.text).SingleLine().Ellipsis("…").MinWidth(0).Shrink(1)
+				ui.Text(c, cv.Label()).FontSize(13).TextColor(pal.text).SingleLine().Ellipsis("…").MinWidth(0).Shrink(1)
 				if h.remote() {
 					a.hostTag(c, pal, h)
 				}
 			})
-			ui.Text(c, proto.DirName(e.Dir)).FontSize(12).TextColor(pal.textFaint).SingleLine().Ellipsis("…")
+			ui.Text(c, proto.DirName(cv.Dir)).FontSize(12).TextColor(pal.textFaint).SingleLine().Ellipsis("…")
 		})
-		if hovered && !e.Archived {
+		if hovered && !cv.Archived {
 			iconButton(c, "archive", archiveIcon, locales.EndedArchive(), pal, func() {
-				a.callOn(h, "ended.archive", proto.IDParams{ID: e.ID}, nil)
+				a.conversationCall(h, "conversation.archive", cv, nil)
 			})
 		} else {
-			ui.Text(c, ago(e.EndedAt, now)).FontSize(12).TextColor(pal.textFaint).SingleLine().Shrink(0)
+			ui.Text(c, ago(cv.Updated, now)).FontSize(12).TextColor(pal.textFaint).SingleLine().Shrink(0)
 		}
 	})
 }
 
-func (a *App) endedMenu(m *ui.Menu, h *host, e proto.EndedSession) {
+// conversationCall asks a host to forget or archive a conversation, as
+// the sidebar's menus do.
+func (a *App) conversationCall(h *host, method string, cv proto.Conversation, run func()) {
+	a.callOn(h, method, proto.ConversationParams{Agent: cv.Agent, ID: cv.ID, Archived: method == "conversation.archive"}, func(err error) {
+		if err != nil {
+			a.toast(err.Error())
+			return
+		}
+		if run != nil {
+			run()
+		}
+	})
+}
+
+func (a *App) endedMenu(m *ui.Menu, h *host, cv proto.Conversation) {
 	if m.Item(locales.EndedResume()).Chosen() {
-		a.resumeEnded(h, e)
+		a.resumeConversation(h, cv)
 	}
-	if e.Archived {
+	if cv.Archived {
 		if m.Item(locales.EndedRestore()).Chosen() {
-			a.callOn(h, "ended.unarchive", proto.IDParams{ID: e.ID}, nil)
+			a.conversationCall(h, "conversation.unarchive", cv, nil)
 		}
 	} else if m.Item(locales.EndedArchive()).Chosen() {
-		a.callOn(h, "ended.archive", proto.IDParams{ID: e.ID}, nil)
+		a.conversationCall(h, "conversation.archive", cv, nil)
 	}
 	m.Separator()
 	if m.Item(locales.SessionCopyId()).Chosen() {
-		a.copyText = e.ID
+		a.copyText = cv.ID
 	}
-	if m.Item(locales.SessionCopyDirectory()).Disabled(e.Dir == "").Chosen() {
-		a.copyText = e.Dir
+	if m.Item(locales.SessionCopyDirectory()).Disabled(cv.Dir == "").Chosen() {
+		a.copyText = cv.Dir
 	}
-	if m.Item(locales.SessionRevealIn(fileManager())).Disabled(e.Dir == "" || h.remote()).Chosen() {
-		openPath(e.Dir)
+	if m.Item(locales.SessionRevealIn(fileManager())).Disabled(cv.Dir == "" || h.remote()).Chosen() {
+		openPath(cv.Dir)
 	}
-	m.Separator()
-	if m.Item(locales.EndedDelete()).Chosen() {
-		a.callOn(h, "ended.delete", proto.IDParams{ID: e.ID}, nil)
+	if !cv.Archived {
+		m.Separator()
+		if m.Item(locales.EndedDelete()).Chosen() {
+			a.conversationCall(h, "conversation.forget", cv, nil)
+		}
 	}
 }
 
 func (a *App) endedSectionMenu(m *ui.Menu, key string, list []hostEnded) {
 	each := func(method string) {
 		for _, he := range list {
-			a.callOn(he.h, method, proto.IDParams{ID: he.e.ID}, nil)
+			a.conversationCall(he.h, method, he.c, nil)
 		}
 	}
 	if key == "ended" {
 		if m.Item(locales.EndedArchiveAll()).Chosen() {
-			each("ended.archive")
+			each("conversation.archive")
 		}
 		return
 	}
@@ -173,29 +227,9 @@ func (a *App) endedSectionMenu(m *ui.Menu, key string, list []hostEnded) {
 			detail:  locales.EndedDeleteAllDetail(),
 			action:  locales.EndedDelete(),
 			destroy: true,
-			run:     func() { each("ended.delete") },
+			run:     func() { each("conversation.forget") },
 		}
 	}
-}
-
-func (a *App) resumeEnded(h *host, e proto.EndedSession) {
-	cl := h.cl
-	if cl == nil {
-		a.toast(locales.HostNotConnected(h.label()))
-		return
-	}
-	go func() {
-		var s proto.Session
-		err := cl.Call("ended.resume", proto.IDParams{ID: e.ID}, &s)
-		a.update(func() {
-			if err != nil {
-				a.toast(err.Error())
-				return
-			}
-			a.addPending(h, s)
-			a.selectSession(s.ID)
-		})
-	}()
 }
 
 // skillHint tells, while nothing has ended, that ended sessions need

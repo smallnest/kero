@@ -180,16 +180,13 @@ func bridgeScript(a Addr, via string) string {
 		script = "exec " + shellQuote(a.Kero) + run
 	} else {
 		// No character cmd reads as its own, as > & | " %, which it would
-		// act on before it says it has no sh. Each path is a word of its
-		// own, quoted, as it is, and HOME is read of this shell. A for
-		// list splits at spaces, which a quoted path is not, and at no
-		// colon of IFS, which the sh's of bash, and so of macOS and
-		// Windows, do not split a list at.
+		// act on before it says it has no sh: words split at colons only,
+		// the spaces of paths escaped.
 		var locs []string
 		for _, l := range BridgeLocations {
-			locs = append(locs, shellQuote(l))
+			locs = append(locs, strings.ReplaceAll(l, " ", `\ `))
 		}
-		script = `for k in ` + strings.Join(locs, " ") + `; do if k=$(command -v $k); then exec $k` + run + `; fi; done; exit ` + strconv.Itoa(bridgeNotFound)
+		script = `IFS=:; for k in ` + strings.Join(locs, " ") + `; do if k=$(command -v $k); then exec $k` + run + `; fi; done; exit ` + strconv.Itoa(bridgeNotFound)
 	}
 	return script
 }

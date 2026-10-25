@@ -28,6 +28,7 @@ kero split --url localhost:3000  # 新建一个显示网页的浏览器窗格
 kero rename api backend          # 重命名会话
 kero focus backend               # 在 app 中显示它
 kero close backend               # 结束会话（如果给的是窗格，则关闭该窗格）
+kero close fix-login --remove-worktree   # 同时删除它专属的工作树
 kero restart <pane>              # 重新启动已退出窗格的 shell
 ```
 
@@ -41,6 +42,8 @@ kero restart <pane>              # 重新启动已退出窗格的 shell
 | `-f`, `--focus`             | 在 app 中显示它                                 |
 | `-w`, `--wait`              | 等待它的命令结束，并以该命令的退出码退出        |
 | `-u`, `--url <url>`         | 打开显示该网页的浏览器，而不是 shell            |
+| `--worktree <branch>`       | 在专属的 git 工作树中、以新分支启动（[详情](./changes.md#sessions-in-their-own-worktree)） |
+| `--base <ref>`              | 工作树分支的起点（默认：默认分支）              |
 
 ## 输入与读取
 
@@ -152,6 +155,18 @@ kero browser eval 'document.title'
 点击和输入发送的是真实鼠标和键盘会产生的事件，所以 React 等框架构建的页面也能收到。截图需要窗格显示在屏幕上：先用 `kero focus` 显示它。其余命令对任何浏览器窗格都有效，无论是否显示。
 
 和 `kero do` 一样，`kero browser` 需要开启 **设置 › 智能体** 中的 **远程控制**，并且 app 处于打开状态。
+
+## 过去的对话
+
+```sh
+kero history                     # 窗格中运行过的智能体对话，最近运行的在前
+kero history -p kero -n 50       # 某个项目的对话，最多 50 个
+kero history login --json        # 与 “login” 匹配的对话，输出 JSON
+kero resume 13b9                 # 恢复一个对话：用 ID、ID 的前缀或名字
+kero resume fix-login -f         # 恢复并在 app 中显示
+```
+
+`kero resume` 会在对话的目录和项目中启动一个恢复该对话的会话，并打印会话的 ID。如果某个窗格仍在运行这个对话，则返回那个会话。参见 [过去的对话](./sessions.md#past-conversations)。
 
 ## 状态
 

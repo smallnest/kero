@@ -10,6 +10,7 @@ import (
 	"github.com/egoist/mygo/ui/editor"
 
 	"kero/internal/proto"
+	"kero/locales"
 )
 
 // The Files view shows a session's folder as a tree, its folders opening
@@ -42,7 +43,6 @@ func TestFilesView(t *testing.T) {
 			t.Fatalf("no %q; texts %q", want, tt.Texts())
 		}
 	}
-	shot(t, tt, "files-tree")
 
 	// A folder opens on a click.
 	if err := tt.Click("src"); err != nil {
@@ -63,7 +63,6 @@ func TestFilesView(t *testing.T) {
 	if !tt.HasText("Code editor") {
 		t.Errorf("no text of the file; texts %q", tt.Texts())
 	}
-	shot(t, tt, "files-open")
 
 	// A binary file is told of, not shown.
 	tree.shown, tree.file = "/tmp/demo/blob.bin", &openFile{path: "/tmp/demo/blob.bin", binary: true}
@@ -173,90 +172,42 @@ func TestFileTreeRel(t *testing.T) {
 	_ = proto.FSList{}
 }
 
-// One shortcut opens the panel, on the view the user saw last, and the
-// same one closes it.
+// The panel's shortcut opens it on the view it showed last, and closes
+// it; this fork has no Files view, so both views' go to Changes.
 func TestSideToggle(t *testing.T) {
 	a := testApp(t)
 	s := &a.st.Sessions[0]
 	s.Panes[0].ProcessDir, s.Panes[0].Git = "/tmp/demo", &proto.GitInfo{Root: "/tmp/demo", Branch: "main"}
 	s.Panes[1].Git = s.Panes[0].Git
 	// Connected: a panel that opens makes calls as it shows.
-	cl, _ := projectClient(t, func(method string, raw json.RawMessage) (any, error) {
+	a.local().cl, _ = projectClient(t, func(method string, raw json.RawMessage) (any, error) {
 		return nil, errors.New("not in a test")
 	})
-	a.local().cl = cl
 	a.local().conn = connReady
-	pane, root := a.filesRoot(s)
-	a.tree(pane, root).dirs[root] = &fileDir{paths: []string{"/tmp/demo/main.go"}}
 	tt := ui.NewTester(a.view, 1280, 720)
-	if !a.fromMay("side.toggle", nil) {
-		t.Fatal("side.toggle refused for the session shown")
-	}
 
 	a.run("side.toggle", nil)
 	tt.Frame()
 	if a.prefs.Side != sideChanges {
-		t.Fatalf("the panel opened on %q (conn %d, session %v)", a.prefs.Side, a.local().conn, a.session(a.selected) != nil)
+		t.Fatalf("the panel opened on %q", a.prefs.Side)
 	}
-	// Files chosen in the header: the panel keeps it as it closes, and
-	// opens on it again.
-	a.showSide(sideFiles)
-	tt.Frame()
-	a.run("side.toggle", nil)
-	tt.Frame()
-	if a.prefs.Side != "" || a.sideView() != sideFiles {
-		t.Fatalf("the panel closed on %q, remembering %q", a.prefs.Side, a.sideView())
+	if !tt.HasText(locales.SideChanges()) || !tt.HasText("What isn't committed") {
+		t.Errorf("the panel did not show Changes; texts %q", tt.Texts())
 	}
 	a.run("side.toggle", nil)
 	tt.Frame()
-	if a.prefs.Side != sideFiles || !tt.HasText("main.go") {
-		t.Errorf("the panel opened on %q, texts %q", a.prefs.Side, tt.Texts())
+	if a.prefs.Side != "" {
+		t.Errorf("side.toggle left the panel open on %q", a.prefs.Side)
 	}
-	// The view's own shortcut opens it when closed, and turns to it when
-	// the other shows.
-	a.run("side.toggle", nil)
-	a.showSide(sideChanges)
+	// A view's own opens the panel on it, and closes it again.
 	a.run("files.toggle", nil)
 	tt.Frame()
-	if a.prefs.Side != sideFiles {
+	if a.prefs.Side != sideChanges {
 		t.Errorf("files.toggle showed %q", a.prefs.Side)
 	}
 	a.run("files.toggle", nil)
 	if a.prefs.Side != "" {
 		t.Errorf("files.toggle left the panel open on %q", a.prefs.Side)
-	}
-}
-
-// The header's tabs show their view on a click, each way, so that the
-// header's drag of the window does not keep them.
-func TestSideTabsClick(t *testing.T) {
-	a := testApp(t)
-	s := &a.st.Sessions[0]
-	s.Panes[0].ProcessDir, s.Panes[1].ProcessDir = "/tmp/demo", "/tmp/demo"
-	a.local().cl, _ = projectClient(t, func(method string, raw json.RawMessage) (any, error) {
-		return nil, errors.New("not in a test")
-	})
-	pane, root := a.filesRoot(s)
-	a.tree(pane, root).dirs[root] = &fileDir{paths: []string{"/tmp/demo/main.go"}}
-	a.prefs.Side = sideChanges
-	tt := ui.NewTester(a.view, 1280, 720)
-	tt.Frame()
-	if err := tt.Click("Files"); err != nil {
-		t.Fatal(err)
-	}
-	tt.Frame()
-	if a.prefs.Side != sideFiles {
-		t.Fatalf("a click on Files showed %q", a.prefs.Side)
-	}
-	if !tt.HasText("main.go") {
-		t.Errorf("the Files view did not show; texts %q", tt.Texts())
-	}
-	if err := tt.Click("Changes"); err != nil {
-		t.Fatal(err)
-	}
-	tt.Frame()
-	if a.prefs.Side != sideChanges {
-		t.Fatalf("a click on Changes showed %q", a.prefs.Side)
 	}
 }
 

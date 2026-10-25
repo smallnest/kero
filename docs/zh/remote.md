@@ -25,13 +25,13 @@ Kero 可以在同一个窗口中显示运行在其他机器上的会话，比如
 在 Linux 机器、云虚拟机或任何没有安装应用的机器上，安装 Kero 的服务器版本。它不需要 root 或管理员权限，也不需要显示器和 GTK。在 Linux 或 macOS 上：
 
 ```sh
-curl -fsSL https://github.com/smallnest/kero/releases/latest/download/install-server.sh | sh
+curl -fsSL https://github.com/egoist/kero/releases/latest/download/install-server.sh | sh
 ```
 
 在 Windows 上，于 PowerShell 中运行：
 
 ```powershell
-irm https://github.com/smallnest/kero/releases/latest/download/install-server.ps1 | iex
+irm https://github.com/egoist/kero/releases/latest/download/install-server.ps1 | iex
 ```
 
 ### 添加主机

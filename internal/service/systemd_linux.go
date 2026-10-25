@@ -25,7 +25,7 @@ func unit(exe string) string {
 	return fmt.Sprintf(`# Kero's daemon, which runs the sessions: written by kero daemon install-service.
 [Unit]
 Description=Kero sessions (kerod)
-Documentation=https://github.com/smallnest/kero/blob/main/docs/remote.md
+Documentation=https://github.com/egoist/kero/blob/main/docs/remote.md
 
 [Service]
 Type=simple

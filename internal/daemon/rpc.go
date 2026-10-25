@@ -59,11 +59,21 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		return d.create(p)
 
 	case "close":
+		// The fork's app closes with {"id"}, upstream's with the
+		// worktree choice too (proto.CloseParams), which IDParams leaves
+		// out: no worktree removed, as before.
+		var p proto.CloseParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return true, d.closeSession(p)
+
+	case "worktree.check":
 		var p proto.IDParams
 		if err := decode(&p); err != nil {
 			return nil, err
 		}
-		return true, d.removeSession(p.ID)
+		return d.checkWorktree(p.ID)
 
 	case "pane.close":
 		var p proto.IDParams
@@ -362,14 +372,61 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		pn.mu.Unlock()
 		d.mu.Lock()
 		sid := pn.sid
+		// It runs again: no longer ended, nor archived.
 		d.ended = slices.DeleteFunc(d.ended, func(e proto.EndedSession) bool { return e.AgentSession == *as })
 		d.mu.Unlock()
 		if old != nil && *old != *as {
+			// The pane runs another conversation now: the old one ended.
 			d.agentExited(pn, old, dir, title)
 		} else {
 			d.changed()
 		}
+		// The conversations store (upstream) hears of it too.
+		d.noteConversations()
 		return proto.AgentSessionResult{Pane: id, Session: sid, Away: away}, nil
+
+	case "conversations":
+		return d.conversations(), nil
+
+	case "conversation.resume":
+		var p proto.ConversationParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return d.resumeConversation(p)
+
+	case "conversation.forget":
+		var p proto.ConversationParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		if !d.convs.forget(p.Agent, p.ID) {
+			return nil, fmt.Errorf("no conversation %s of %s", p.ID, p.Agent)
+		}
+		d.changed()
+		return true, nil
+
+	case "conversation.archive":
+		var p proto.ConversationParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		if !d.convs.archive(p.Agent, p.ID, p.Archived) {
+			return nil, fmt.Errorf("no conversation %s of %s", p.ID, p.Agent)
+		}
+		d.changed()
+		return true, nil
+
+	case "conversation.unarchive":
+		var p proto.ConversationParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		if !d.convs.archive(p.Agent, p.ID, false) {
+			return nil, fmt.Errorf("no conversation %s of %s", p.ID, p.Agent)
+		}
+		d.changed()
+		return true, nil
 
 	case "ended":
 		d.mu.Lock()

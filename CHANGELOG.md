@@ -4,6 +4,31 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.20 (smallnest/kero)
+
+- This release has everything upstream's 2.1.19 has, whose notes
+  follow. The **Ended** section of the sidebar now lists the
+  conversations that this 2.1.19 records, so it works for every
+  conversation, on every host, and a conversation leaves the list when
+  it runs again.
+- **Quitting Kero** can end this computer's sessions and their programs,
+  and stop kerod, as **Quit and End All Sessions** does: set
+  `quit-ends-sessions = true`. It asks first while a program runs.
+- The window takes a **window-opacity** and a **window-blur** setting:
+  how much the background wash covers, 0 to 1, and whether the desktop
+  behind it is blurred.
+- **Kero the frog** stays in the window, and follows your sessions.
+  `pet = false` hides it, and `pet-offset` sets where it stands.
+- The sidebar groups sessions by project, with an icon for each, and
+  sorts them by date or by name, or in the order you drag them to.
+- The side panel has a **Files** view and a **Changes** view. ⇧⌘E shows
+  or hides the panel, and ⌥⌘F goes to Files.
+- The question that **Quit and End All Sessions** asks takes a click or
+  Escape, and **Cancel** closes it.
+- Chinese text keeps its monospaced font on Windows. Upstream took this
+  fix out of 2.1.19; this fork keeps it.
+- The window has more strings in Japanese.
+
 ## 2.1.19 (smallnest/kero)
 
 - **Session history**, off until you turn it on in **Settings › General**,

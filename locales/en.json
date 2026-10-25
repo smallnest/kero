@@ -5,8 +5,10 @@
   "actionQuitAll": "Quit and End All Sessions…",
   "actionNewSession": "New Session",
   "actionNewSessionHome": "New Session in Home",
+  "actionNewSessionWorktree": "New Session in Worktree…",
   "actionOpenProject": "Open Project…",
   "actionGoToSession": "Go to Session…",
+  "actionResumeConversation": "Resume Conversation…",
   "actionJumpToAttention": "Jump to Session Needing You",
   "actionNextSession": "Next Session",
   "actionPreviousSession": "Previous Session",
@@ -148,16 +150,16 @@
     }
   },
   "restartServiceDetail": "Every pane’s program ends; the shells start again in their folders, under their history.",
-  "sidebarSort": "Sort and Group",
-  "sidebarGroup": "Group",
-  "sidebarGroupProject": "By Project",
-  "sidebarGroupNone": "No Grouping",
-  "sidebarGroupDate": "By Date",
-  "sidebarOrder": "Order",
-  "sidebarOrderCreated": "Created Time",
-  "sidebarOrderUpdated": "Updated Time",
-  "sidebarToday": "Today",
   "sidebarYesterday": "Yesterday",
+  "sidebarToday": "Today",
+  "sidebarOrderUpdated": "Updated Time",
+  "sidebarOrderCreated": "Created Time",
+  "sidebarOrder": "Order",
+  "sidebarGroupDate": "By Date",
+  "sidebarGroupNone": "No Grouping",
+  "sidebarGroupProject": "By Project",
+  "sidebarGroup": "Group",
+  "sidebarSort": "Sort and Group",
   "sidebarOtherProject": "Other",
   "sidebarHide": "Hide Sidebar",
   "sidebarShow": "Show Sidebar",
@@ -232,6 +234,11 @@
   "palettePlaceholder": "Go to session or run a command…",
   "paletteNoMatches": "No matches",
   "paletteCommands": "Commands",
+  "paletteConversations": "Recent Conversations",
+  "paletteConversationsLabel": "Resume Conversation",
+  "paletteConversationsPlaceholder": "Find a conversation to resume…",
+  "paletteNoConversations": "No conversations yet. Coding agents’ conversations show here once Kero’s skill is set up for them.",
+  "paletteConversationRunning": "running",
   "agoNow": "now",
   "agoMinutes": "{n}m",
   "@agoMinutes": {
@@ -356,14 +363,12 @@
   "setFocusFollowsMouseDetail": "A pane takes the focus when the pointer moves into it, without a click.",
   "setAskBeforeClosing": "Ask before closing a running program",
   "setAskBeforeClosingDetail": "When a pane or session you close has a program other than the shell running.",
-  "setQuitEndsSessions": "End sessions when Kero quits",
   "setQuitEndsSessionsDetail": "Quitting, as with the close button, ⌘Q or the menu, ends this machine’s sessions and their programs, and stops the background service, as Quit and End All Sessions does. With Ask before closing a running program, it asks first. Other machines’ sessions keep running.",
+  "setQuitEndsSessions": "End sessions when Kero quits",
   "setRestoreSessions": "Restore sessions after a restart",
   "setRestoreSessionsDetail": "If the background service stops, as when the Mac restarts, sessions start again in their folders, under their history.",
   "setResumeAgents": "Resume agents",
   "setResumeAgentsDetail": "Claude Code, Codex, Pi and OpenCode pick up their conversation where it was, once Kero’s skill is set up for them in Agents.",
-  "setSessionHistory": "Session history",
-  "setSessionHistoryDetail": "List ended agent sessions in the sidebar, to resume them later or archive them.",
   "setStartup": "Startup",
   "setOpenAtLogin": "Open Kero at login",
   "setLoginFailed": "Couldn’t change it: {error}",
@@ -391,13 +396,13 @@
   "setLanguageSystem": "System",
   "setTranslucent": "Translucent window",
   "setTranslucentDetail": "Let the desktop show through the window’s background.",
-  "setWindowOpacity": "Background opacity",
-  "setWindowOpacityDetail": "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque.",
-  "setWindowBlur": "Background blur",
-  "setWindowBlurDetail": "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the desktop alone.",
-  "setPet": "Kero the frog",
-  "setPetDetail": "A little frog on the window’s top edge: it hops when a session needs you, reads along while one works, and dozes when all is calm.",
   "petName": "Kero, the frog",
+  "setPetDetail": "A little frog on the window’s top edge: it hops when a session needs you, reads along while one works, and dozes when all is calm.",
+  "setPet": "Kero the frog",
+  "setWindowBlurDetail": "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the desktop alone.",
+  "setWindowBlur": "Background blur",
+  "setWindowOpacityDetail": "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque.",
+  "setWindowOpacity": "Background opacity",
   "setDimUnfocused": "Dim unfocused terminals",
   "setDimUnfocusedDetail": "When a session has several panes, the terminals you’re not in fade.",
   "setBackground": "Background",
@@ -518,38 +523,12 @@
   "findNoMatches": "No matches",
   "findClose": "Close Find Bar",
   "actionToggleChanges": "Toggle Changes",
-  "actionTogglePanel": "Toggle Side Panel",
-  "actionToggleFiles": "Toggle Files",
   "actionTogglePet": "Toggle Kero",
+  "actionToggleFiles": "Toggle Side Panel",
+  "actionTogglePanel": "Toggle Side Panel",
   "sideChanges": "Changes",
   "sideClose": "Close Panel",
   "sideFiles": "Files",
-  "endedTitle": "Ended",
-  "endedArchived": "Archived",
-  "endedArchive": "Archive",
-  "endedShowAll": "Show all {n}",
-  "@endedShowAll": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "endedResume": "Resume",
-  "endedRestore": "Restore",
-  "endedDelete": "Delete",
-  "endedArchiveAll": "Archive All",
-  "endedDeleteAll": "Delete All…",
-  "endedDeleteAllTitle": "Delete {n} archived sessions?",
-  "@endedDeleteAllTitle": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "endedDeleteAllDetail": "Kero forgets them; each agent keeps its own history of the conversation.",
-  "endedSetUpSkill": "Set up Kero's skill for your agents to list their ended sessions here",
   "changesTurn": "Last Turn",
   "changesUncommitted": "Uncommitted",
   "changesBranch": "Branch",
@@ -579,22 +558,22 @@
   "changesSplit": "Side by Side",
   "changesBinary": "Binary file",
   "changesTooLarge": "Too large to show",
-  "filesNoFolder": "No folder",
-  "filesNoFolderDetail": "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane.",
-  "filesEmpty": "This folder is empty",
-  "filesCantList": "Can't list a folder",
-  "filesCantRead": "Can't read the file",
-  "filesBinary": "Binary file",
-  "filesLarge": "Too large to show",
-  "filesRefresh": "Reload",
-  "filesCloseFile": "Close File",
-  "filesOpenInPane": "Open in a File Pane",
-  "filesOpenInEditor": "Open in the Host's Editor",
-  "filesOpenWith": "Open with",
-  "filesOpenPreview": "Preview",
-  "filesOpenPane": "File Pane",
-  "filesOpenEditor": "Editor",
   "filesUpdateHost": "The kerod on this host is older than this version of Kero. Update it on the host to browse its files.",
+  "filesOpenEditor": "Editor",
+  "filesOpenPane": "File Pane",
+  "filesOpenPreview": "Preview",
+  "filesOpenWith": "Open with",
+  "filesOpenInEditor": "Open in the Host's Editor",
+  "filesOpenInPane": "Open in a File Pane",
+  "filesCloseFile": "Close File",
+  "filesRefresh": "Reload",
+  "filesLarge": "Too large to show",
+  "filesBinary": "Binary file",
+  "filesCantRead": "Can't read the file",
+  "filesCantList": "Can't list a folder",
+  "filesEmpty": "This folder is empty",
+  "filesNoFolderDetail": "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane.",
+  "filesNoFolder": "No folder",
   "changesRevert": "Revert",
   "changesKeep": "Keep",
   "changesRevertTip": "Put the old lines back in the file",
@@ -1102,5 +1081,52 @@
   "browserForward": "Forward",
   "browserReload": "Reload",
   "browserStop": "Stop",
-  "browserAddress": "Address or search"
+  "browserAddress": "Address or search",
+  "worktreeTitle": "New Session in Worktree",
+  "worktreeDetailDefault": "Kero checks out a new branch from the default branch in a folder of its own, so the session’s agent works apart from the others.",
+  "worktreeDetailCurrent": "Kero checks out a new branch from the current branch in a folder of its own, so the session’s agent works apart from the others.",
+  "worktreeBranch": "Branch name",
+  "worktreeCreate": "Create",
+  "worktreeRemoveTitle": "Remove the worktree of “{name}” too?",
+  "worktreeRemoveMerged": "Its folder {path} goes, and its branch {branch}, which is merged.",
+  "worktreeRemoveUnmerged": "Its folder {path} goes. Its branch {branch} stays, with its commits.",
+  "worktreeRemoveDirty": "{count, plural, one {# changed file} other {# changed files}} in {path} will be lost. Its branch {branch} stays, with its commits.",
+  "@worktreeRemoveDirty": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "worktreeRemove": "Remove Worktree",
+  "worktreeKeep": "Keep Worktree",
+  "worktreeRemoveAnyway": "Remove Anyway",
+  "setSessionHistory": "Session history",
+  "setSessionHistoryDetail": "List the coding agents' ended conversations in the sidebar, to resume them later or archive them.",
+  "endedTitle": "Ended",
+  "endedArchived": "Archived",
+  "endedArchive": "Archive",
+  "endedShowAll": "Show all {n}",
+  "@endedShowAll": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "endedResume": "Resume",
+  "endedRestore": "Restore",
+  "endedDelete": "Delete",
+  "endedArchiveAll": "Archive All",
+  "endedDeleteAll": "Delete All…",
+  "endedDeleteAllTitle": "Delete {n} archived conversations?",
+  "@endedDeleteAllTitle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "endedDeleteAllDetail": "Kero forgets them; each agent keeps its own history of the conversation.",
+  "endedSetUpSkill": "Set up Kero's skill for your agents to list their ended conversations here"
 }

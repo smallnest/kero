@@ -48,7 +48,7 @@ kero config check             # report unknown keys and bad values
 | `restore-sessions`      | `true`    | Start sessions again after kerod restarts, as after a reboot  |
 | `resume-agents`         | `true`    | As sessions start again, resume the conversation of the agent each pane ran |
 | `quit-ends-sessions`    | `false`   | Quitting, as with the close button, ⌘Q or the menu, ends this machine's sessions and their programs, and stops kerod, as Quit and End All Sessions does; it asks first, as `confirm-close` says, while a program runs. Other machines' sessions keep running ([more](./sessions.md#quitting)) |
-| `session-history`       | `false`   | List ended agent sessions in the sidebar, to resume or archive ([more](./sessions.md#ended-sessions)) |
+| `session-history`       | `false`   | List the agents' ended conversations in the sidebar, to resume or archive ([more](./sessions.md#ended-sessions)) |
 | `macos-show-app-icon`   | `dock-and-menubar` | Where Kero's icon shows on macOS: `dock-and-menubar`, `dock` or `menubar`. While it's in the menu bar, closing the window keeps Kero running there. Windows and Linux always show it in the notification area, where closing the window does the same |
 
 ## Appearance
@@ -126,6 +126,8 @@ Other machines whose sessions the app shows, and `kero -H` reaches. See [Remote 
 | ------------- | ------- | ------------------------------------------------------------------------------------------------- |
 | `git-status`  | `true`  | Show each session's branch and [changes](./changes.md)                                            |
 | `diff-layout` | `auto`  | Diffs in the changes panel: `unified`, `split` (side by side), or `auto`, side by side once it's wide |
+| `worktree-base` | `default` | What a [session's own worktree](./changes.md#sessions-in-their-own-worktree) branches from: `default`, the repository's default branch, or `current`, the branch of the session you're in |
+| `worktree-dir` |        | Where sessions' own worktrees go, each under its repository's name; empty for `.kero/worktrees` in the repository |
 
 ## Browser
 

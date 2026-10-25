@@ -86,6 +86,16 @@ func (msgs Messages) ActionNewSessionHome() string {
 	return Catalog.Format(msgs.locale, "actionNewSessionHome", nil)
 }
 
+// ActionNewSessionWorktree says "New Session in Worktree…"
+// in the language the app shows.
+func ActionNewSessionWorktree() string { return In(i18n.Locale()).ActionNewSessionWorktree() }
+
+// ActionNewSessionWorktree says "New Session in Worktree…"
+// in the language of msgs.
+func (msgs Messages) ActionNewSessionWorktree() string {
+	return Catalog.Format(msgs.locale, "actionNewSessionWorktree", nil)
+}
+
 // ActionOpenProject says "Open Project…"
 // in the language the app shows.
 func ActionOpenProject() string { return In(i18n.Locale()).ActionOpenProject() }
@@ -104,6 +114,16 @@ func ActionGoToSession() string { return In(i18n.Locale()).ActionGoToSession() }
 // in the language of msgs.
 func (msgs Messages) ActionGoToSession() string {
 	return Catalog.Format(msgs.locale, "actionGoToSession", nil)
+}
+
+// ActionResumeConversation says "Resume Conversation…"
+// in the language the app shows.
+func ActionResumeConversation() string { return In(i18n.Locale()).ActionResumeConversation() }
+
+// ActionResumeConversation says "Resume Conversation…"
+// in the language of msgs.
+func (msgs Messages) ActionResumeConversation() string {
+	return Catalog.Format(msgs.locale, "actionResumeConversation", nil)
 }
 
 // ActionJumpToAttention says "Jump to Session Needing You"
@@ -1056,84 +1076,14 @@ func (msgs Messages) RestartServiceDetail() string {
 	return Catalog.Format(msgs.locale, "restartServiceDetail", nil)
 }
 
-// SidebarSort says "Sort and Group"
+// SidebarYesterday says "Yesterday"
 // in the language the app shows.
-func SidebarSort() string { return In(i18n.Locale()).SidebarSort() }
+func SidebarYesterday() string { return In(i18n.Locale()).SidebarYesterday() }
 
-// SidebarSort says "Sort and Group"
+// SidebarYesterday says "Yesterday"
 // in the language of msgs.
-func (msgs Messages) SidebarSort() string {
-	return Catalog.Format(msgs.locale, "sidebarSort", nil)
-}
-
-// SidebarGroup says "Group"
-// in the language the app shows.
-func SidebarGroup() string { return In(i18n.Locale()).SidebarGroup() }
-
-// SidebarGroup says "Group"
-// in the language of msgs.
-func (msgs Messages) SidebarGroup() string {
-	return Catalog.Format(msgs.locale, "sidebarGroup", nil)
-}
-
-// SidebarGroupProject says "By Project"
-// in the language the app shows.
-func SidebarGroupProject() string { return In(i18n.Locale()).SidebarGroupProject() }
-
-// SidebarGroupProject says "By Project"
-// in the language of msgs.
-func (msgs Messages) SidebarGroupProject() string {
-	return Catalog.Format(msgs.locale, "sidebarGroupProject", nil)
-}
-
-// SidebarGroupNone says "No Grouping"
-// in the language the app shows.
-func SidebarGroupNone() string { return In(i18n.Locale()).SidebarGroupNone() }
-
-// SidebarGroupNone says "No Grouping"
-// in the language of msgs.
-func (msgs Messages) SidebarGroupNone() string {
-	return Catalog.Format(msgs.locale, "sidebarGroupNone", nil)
-}
-
-// SidebarGroupDate says "By Date"
-// in the language the app shows.
-func SidebarGroupDate() string { return In(i18n.Locale()).SidebarGroupDate() }
-
-// SidebarGroupDate says "By Date"
-// in the language of msgs.
-func (msgs Messages) SidebarGroupDate() string {
-	return Catalog.Format(msgs.locale, "sidebarGroupDate", nil)
-}
-
-// SidebarOrder says "Order"
-// in the language the app shows.
-func SidebarOrder() string { return In(i18n.Locale()).SidebarOrder() }
-
-// SidebarOrder says "Order"
-// in the language of msgs.
-func (msgs Messages) SidebarOrder() string {
-	return Catalog.Format(msgs.locale, "sidebarOrder", nil)
-}
-
-// SidebarOrderCreated says "Created Time"
-// in the language the app shows.
-func SidebarOrderCreated() string { return In(i18n.Locale()).SidebarOrderCreated() }
-
-// SidebarOrderCreated says "Created Time"
-// in the language of msgs.
-func (msgs Messages) SidebarOrderCreated() string {
-	return Catalog.Format(msgs.locale, "sidebarOrderCreated", nil)
-}
-
-// SidebarOrderUpdated says "Updated Time"
-// in the language the app shows.
-func SidebarOrderUpdated() string { return In(i18n.Locale()).SidebarOrderUpdated() }
-
-// SidebarOrderUpdated says "Updated Time"
-// in the language of msgs.
-func (msgs Messages) SidebarOrderUpdated() string {
-	return Catalog.Format(msgs.locale, "sidebarOrderUpdated", nil)
+func (msgs Messages) SidebarYesterday() string {
+	return Catalog.Format(msgs.locale, "sidebarYesterday", nil)
 }
 
 // SidebarToday says "Today"
@@ -1146,14 +1096,84 @@ func (msgs Messages) SidebarToday() string {
 	return Catalog.Format(msgs.locale, "sidebarToday", nil)
 }
 
-// SidebarYesterday says "Yesterday"
+// SidebarOrderUpdated says "Updated Time"
 // in the language the app shows.
-func SidebarYesterday() string { return In(i18n.Locale()).SidebarYesterday() }
+func SidebarOrderUpdated() string { return In(i18n.Locale()).SidebarOrderUpdated() }
 
-// SidebarYesterday says "Yesterday"
+// SidebarOrderUpdated says "Updated Time"
 // in the language of msgs.
-func (msgs Messages) SidebarYesterday() string {
-	return Catalog.Format(msgs.locale, "sidebarYesterday", nil)
+func (msgs Messages) SidebarOrderUpdated() string {
+	return Catalog.Format(msgs.locale, "sidebarOrderUpdated", nil)
+}
+
+// SidebarOrderCreated says "Created Time"
+// in the language the app shows.
+func SidebarOrderCreated() string { return In(i18n.Locale()).SidebarOrderCreated() }
+
+// SidebarOrderCreated says "Created Time"
+// in the language of msgs.
+func (msgs Messages) SidebarOrderCreated() string {
+	return Catalog.Format(msgs.locale, "sidebarOrderCreated", nil)
+}
+
+// SidebarOrder says "Order"
+// in the language the app shows.
+func SidebarOrder() string { return In(i18n.Locale()).SidebarOrder() }
+
+// SidebarOrder says "Order"
+// in the language of msgs.
+func (msgs Messages) SidebarOrder() string {
+	return Catalog.Format(msgs.locale, "sidebarOrder", nil)
+}
+
+// SidebarGroupDate says "By Date"
+// in the language the app shows.
+func SidebarGroupDate() string { return In(i18n.Locale()).SidebarGroupDate() }
+
+// SidebarGroupDate says "By Date"
+// in the language of msgs.
+func (msgs Messages) SidebarGroupDate() string {
+	return Catalog.Format(msgs.locale, "sidebarGroupDate", nil)
+}
+
+// SidebarGroupNone says "No Grouping"
+// in the language the app shows.
+func SidebarGroupNone() string { return In(i18n.Locale()).SidebarGroupNone() }
+
+// SidebarGroupNone says "No Grouping"
+// in the language of msgs.
+func (msgs Messages) SidebarGroupNone() string {
+	return Catalog.Format(msgs.locale, "sidebarGroupNone", nil)
+}
+
+// SidebarGroupProject says "By Project"
+// in the language the app shows.
+func SidebarGroupProject() string { return In(i18n.Locale()).SidebarGroupProject() }
+
+// SidebarGroupProject says "By Project"
+// in the language of msgs.
+func (msgs Messages) SidebarGroupProject() string {
+	return Catalog.Format(msgs.locale, "sidebarGroupProject", nil)
+}
+
+// SidebarGroup says "Group"
+// in the language the app shows.
+func SidebarGroup() string { return In(i18n.Locale()).SidebarGroup() }
+
+// SidebarGroup says "Group"
+// in the language of msgs.
+func (msgs Messages) SidebarGroup() string {
+	return Catalog.Format(msgs.locale, "sidebarGroup", nil)
+}
+
+// SidebarSort says "Sort and Group"
+// in the language the app shows.
+func SidebarSort() string { return In(i18n.Locale()).SidebarSort() }
+
+// SidebarSort says "Sort and Group"
+// in the language of msgs.
+func (msgs Messages) SidebarSort() string {
+	return Catalog.Format(msgs.locale, "sidebarSort", nil)
 }
 
 // SidebarOtherProject says "Other"
@@ -1614,6 +1634,58 @@ func PaletteCommands() string { return In(i18n.Locale()).PaletteCommands() }
 // in the language of msgs.
 func (msgs Messages) PaletteCommands() string {
 	return Catalog.Format(msgs.locale, "paletteCommands", nil)
+}
+
+// PaletteConversations says "Recent Conversations"
+// in the language the app shows.
+func PaletteConversations() string { return In(i18n.Locale()).PaletteConversations() }
+
+// PaletteConversations says "Recent Conversations"
+// in the language of msgs.
+func (msgs Messages) PaletteConversations() string {
+	return Catalog.Format(msgs.locale, "paletteConversations", nil)
+}
+
+// PaletteConversationsLabel says "Resume Conversation"
+// in the language the app shows.
+func PaletteConversationsLabel() string { return In(i18n.Locale()).PaletteConversationsLabel() }
+
+// PaletteConversationsLabel says "Resume Conversation"
+// in the language of msgs.
+func (msgs Messages) PaletteConversationsLabel() string {
+	return Catalog.Format(msgs.locale, "paletteConversationsLabel", nil)
+}
+
+// PaletteConversationsPlaceholder says "Find a conversation to resume…"
+// in the language the app shows.
+func PaletteConversationsPlaceholder() string {
+	return In(i18n.Locale()).PaletteConversationsPlaceholder()
+}
+
+// PaletteConversationsPlaceholder says "Find a conversation to resume…"
+// in the language of msgs.
+func (msgs Messages) PaletteConversationsPlaceholder() string {
+	return Catalog.Format(msgs.locale, "paletteConversationsPlaceholder", nil)
+}
+
+// PaletteNoConversations says "No conversations yet. Coding agents’ conversations show here once Kero’s skill is set up for them."
+// in the language the app shows.
+func PaletteNoConversations() string { return In(i18n.Locale()).PaletteNoConversations() }
+
+// PaletteNoConversations says "No conversations yet. Coding agents’ conversations show here once Kero’s skill is set up for them."
+// in the language of msgs.
+func (msgs Messages) PaletteNoConversations() string {
+	return Catalog.Format(msgs.locale, "paletteNoConversations", nil)
+}
+
+// PaletteConversationRunning says "running"
+// in the language the app shows.
+func PaletteConversationRunning() string { return In(i18n.Locale()).PaletteConversationRunning() }
+
+// PaletteConversationRunning says "running"
+// in the language of msgs.
+func (msgs Messages) PaletteConversationRunning() string {
+	return Catalog.Format(msgs.locale, "paletteConversationRunning", nil)
 }
 
 // AgoNow says "now"
@@ -2138,16 +2210,6 @@ func (msgs Messages) SetAskBeforeClosingDetail() string {
 	return Catalog.Format(msgs.locale, "setAskBeforeClosingDetail", nil)
 }
 
-// SetQuitEndsSessions says "End sessions when Kero quits"
-// in the language the app shows.
-func SetQuitEndsSessions() string { return In(i18n.Locale()).SetQuitEndsSessions() }
-
-// SetQuitEndsSessions says "End sessions when Kero quits"
-// in the language of msgs.
-func (msgs Messages) SetQuitEndsSessions() string {
-	return Catalog.Format(msgs.locale, "setQuitEndsSessions", nil)
-}
-
 // SetQuitEndsSessionsDetail says "Quitting, as with the close button, ⌘Q or the menu, ends this machine’s sessions and their programs, and stops th…"
 // in the language the app shows.
 func SetQuitEndsSessionsDetail() string { return In(i18n.Locale()).SetQuitEndsSessionsDetail() }
@@ -2156,6 +2218,16 @@ func SetQuitEndsSessionsDetail() string { return In(i18n.Locale()).SetQuitEndsSe
 // in the language of msgs.
 func (msgs Messages) SetQuitEndsSessionsDetail() string {
 	return Catalog.Format(msgs.locale, "setQuitEndsSessionsDetail", nil)
+}
+
+// SetQuitEndsSessions says "End sessions when Kero quits"
+// in the language the app shows.
+func SetQuitEndsSessions() string { return In(i18n.Locale()).SetQuitEndsSessions() }
+
+// SetQuitEndsSessions says "End sessions when Kero quits"
+// in the language of msgs.
+func (msgs Messages) SetQuitEndsSessions() string {
+	return Catalog.Format(msgs.locale, "setQuitEndsSessions", nil)
 }
 
 // SetRestoreSessions says "Restore sessions after a restart"
@@ -2196,26 +2268,6 @@ func SetResumeAgentsDetail() string { return In(i18n.Locale()).SetResumeAgentsDe
 // in the language of msgs.
 func (msgs Messages) SetResumeAgentsDetail() string {
 	return Catalog.Format(msgs.locale, "setResumeAgentsDetail", nil)
-}
-
-// SetSessionHistory says "Session history"
-// in the language the app shows.
-func SetSessionHistory() string { return In(i18n.Locale()).SetSessionHistory() }
-
-// SetSessionHistory says "Session history"
-// in the language of msgs.
-func (msgs Messages) SetSessionHistory() string {
-	return Catalog.Format(msgs.locale, "setSessionHistory", nil)
-}
-
-// SetSessionHistoryDetail says "List ended agent sessions in the sidebar, to resume them later or archive them."
-// in the language the app shows.
-func SetSessionHistoryDetail() string { return In(i18n.Locale()).SetSessionHistoryDetail() }
-
-// SetSessionHistoryDetail says "List ended agent sessions in the sidebar, to resume them later or archive them."
-// in the language of msgs.
-func (msgs Messages) SetSessionHistoryDetail() string {
-	return Catalog.Format(msgs.locale, "setSessionHistoryDetail", nil)
 }
 
 // SetStartup says "Startup"
@@ -2490,54 +2542,14 @@ func (msgs Messages) SetTranslucentDetail() string {
 	return Catalog.Format(msgs.locale, "setTranslucentDetail", nil)
 }
 
-// SetWindowOpacity says "Background opacity"
+// PetName says "Kero, the frog"
 // in the language the app shows.
-func SetWindowOpacity() string { return In(i18n.Locale()).SetWindowOpacity() }
+func PetName() string { return In(i18n.Locale()).PetName() }
 
-// SetWindowOpacity says "Background opacity"
+// PetName says "Kero, the frog"
 // in the language of msgs.
-func (msgs Messages) SetWindowOpacity() string {
-	return Catalog.Format(msgs.locale, "setWindowOpacity", nil)
-}
-
-// SetWindowOpacityDetail says "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque."
-// in the language the app shows.
-func SetWindowOpacityDetail() string { return In(i18n.Locale()).SetWindowOpacityDetail() }
-
-// SetWindowOpacityDetail says "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque."
-// in the language of msgs.
-func (msgs Messages) SetWindowOpacityDetail() string {
-	return Catalog.Format(msgs.locale, "setWindowOpacityDetail", nil)
-}
-
-// SetWindowBlur says "Background blur"
-// in the language the app shows.
-func SetWindowBlur() string { return In(i18n.Locale()).SetWindowBlur() }
-
-// SetWindowBlur says "Background blur"
-// in the language of msgs.
-func (msgs Messages) SetWindowBlur() string {
-	return Catalog.Format(msgs.locale, "setWindowBlur", nil)
-}
-
-// SetWindowBlurDetail says "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the d…"
-// in the language the app shows.
-func SetWindowBlurDetail() string { return In(i18n.Locale()).SetWindowBlurDetail() }
-
-// SetWindowBlurDetail says "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the d…"
-// in the language of msgs.
-func (msgs Messages) SetWindowBlurDetail() string {
-	return Catalog.Format(msgs.locale, "setWindowBlurDetail", nil)
-}
-
-// SetPet says "Kero the frog"
-// in the language the app shows.
-func SetPet() string { return In(i18n.Locale()).SetPet() }
-
-// SetPet says "Kero the frog"
-// in the language of msgs.
-func (msgs Messages) SetPet() string {
-	return Catalog.Format(msgs.locale, "setPet", nil)
+func (msgs Messages) PetName() string {
+	return Catalog.Format(msgs.locale, "petName", nil)
 }
 
 // SetPetDetail says "A little frog on the window’s top edge: it hops when a session needs you, reads along while one works, and dozes wh…"
@@ -2550,14 +2562,54 @@ func (msgs Messages) SetPetDetail() string {
 	return Catalog.Format(msgs.locale, "setPetDetail", nil)
 }
 
-// PetName says "Kero, the frog"
+// SetPet says "Kero the frog"
 // in the language the app shows.
-func PetName() string { return In(i18n.Locale()).PetName() }
+func SetPet() string { return In(i18n.Locale()).SetPet() }
 
-// PetName says "Kero, the frog"
+// SetPet says "Kero the frog"
 // in the language of msgs.
-func (msgs Messages) PetName() string {
-	return Catalog.Format(msgs.locale, "petName", nil)
+func (msgs Messages) SetPet() string {
+	return Catalog.Format(msgs.locale, "setPet", nil)
+}
+
+// SetWindowBlurDetail says "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the d…"
+// in the language the app shows.
+func SetWindowBlurDetail() string { return In(i18n.Locale()).SetWindowBlurDetail() }
+
+// SetWindowBlurDetail says "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the d…"
+// in the language of msgs.
+func (msgs Messages) SetWindowBlurDetail() string {
+	return Catalog.Format(msgs.locale, "setWindowBlurDetail", nil)
+}
+
+// SetWindowBlur says "Background blur"
+// in the language the app shows.
+func SetWindowBlur() string { return In(i18n.Locale()).SetWindowBlur() }
+
+// SetWindowBlur says "Background blur"
+// in the language of msgs.
+func (msgs Messages) SetWindowBlur() string {
+	return Catalog.Format(msgs.locale, "setWindowBlur", nil)
+}
+
+// SetWindowOpacityDetail says "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque."
+// in the language the app shows.
+func SetWindowOpacityDetail() string { return In(i18n.Locale()).SetWindowOpacityDetail() }
+
+// SetWindowOpacityDetail says "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque."
+// in the language of msgs.
+func (msgs Messages) SetWindowOpacityDetail() string {
+	return Catalog.Format(msgs.locale, "setWindowOpacityDetail", nil)
+}
+
+// SetWindowOpacity says "Background opacity"
+// in the language the app shows.
+func SetWindowOpacity() string { return In(i18n.Locale()).SetWindowOpacity() }
+
+// SetWindowOpacity says "Background opacity"
+// in the language of msgs.
+func (msgs Messages) SetWindowOpacity() string {
+	return Catalog.Format(msgs.locale, "setWindowOpacity", nil)
 }
 
 // SetDimUnfocused says "Dim unfocused terminals"
@@ -3766,26 +3818,6 @@ func (msgs Messages) ActionToggleChanges() string {
 	return Catalog.Format(msgs.locale, "actionToggleChanges", nil)
 }
 
-// ActionTogglePanel says "Toggle Side Panel"
-// in the language the app shows.
-func ActionTogglePanel() string { return In(i18n.Locale()).ActionTogglePanel() }
-
-// ActionTogglePanel says "Toggle Side Panel"
-// in the language of msgs.
-func (msgs Messages) ActionTogglePanel() string {
-	return Catalog.Format(msgs.locale, "actionTogglePanel", nil)
-}
-
-// ActionToggleFiles says "Toggle Files"
-// in the language the app shows.
-func ActionToggleFiles() string { return In(i18n.Locale()).ActionToggleFiles() }
-
-// ActionToggleFiles says "Toggle Files"
-// in the language of msgs.
-func (msgs Messages) ActionToggleFiles() string {
-	return Catalog.Format(msgs.locale, "actionToggleFiles", nil)
-}
-
 // ActionTogglePet says "Toggle Kero"
 // in the language the app shows.
 func ActionTogglePet() string { return In(i18n.Locale()).ActionTogglePet() }
@@ -3794,6 +3826,26 @@ func ActionTogglePet() string { return In(i18n.Locale()).ActionTogglePet() }
 // in the language of msgs.
 func (msgs Messages) ActionTogglePet() string {
 	return Catalog.Format(msgs.locale, "actionTogglePet", nil)
+}
+
+// ActionToggleFiles says "Toggle Side Panel"
+// in the language the app shows.
+func ActionToggleFiles() string { return In(i18n.Locale()).ActionToggleFiles() }
+
+// ActionToggleFiles says "Toggle Side Panel"
+// in the language of msgs.
+func (msgs Messages) ActionToggleFiles() string {
+	return Catalog.Format(msgs.locale, "actionToggleFiles", nil)
+}
+
+// ActionTogglePanel says "Toggle Side Panel"
+// in the language the app shows.
+func ActionTogglePanel() string { return In(i18n.Locale()).ActionTogglePanel() }
+
+// ActionTogglePanel says "Toggle Side Panel"
+// in the language of msgs.
+func (msgs Messages) ActionTogglePanel() string {
+	return Catalog.Format(msgs.locale, "actionTogglePanel", nil)
 }
 
 // SideChanges says "Changes"
@@ -3824,126 +3876,6 @@ func SideFiles() string { return In(i18n.Locale()).SideFiles() }
 // in the language of msgs.
 func (msgs Messages) SideFiles() string {
 	return Catalog.Format(msgs.locale, "sideFiles", nil)
-}
-
-// EndedTitle says "Ended"
-// in the language the app shows.
-func EndedTitle() string { return In(i18n.Locale()).EndedTitle() }
-
-// EndedTitle says "Ended"
-// in the language of msgs.
-func (msgs Messages) EndedTitle() string {
-	return Catalog.Format(msgs.locale, "endedTitle", nil)
-}
-
-// EndedArchived says "Archived"
-// in the language the app shows.
-func EndedArchived() string { return In(i18n.Locale()).EndedArchived() }
-
-// EndedArchived says "Archived"
-// in the language of msgs.
-func (msgs Messages) EndedArchived() string {
-	return Catalog.Format(msgs.locale, "endedArchived", nil)
-}
-
-// EndedArchive says "Archive"
-// in the language the app shows.
-func EndedArchive() string { return In(i18n.Locale()).EndedArchive() }
-
-// EndedArchive says "Archive"
-// in the language of msgs.
-func (msgs Messages) EndedArchive() string {
-	return Catalog.Format(msgs.locale, "endedArchive", nil)
-}
-
-// EndedShowAll says "Show all {n}"
-// in the language the app shows.
-func EndedShowAll(n int) string { return In(i18n.Locale()).EndedShowAll(n) }
-
-// EndedShowAll says "Show all {n}"
-// in the language of msgs.
-func (msgs Messages) EndedShowAll(n int) string {
-	return Catalog.Format(msgs.locale, "endedShowAll", map[string]any{"n": n})
-}
-
-// EndedResume says "Resume"
-// in the language the app shows.
-func EndedResume() string { return In(i18n.Locale()).EndedResume() }
-
-// EndedResume says "Resume"
-// in the language of msgs.
-func (msgs Messages) EndedResume() string {
-	return Catalog.Format(msgs.locale, "endedResume", nil)
-}
-
-// EndedRestore says "Restore"
-// in the language the app shows.
-func EndedRestore() string { return In(i18n.Locale()).EndedRestore() }
-
-// EndedRestore says "Restore"
-// in the language of msgs.
-func (msgs Messages) EndedRestore() string {
-	return Catalog.Format(msgs.locale, "endedRestore", nil)
-}
-
-// EndedDelete says "Delete"
-// in the language the app shows.
-func EndedDelete() string { return In(i18n.Locale()).EndedDelete() }
-
-// EndedDelete says "Delete"
-// in the language of msgs.
-func (msgs Messages) EndedDelete() string {
-	return Catalog.Format(msgs.locale, "endedDelete", nil)
-}
-
-// EndedArchiveAll says "Archive All"
-// in the language the app shows.
-func EndedArchiveAll() string { return In(i18n.Locale()).EndedArchiveAll() }
-
-// EndedArchiveAll says "Archive All"
-// in the language of msgs.
-func (msgs Messages) EndedArchiveAll() string {
-	return Catalog.Format(msgs.locale, "endedArchiveAll", nil)
-}
-
-// EndedDeleteAll says "Delete All…"
-// in the language the app shows.
-func EndedDeleteAll() string { return In(i18n.Locale()).EndedDeleteAll() }
-
-// EndedDeleteAll says "Delete All…"
-// in the language of msgs.
-func (msgs Messages) EndedDeleteAll() string {
-	return Catalog.Format(msgs.locale, "endedDeleteAll", nil)
-}
-
-// EndedDeleteAllTitle says "Delete {n} archived sessions?"
-// in the language the app shows.
-func EndedDeleteAllTitle(n int) string { return In(i18n.Locale()).EndedDeleteAllTitle(n) }
-
-// EndedDeleteAllTitle says "Delete {n} archived sessions?"
-// in the language of msgs.
-func (msgs Messages) EndedDeleteAllTitle(n int) string {
-	return Catalog.Format(msgs.locale, "endedDeleteAllTitle", map[string]any{"n": n})
-}
-
-// EndedDeleteAllDetail says "Kero forgets them; each agent keeps its own history of the conversation."
-// in the language the app shows.
-func EndedDeleteAllDetail() string { return In(i18n.Locale()).EndedDeleteAllDetail() }
-
-// EndedDeleteAllDetail says "Kero forgets them; each agent keeps its own history of the conversation."
-// in the language of msgs.
-func (msgs Messages) EndedDeleteAllDetail() string {
-	return Catalog.Format(msgs.locale, "endedDeleteAllDetail", nil)
-}
-
-// EndedSetUpSkill says "Set up Kero's skill for your agents to list their ended sessions here"
-// in the language the app shows.
-func EndedSetUpSkill() string { return In(i18n.Locale()).EndedSetUpSkill() }
-
-// EndedSetUpSkill says "Set up Kero's skill for your agents to list their ended sessions here"
-// in the language of msgs.
-func (msgs Messages) EndedSetUpSkill() string {
-	return Catalog.Format(msgs.locale, "endedSetUpSkill", nil)
 }
 
 // ChangesTurn says "Last Turn"
@@ -4166,144 +4098,14 @@ func (msgs Messages) ChangesTooLarge() string {
 	return Catalog.Format(msgs.locale, "changesTooLarge", nil)
 }
 
-// FilesNoFolder says "No folder"
+// FilesUpdateHost says "The kerod on this host is older than this version of Kero. Update it on the host to browse its files."
 // in the language the app shows.
-func FilesNoFolder() string { return In(i18n.Locale()).FilesNoFolder() }
+func FilesUpdateHost() string { return In(i18n.Locale()).FilesUpdateHost() }
 
-// FilesNoFolder says "No folder"
+// FilesUpdateHost says "The kerod on this host is older than this version of Kero. Update it on the host to browse its files."
 // in the language of msgs.
-func (msgs Messages) FilesNoFolder() string {
-	return Catalog.Format(msgs.locale, "filesNoFolder", nil)
-}
-
-// FilesNoFolderDetail says "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane."
-// in the language the app shows.
-func FilesNoFolderDetail() string { return In(i18n.Locale()).FilesNoFolderDetail() }
-
-// FilesNoFolderDetail says "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane."
-// in the language of msgs.
-func (msgs Messages) FilesNoFolderDetail() string {
-	return Catalog.Format(msgs.locale, "filesNoFolderDetail", nil)
-}
-
-// FilesEmpty says "This folder is empty"
-// in the language the app shows.
-func FilesEmpty() string { return In(i18n.Locale()).FilesEmpty() }
-
-// FilesEmpty says "This folder is empty"
-// in the language of msgs.
-func (msgs Messages) FilesEmpty() string {
-	return Catalog.Format(msgs.locale, "filesEmpty", nil)
-}
-
-// FilesCantList says "Can't list a folder"
-// in the language the app shows.
-func FilesCantList() string { return In(i18n.Locale()).FilesCantList() }
-
-// FilesCantList says "Can't list a folder"
-// in the language of msgs.
-func (msgs Messages) FilesCantList() string {
-	return Catalog.Format(msgs.locale, "filesCantList", nil)
-}
-
-// FilesCantRead says "Can't read the file"
-// in the language the app shows.
-func FilesCantRead() string { return In(i18n.Locale()).FilesCantRead() }
-
-// FilesCantRead says "Can't read the file"
-// in the language of msgs.
-func (msgs Messages) FilesCantRead() string {
-	return Catalog.Format(msgs.locale, "filesCantRead", nil)
-}
-
-// FilesBinary says "Binary file"
-// in the language the app shows.
-func FilesBinary() string { return In(i18n.Locale()).FilesBinary() }
-
-// FilesBinary says "Binary file"
-// in the language of msgs.
-func (msgs Messages) FilesBinary() string {
-	return Catalog.Format(msgs.locale, "filesBinary", nil)
-}
-
-// FilesLarge says "Too large to show"
-// in the language the app shows.
-func FilesLarge() string { return In(i18n.Locale()).FilesLarge() }
-
-// FilesLarge says "Too large to show"
-// in the language of msgs.
-func (msgs Messages) FilesLarge() string {
-	return Catalog.Format(msgs.locale, "filesLarge", nil)
-}
-
-// FilesRefresh says "Reload"
-// in the language the app shows.
-func FilesRefresh() string { return In(i18n.Locale()).FilesRefresh() }
-
-// FilesRefresh says "Reload"
-// in the language of msgs.
-func (msgs Messages) FilesRefresh() string {
-	return Catalog.Format(msgs.locale, "filesRefresh", nil)
-}
-
-// FilesCloseFile says "Close File"
-// in the language the app shows.
-func FilesCloseFile() string { return In(i18n.Locale()).FilesCloseFile() }
-
-// FilesCloseFile says "Close File"
-// in the language of msgs.
-func (msgs Messages) FilesCloseFile() string {
-	return Catalog.Format(msgs.locale, "filesCloseFile", nil)
-}
-
-// FilesOpenInPane says "Open in a File Pane"
-// in the language the app shows.
-func FilesOpenInPane() string { return In(i18n.Locale()).FilesOpenInPane() }
-
-// FilesOpenInPane says "Open in a File Pane"
-// in the language of msgs.
-func (msgs Messages) FilesOpenInPane() string {
-	return Catalog.Format(msgs.locale, "filesOpenInPane", nil)
-}
-
-// FilesOpenInEditor says "Open in the Host's Editor"
-// in the language the app shows.
-func FilesOpenInEditor() string { return In(i18n.Locale()).FilesOpenInEditor() }
-
-// FilesOpenInEditor says "Open in the Host's Editor"
-// in the language of msgs.
-func (msgs Messages) FilesOpenInEditor() string {
-	return Catalog.Format(msgs.locale, "filesOpenInEditor", nil)
-}
-
-// FilesOpenWith says "Open with"
-// in the language the app shows.
-func FilesOpenWith() string { return In(i18n.Locale()).FilesOpenWith() }
-
-// FilesOpenWith says "Open with"
-// in the language of msgs.
-func (msgs Messages) FilesOpenWith() string {
-	return Catalog.Format(msgs.locale, "filesOpenWith", nil)
-}
-
-// FilesOpenPreview says "Preview"
-// in the language the app shows.
-func FilesOpenPreview() string { return In(i18n.Locale()).FilesOpenPreview() }
-
-// FilesOpenPreview says "Preview"
-// in the language of msgs.
-func (msgs Messages) FilesOpenPreview() string {
-	return Catalog.Format(msgs.locale, "filesOpenPreview", nil)
-}
-
-// FilesOpenPane says "File Pane"
-// in the language the app shows.
-func FilesOpenPane() string { return In(i18n.Locale()).FilesOpenPane() }
-
-// FilesOpenPane says "File Pane"
-// in the language of msgs.
-func (msgs Messages) FilesOpenPane() string {
-	return Catalog.Format(msgs.locale, "filesOpenPane", nil)
+func (msgs Messages) FilesUpdateHost() string {
+	return Catalog.Format(msgs.locale, "filesUpdateHost", nil)
 }
 
 // FilesOpenEditor says "Editor"
@@ -4316,14 +4118,144 @@ func (msgs Messages) FilesOpenEditor() string {
 	return Catalog.Format(msgs.locale, "filesOpenEditor", nil)
 }
 
-// FilesUpdateHost says "The kerod on this host is older than this version of Kero. Update it on the host to browse its files."
+// FilesOpenPane says "File Pane"
 // in the language the app shows.
-func FilesUpdateHost() string { return In(i18n.Locale()).FilesUpdateHost() }
+func FilesOpenPane() string { return In(i18n.Locale()).FilesOpenPane() }
 
-// FilesUpdateHost says "The kerod on this host is older than this version of Kero. Update it on the host to browse its files."
+// FilesOpenPane says "File Pane"
 // in the language of msgs.
-func (msgs Messages) FilesUpdateHost() string {
-	return Catalog.Format(msgs.locale, "filesUpdateHost", nil)
+func (msgs Messages) FilesOpenPane() string {
+	return Catalog.Format(msgs.locale, "filesOpenPane", nil)
+}
+
+// FilesOpenPreview says "Preview"
+// in the language the app shows.
+func FilesOpenPreview() string { return In(i18n.Locale()).FilesOpenPreview() }
+
+// FilesOpenPreview says "Preview"
+// in the language of msgs.
+func (msgs Messages) FilesOpenPreview() string {
+	return Catalog.Format(msgs.locale, "filesOpenPreview", nil)
+}
+
+// FilesOpenWith says "Open with"
+// in the language the app shows.
+func FilesOpenWith() string { return In(i18n.Locale()).FilesOpenWith() }
+
+// FilesOpenWith says "Open with"
+// in the language of msgs.
+func (msgs Messages) FilesOpenWith() string {
+	return Catalog.Format(msgs.locale, "filesOpenWith", nil)
+}
+
+// FilesOpenInEditor says "Open in the Host's Editor"
+// in the language the app shows.
+func FilesOpenInEditor() string { return In(i18n.Locale()).FilesOpenInEditor() }
+
+// FilesOpenInEditor says "Open in the Host's Editor"
+// in the language of msgs.
+func (msgs Messages) FilesOpenInEditor() string {
+	return Catalog.Format(msgs.locale, "filesOpenInEditor", nil)
+}
+
+// FilesOpenInPane says "Open in a File Pane"
+// in the language the app shows.
+func FilesOpenInPane() string { return In(i18n.Locale()).FilesOpenInPane() }
+
+// FilesOpenInPane says "Open in a File Pane"
+// in the language of msgs.
+func (msgs Messages) FilesOpenInPane() string {
+	return Catalog.Format(msgs.locale, "filesOpenInPane", nil)
+}
+
+// FilesCloseFile says "Close File"
+// in the language the app shows.
+func FilesCloseFile() string { return In(i18n.Locale()).FilesCloseFile() }
+
+// FilesCloseFile says "Close File"
+// in the language of msgs.
+func (msgs Messages) FilesCloseFile() string {
+	return Catalog.Format(msgs.locale, "filesCloseFile", nil)
+}
+
+// FilesRefresh says "Reload"
+// in the language the app shows.
+func FilesRefresh() string { return In(i18n.Locale()).FilesRefresh() }
+
+// FilesRefresh says "Reload"
+// in the language of msgs.
+func (msgs Messages) FilesRefresh() string {
+	return Catalog.Format(msgs.locale, "filesRefresh", nil)
+}
+
+// FilesLarge says "Too large to show"
+// in the language the app shows.
+func FilesLarge() string { return In(i18n.Locale()).FilesLarge() }
+
+// FilesLarge says "Too large to show"
+// in the language of msgs.
+func (msgs Messages) FilesLarge() string {
+	return Catalog.Format(msgs.locale, "filesLarge", nil)
+}
+
+// FilesBinary says "Binary file"
+// in the language the app shows.
+func FilesBinary() string { return In(i18n.Locale()).FilesBinary() }
+
+// FilesBinary says "Binary file"
+// in the language of msgs.
+func (msgs Messages) FilesBinary() string {
+	return Catalog.Format(msgs.locale, "filesBinary", nil)
+}
+
+// FilesCantRead says "Can't read the file"
+// in the language the app shows.
+func FilesCantRead() string { return In(i18n.Locale()).FilesCantRead() }
+
+// FilesCantRead says "Can't read the file"
+// in the language of msgs.
+func (msgs Messages) FilesCantRead() string {
+	return Catalog.Format(msgs.locale, "filesCantRead", nil)
+}
+
+// FilesCantList says "Can't list a folder"
+// in the language the app shows.
+func FilesCantList() string { return In(i18n.Locale()).FilesCantList() }
+
+// FilesCantList says "Can't list a folder"
+// in the language of msgs.
+func (msgs Messages) FilesCantList() string {
+	return Catalog.Format(msgs.locale, "filesCantList", nil)
+}
+
+// FilesEmpty says "This folder is empty"
+// in the language the app shows.
+func FilesEmpty() string { return In(i18n.Locale()).FilesEmpty() }
+
+// FilesEmpty says "This folder is empty"
+// in the language of msgs.
+func (msgs Messages) FilesEmpty() string {
+	return Catalog.Format(msgs.locale, "filesEmpty", nil)
+}
+
+// FilesNoFolderDetail says "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane."
+// in the language the app shows.
+func FilesNoFolderDetail() string { return In(i18n.Locale()).FilesNoFolderDetail() }
+
+// FilesNoFolderDetail says "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane."
+// in the language of msgs.
+func (msgs Messages) FilesNoFolderDetail() string {
+	return Catalog.Format(msgs.locale, "filesNoFolderDetail", nil)
+}
+
+// FilesNoFolder says "No folder"
+// in the language the app shows.
+func FilesNoFolder() string { return In(i18n.Locale()).FilesNoFolder() }
+
+// FilesNoFolder says "No folder"
+// in the language of msgs.
+func (msgs Messages) FilesNoFolder() string {
+	return Catalog.Format(msgs.locale, "filesNoFolder", nil)
 }
 
 // ChangesRevert says "Revert"
@@ -5652,4 +5584,270 @@ func BrowserAddress() string { return In(i18n.Locale()).BrowserAddress() }
 // in the language of msgs.
 func (msgs Messages) BrowserAddress() string {
 	return Catalog.Format(msgs.locale, "browserAddress", nil)
+}
+
+// WorktreeTitle says "New Session in Worktree"
+// in the language the app shows.
+func WorktreeTitle() string { return In(i18n.Locale()).WorktreeTitle() }
+
+// WorktreeTitle says "New Session in Worktree"
+// in the language of msgs.
+func (msgs Messages) WorktreeTitle() string {
+	return Catalog.Format(msgs.locale, "worktreeTitle", nil)
+}
+
+// WorktreeDetailDefault says "Kero checks out a new branch from the default branch in a folder of its own, so the session’s agent works apart fro…"
+// in the language the app shows.
+func WorktreeDetailDefault() string { return In(i18n.Locale()).WorktreeDetailDefault() }
+
+// WorktreeDetailDefault says "Kero checks out a new branch from the default branch in a folder of its own, so the session’s agent works apart fro…"
+// in the language of msgs.
+func (msgs Messages) WorktreeDetailDefault() string {
+	return Catalog.Format(msgs.locale, "worktreeDetailDefault", nil)
+}
+
+// WorktreeDetailCurrent says "Kero checks out a new branch from the current branch in a folder of its own, so the session’s agent works apart fro…"
+// in the language the app shows.
+func WorktreeDetailCurrent() string { return In(i18n.Locale()).WorktreeDetailCurrent() }
+
+// WorktreeDetailCurrent says "Kero checks out a new branch from the current branch in a folder of its own, so the session’s agent works apart fro…"
+// in the language of msgs.
+func (msgs Messages) WorktreeDetailCurrent() string {
+	return Catalog.Format(msgs.locale, "worktreeDetailCurrent", nil)
+}
+
+// WorktreeBranch says "Branch name"
+// in the language the app shows.
+func WorktreeBranch() string { return In(i18n.Locale()).WorktreeBranch() }
+
+// WorktreeBranch says "Branch name"
+// in the language of msgs.
+func (msgs Messages) WorktreeBranch() string {
+	return Catalog.Format(msgs.locale, "worktreeBranch", nil)
+}
+
+// WorktreeCreate says "Create"
+// in the language the app shows.
+func WorktreeCreate() string { return In(i18n.Locale()).WorktreeCreate() }
+
+// WorktreeCreate says "Create"
+// in the language of msgs.
+func (msgs Messages) WorktreeCreate() string {
+	return Catalog.Format(msgs.locale, "worktreeCreate", nil)
+}
+
+// WorktreeRemoveTitle says "Remove the worktree of “{name}” too?"
+// in the language the app shows.
+func WorktreeRemoveTitle(name string) string { return In(i18n.Locale()).WorktreeRemoveTitle(name) }
+
+// WorktreeRemoveTitle says "Remove the worktree of “{name}” too?"
+// in the language of msgs.
+func (msgs Messages) WorktreeRemoveTitle(name string) string {
+	return Catalog.Format(msgs.locale, "worktreeRemoveTitle", map[string]any{"name": name})
+}
+
+// WorktreeRemoveMerged says "Its folder {path} goes, and its branch {branch}, which is merged."
+// in the language the app shows.
+func WorktreeRemoveMerged(path string, branch string) string {
+	return In(i18n.Locale()).WorktreeRemoveMerged(path, branch)
+}
+
+// WorktreeRemoveMerged says "Its folder {path} goes, and its branch {branch}, which is merged."
+// in the language of msgs.
+func (msgs Messages) WorktreeRemoveMerged(path string, branch string) string {
+	return Catalog.Format(msgs.locale, "worktreeRemoveMerged", map[string]any{"path": path, "branch": branch})
+}
+
+// WorktreeRemoveUnmerged says "Its folder {path} goes. Its branch {branch} stays, with its commits."
+// in the language the app shows.
+func WorktreeRemoveUnmerged(path string, branch string) string {
+	return In(i18n.Locale()).WorktreeRemoveUnmerged(path, branch)
+}
+
+// WorktreeRemoveUnmerged says "Its folder {path} goes. Its branch {branch} stays, with its commits."
+// in the language of msgs.
+func (msgs Messages) WorktreeRemoveUnmerged(path string, branch string) string {
+	return Catalog.Format(msgs.locale, "worktreeRemoveUnmerged", map[string]any{"path": path, "branch": branch})
+}
+
+// WorktreeRemoveDirty says "{count, plural, one {# changed file} other {# changed files}} in {path} will be lost. Its branch {branch} stays, with…"
+// in the language the app shows.
+func WorktreeRemoveDirty(count int, path string, branch string) string {
+	return In(i18n.Locale()).WorktreeRemoveDirty(count, path, branch)
+}
+
+// WorktreeRemoveDirty says "{count, plural, one {# changed file} other {# changed files}} in {path} will be lost. Its branch {branch} stays, with…"
+// in the language of msgs.
+func (msgs Messages) WorktreeRemoveDirty(count int, path string, branch string) string {
+	return Catalog.Format(msgs.locale, "worktreeRemoveDirty", map[string]any{"count": count, "path": path, "branch": branch})
+}
+
+// WorktreeRemove says "Remove Worktree"
+// in the language the app shows.
+func WorktreeRemove() string { return In(i18n.Locale()).WorktreeRemove() }
+
+// WorktreeRemove says "Remove Worktree"
+// in the language of msgs.
+func (msgs Messages) WorktreeRemove() string {
+	return Catalog.Format(msgs.locale, "worktreeRemove", nil)
+}
+
+// WorktreeKeep says "Keep Worktree"
+// in the language the app shows.
+func WorktreeKeep() string { return In(i18n.Locale()).WorktreeKeep() }
+
+// WorktreeKeep says "Keep Worktree"
+// in the language of msgs.
+func (msgs Messages) WorktreeKeep() string {
+	return Catalog.Format(msgs.locale, "worktreeKeep", nil)
+}
+
+// WorktreeRemoveAnyway says "Remove Anyway"
+// in the language the app shows.
+func WorktreeRemoveAnyway() string { return In(i18n.Locale()).WorktreeRemoveAnyway() }
+
+// WorktreeRemoveAnyway says "Remove Anyway"
+// in the language of msgs.
+func (msgs Messages) WorktreeRemoveAnyway() string {
+	return Catalog.Format(msgs.locale, "worktreeRemoveAnyway", nil)
+}
+
+// SetSessionHistory says "Session history"
+// in the language the app shows.
+func SetSessionHistory() string { return In(i18n.Locale()).SetSessionHistory() }
+
+// SetSessionHistory says "Session history"
+// in the language of msgs.
+func (msgs Messages) SetSessionHistory() string {
+	return Catalog.Format(msgs.locale, "setSessionHistory", nil)
+}
+
+// SetSessionHistoryDetail says "List the coding agents' ended conversations in the sidebar, to resume them later or archive them."
+// in the language the app shows.
+func SetSessionHistoryDetail() string { return In(i18n.Locale()).SetSessionHistoryDetail() }
+
+// SetSessionHistoryDetail says "List the coding agents' ended conversations in the sidebar, to resume them later or archive them."
+// in the language of msgs.
+func (msgs Messages) SetSessionHistoryDetail() string {
+	return Catalog.Format(msgs.locale, "setSessionHistoryDetail", nil)
+}
+
+// EndedTitle says "Ended"
+// in the language the app shows.
+func EndedTitle() string { return In(i18n.Locale()).EndedTitle() }
+
+// EndedTitle says "Ended"
+// in the language of msgs.
+func (msgs Messages) EndedTitle() string {
+	return Catalog.Format(msgs.locale, "endedTitle", nil)
+}
+
+// EndedArchived says "Archived"
+// in the language the app shows.
+func EndedArchived() string { return In(i18n.Locale()).EndedArchived() }
+
+// EndedArchived says "Archived"
+// in the language of msgs.
+func (msgs Messages) EndedArchived() string {
+	return Catalog.Format(msgs.locale, "endedArchived", nil)
+}
+
+// EndedArchive says "Archive"
+// in the language the app shows.
+func EndedArchive() string { return In(i18n.Locale()).EndedArchive() }
+
+// EndedArchive says "Archive"
+// in the language of msgs.
+func (msgs Messages) EndedArchive() string {
+	return Catalog.Format(msgs.locale, "endedArchive", nil)
+}
+
+// EndedShowAll says "Show all {n}"
+// in the language the app shows.
+func EndedShowAll(n int) string { return In(i18n.Locale()).EndedShowAll(n) }
+
+// EndedShowAll says "Show all {n}"
+// in the language of msgs.
+func (msgs Messages) EndedShowAll(n int) string {
+	return Catalog.Format(msgs.locale, "endedShowAll", map[string]any{"n": n})
+}
+
+// EndedResume says "Resume"
+// in the language the app shows.
+func EndedResume() string { return In(i18n.Locale()).EndedResume() }
+
+// EndedResume says "Resume"
+// in the language of msgs.
+func (msgs Messages) EndedResume() string {
+	return Catalog.Format(msgs.locale, "endedResume", nil)
+}
+
+// EndedRestore says "Restore"
+// in the language the app shows.
+func EndedRestore() string { return In(i18n.Locale()).EndedRestore() }
+
+// EndedRestore says "Restore"
+// in the language of msgs.
+func (msgs Messages) EndedRestore() string {
+	return Catalog.Format(msgs.locale, "endedRestore", nil)
+}
+
+// EndedDelete says "Delete"
+// in the language the app shows.
+func EndedDelete() string { return In(i18n.Locale()).EndedDelete() }
+
+// EndedDelete says "Delete"
+// in the language of msgs.
+func (msgs Messages) EndedDelete() string {
+	return Catalog.Format(msgs.locale, "endedDelete", nil)
+}
+
+// EndedArchiveAll says "Archive All"
+// in the language the app shows.
+func EndedArchiveAll() string { return In(i18n.Locale()).EndedArchiveAll() }
+
+// EndedArchiveAll says "Archive All"
+// in the language of msgs.
+func (msgs Messages) EndedArchiveAll() string {
+	return Catalog.Format(msgs.locale, "endedArchiveAll", nil)
+}
+
+// EndedDeleteAll says "Delete All…"
+// in the language the app shows.
+func EndedDeleteAll() string { return In(i18n.Locale()).EndedDeleteAll() }
+
+// EndedDeleteAll says "Delete All…"
+// in the language of msgs.
+func (msgs Messages) EndedDeleteAll() string {
+	return Catalog.Format(msgs.locale, "endedDeleteAll", nil)
+}
+
+// EndedDeleteAllTitle says "Delete {n} archived conversations?"
+// in the language the app shows.
+func EndedDeleteAllTitle(n int) string { return In(i18n.Locale()).EndedDeleteAllTitle(n) }
+
+// EndedDeleteAllTitle says "Delete {n} archived conversations?"
+// in the language of msgs.
+func (msgs Messages) EndedDeleteAllTitle(n int) string {
+	return Catalog.Format(msgs.locale, "endedDeleteAllTitle", map[string]any{"n": n})
+}
+
+// EndedDeleteAllDetail says "Kero forgets them; each agent keeps its own history of the conversation."
+// in the language the app shows.
+func EndedDeleteAllDetail() string { return In(i18n.Locale()).EndedDeleteAllDetail() }
+
+// EndedDeleteAllDetail says "Kero forgets them; each agent keeps its own history of the conversation."
+// in the language of msgs.
+func (msgs Messages) EndedDeleteAllDetail() string {
+	return Catalog.Format(msgs.locale, "endedDeleteAllDetail", nil)
+}
+
+// EndedSetUpSkill says "Set up Kero's skill for your agents to list their ended conversations here"
+// in the language the app shows.
+func EndedSetUpSkill() string { return In(i18n.Locale()).EndedSetUpSkill() }
+
+// EndedSetUpSkill says "Set up Kero's skill for your agents to list their ended conversations here"
+// in the language of msgs.
+func (msgs Messages) EndedSetUpSkill() string {
+	return Catalog.Format(msgs.locale, "endedSetUpSkill", nil)
 }

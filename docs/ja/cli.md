@@ -28,6 +28,7 @@ kero split --url localhost:3000  # ページを表示するブラウザペイン
 kero rename api backend          # セッション名を変更
 kero focus backend               # アプリで表示
 kero close backend               # セッションを終える（ペインを指定するとそのペイン）
+kero close fix-login --remove-worktree   # 専用のワークツリーも削除する
 kero restart <pane>              # 終了したペインのシェルを再び開始
 ```
 
@@ -41,6 +42,8 @@ kero restart <pane>              # 終了したペインのシェルを再び開
 | `-f`, `--focus`             | アプリで表示する                                |
 | `-w`, `--wait`              | コマンドの終了を待ち、その終了ステータスで終了する |
 | `-u`, `--url <url>`         | シェルの代わりに、ページを表示するブラウザを開く |
+| `--worktree <branch>`       | 専用の git ワークツリーで、新しいブランチで開始する（[詳しく](./changes.md#sessions-in-their-own-worktree)） |
+| `--base <ref>`              | ワークツリーのブランチの起点（既定: デフォルトブランチ） |
 
 ## 入力と読み取り
 
@@ -153,6 +156,18 @@ kero browser eval 'document.title'
 クリックと入力は本物のマウスとキーボードと同じイベントを送るので、React などのフレームワークで作られたページもそれを受け取ります。スクリーンショットにはペインが画面に表示されている必要があります: 先に `kero focus` で表示してください。それ以外は、表示されているかどうかにかかわらず、どのブラウザペインでも動きます。
 
 `kero do` と同じく、`kero browser` には **設定 › エージェント** のリモート操作と、アプリが開いていることが必要です。
+
+## 過去の会話
+
+```sh
+kero history                     # ペインで動いたエージェントの会話を、最後に動いたものから順に
+kero history -p kero -n 50       # ひとつのプロジェクトの会話を、最大 50 件
+kero history login --json        # 「login」に一致するものを JSON で
+kero resume 13b9                 # 再開する: ID、その先頭部分、または名前で
+kero resume fix-login -f         # 再開して、アプリに表示する
+```
+
+`kero resume` は、その会話を再開するセッションを会話のディレクトリとプロジェクトで開始し、セッションの ID を表示します。まだペインで動いている会話なら、そのセッションを返します。[過去の会話](./sessions.md#past-conversations)を参照してください。
 
 ## 状態
 

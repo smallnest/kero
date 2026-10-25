@@ -194,11 +194,11 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 			if set != "" {
 				a.defer_(func() { a.showSide(set) })
 			}
-			if dir := a.sideDir(s); dir != "" {
+			if dir := a.sideDir(s, view); dir != "" {
 				ui.Text(c, a.hostOf(s.ID).shortDir(dir)).FontSize(13).TextColor(pal.textFaint).SingleLine().Ellipsis("…").Shrink(2).MinWidth(0).Tooltip(dir)
 			}
 			ui.Box(c.Key("drag")).Grow(1).AlignSelf(ui.Stretch).DragWindow()
-			iconButton(c, "close-side", closeIcon, a.tip(locales.SideClose(), "side.toggle"), pal, func() { a.defer_(func() { a.toggleSide("") }) })
+			iconButton(c, "close-side", closeIcon, a.tip(locales.SideClose(), "changes.toggle"), pal, func() { a.defer_(func() { a.toggleSide(a.prefs.Side) }) })
 			if right {
 				windowControls(c, pal, a.win)
 			}
@@ -243,8 +243,8 @@ func (a *App) sideTab(c *ui.Context, pal *palette, id, label string, svg *ui.SVG
 
 // sideDir is the folder a view names in the header: the worktree the
 // Changes view lists, or the folder the Files view shows.
-func (a *App) sideDir(s *proto.Session) string {
-	if a.sideView() == sideFiles {
+func (a *App) sideDir(s *proto.Session, view string) string {
+	if view == sideFiles {
 		if _, root := a.filesRoot(s); root != "" {
 			return root
 		}

@@ -71,6 +71,7 @@ type Daemon struct {
 	// panes answer programs' questions about the colors with.
 	theme    atomic.Pointer[terminal.Theme]
 	git      *gitFollow
+	convs    convStore
 	net      *listeners
 	changeCh chan struct{}
 	saveCh   chan struct{}
@@ -163,6 +164,7 @@ func Run(opts Options) error {
 	// The listeners first: Tailscale Serve's socket takes a umask of its
 	// own, which no program kerod starts may get.
 	d.net = d.listen()
+	d.loadConversations()
 	d.restore()
 
 	signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE)
@@ -174,6 +176,7 @@ func Run(opts Options) error {
 		lg.Printf("%v: saving and exiting", s)
 		d.saveHistories(true)
 		d.saveState()
+		d.saveConversations()
 		d.stop()
 	}()
 

@@ -9,7 +9,7 @@ Install Kero, open a project, and run your first agent in a session that keeps g
 
 ## Install
 
-Download the latest Kero from the [releases page](https://github.com/smallnest/kero/releases). On macOS, drag **Kero.app** into your Applications folder; on Windows, run the **Kero Setup** installer, which needs no administrator rights.
+Download the latest Kero from the [releases page](https://github.com/egoist/kero/releases). On macOS, drag **Kero.app** into your Applications folder; on Windows, run the **Kero Setup** installer, which needs no administrator rights.
 
 On Windows, sessions run in PowerShell 7 when it is installed, else Windows PowerShell; choose another shell, such as `cmd` or Git Bash's `bash`, in **Settings › Shell**. Kero needs Windows 10 1809 or later, for its pseudo consoles.
 

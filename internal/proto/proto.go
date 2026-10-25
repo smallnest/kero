@@ -136,9 +136,16 @@ type State struct {
 	Projects []Project `json:"projects"`
 	Sessions []Session `json:"sessions"`
 	// Viewed is the session a client shows in a focused window.
-	Viewed  string         `json:"viewed,omitempty"`
-	Started int64          `json:"started"` // unix ms, the daemon's start
-	Ended   []EndedSession `json:"ended,omitempty"`
+	Viewed  string `json:"viewed,omitempty"`
+	Started int64  `json:"started"` // unix ms, the daemon's start
+	// Conversations counts the changes to the conversations kerod
+	// remembers that show in the sidebar, for the app to ask for them
+	// anew (the conversations method) rather than have them in every
+	// state.
+	Conversations uint64 `json:"conversations,omitempty"`
+	// Ended are the agent sessions that ended, for the sidebar to offer
+	// to resume (kero fork).
+	Ended []EndedSession `json:"ended,omitempty"`
 }
 
 // Project groups sessions, usually those of one repository.
@@ -253,6 +260,45 @@ type AgentSession struct {
 	ID    string `json:"id"`
 }
 
+// Conversation is a coding agent's conversation that ran in one of
+// kerod's panes, as kerod remembers it after the pane is gone, to resume
+// (kero history, kero resume).
+type Conversation struct {
+	Agent string `json:"agent"` // as AgentSession's
+	ID    string `json:"id"`
+	Dir   string `json:"dir,omitempty"` // where the agent worked
+	// Project is the project of the session it ran in, Name that
+	// session's name, the user's or an agent's, and Title what the
+	// agent titled the conversation.
+	Project string `json:"project,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Started int64  `json:"started"` // unix ms
+	Updated int64  `json:"updated"` // when it last ran
+	// Session and Pane run it now; "" when none does.
+	Session string `json:"session,omitempty"`
+	Pane    string `json:"pane,omitempty"`
+	// Archived: the user moved it to the sidebar's Archived, until it
+	// runs again.
+	Archived bool `json:"archived,omitempty"`
+}
+
+// Label is what to call a conversation: its session's name, else its
+// title, else its directory's name.
+func (c *Conversation) Label() string {
+	switch {
+	case c.Name != "":
+		return c.Name
+	case c.Title != "":
+		return c.Title
+	case c.Dir != "":
+		return DirName(c.Dir)
+	}
+	return c.Agent
+}
+
+// EndedSession is a coding agent's session that ran in one of kerod's
+// panes, as kerod remembers it after the pane is gone.
 type EndedSession struct {
 	AgentSession
 	Dir      string `json:"dir"`
@@ -261,6 +307,9 @@ type EndedSession struct {
 	EndedAt  int64  `json:"endedAt"`
 	Archived bool   `json:"archived,omitempty"`
 }
+
+// AgentNames are the coding agents' names as they show them.
+var AgentNames = map[string]string{"claude": "Claude Code", "codex": "Codex", "pi": "Pi", "opencode": "OpenCode"}
 
 // Session is a row of the sidebar: one task, with its terminals, its
 // panes, side by side. Its Pane fields are those of its lead pane, the
@@ -282,6 +331,32 @@ type Session struct {
 	Lead   string `json:"lead,omitempty"`
 	Focus  string `json:"focus,omitempty"`
 	Zoomed string `json:"zoomed,omitempty"`
+	// Worktree is the linked git worktree kero made for the session to
+	// work in, nil for none.
+	Worktree *Worktree `json:"worktree,omitempty"`
+}
+
+// Worktree is a linked git worktree kero made for a session: Path checks
+// out Branch, which started from Base, in the repository whose main
+// checkout is Main.
+type Worktree struct {
+	Path   string `json:"path"`
+	Branch string `json:"branch"`
+	Base   string `json:"base,omitempty"`
+	Main   string `json:"main"`
+}
+
+// Losses writes what removing the worktree would lose, in English, as
+// "3 files changed"; "" for nothing. Its branch stays unless merged, and
+// keeps its commits.
+func (wc *WorktreeCheck) Losses() string {
+	switch {
+	case wc.Files == 1:
+		return "1 file changed"
+	case wc.Files > 1:
+		return fmt.Sprintf("%d files changed", wc.Files)
+	}
+	return ""
 }
 
 // PaneByID returns a pane of the session, or nil.
@@ -507,6 +582,8 @@ func DirName(dir string) string {
 	return dir
 }
 
+// ProgramTitle is a pane title a program set, or "" for one that is
+// only a path.
 func ProgramTitle(t string) string {
 	if t = CleanTitle(t); !looksLikePath(t) {
 		return t
@@ -680,9 +757,34 @@ type (
 		After string `json:"after,omitempty"` // put it after this session
 		Cols  int    `json:"cols,omitempty"`
 		Rows  int    `json:"rows,omitempty"`
+		// Worktree starts the session in a linked git worktree of its own
+		// of Dir's repository, on a new branch of this name from Base: the
+		// repository's default branch when "", "HEAD" for Dir's. An
+		// existing branch no worktree has is checked out as it is.
+		Worktree string `json:"worktree,omitempty"`
+		Base     string `json:"base,omitempty"`
 	}
 	IDParams struct {
 		ID string `json:"id"`
+	}
+	// CloseParams closes a session; RemoveWorktree removes the worktree
+	// kero made for it too, unless another session works in it, and
+	// unless changes it would lose (WorktreeCheck.Files) need Force.
+	CloseParams struct {
+		ID             string `json:"id"`
+		RemoveWorktree bool   `json:"removeWorktree,omitempty"`
+		Force          bool   `json:"force,omitempty"`
+	}
+	// WorktreeCheck is what removing a session's worktree would lose:
+	// Files changed, untracked ones too, and Unpushed commits on neither
+	// its base nor a remote. Merged: its base has its branch, which goes
+	// with it. Shared: another session works in it, which keeps it.
+	WorktreeCheck struct {
+		Worktree
+		Files    int  `json:"files"`
+		Unpushed int  `json:"unpushed"`
+		Merged   bool `json:"merged"`
+		Shared   bool `json:"shared"`
 	}
 	RenameParams struct {
 		ID   string `json:"id"`
@@ -812,6 +914,17 @@ type (
 		Agent   string `json:"agent"`
 		Session string `json:"session"`
 		Dir     string `json:"dir,omitempty"` // the agent's, to tell its pane by
+	}
+	// ConversationParams names a conversation (Conversation), to resume
+	// in a session after After, of Cols and Rows, to forget, or to
+	// archive or not, as Archived.
+	ConversationParams struct {
+		Agent    string `json:"agent"`
+		ID       string `json:"id"`
+		After    string `json:"after,omitempty"`
+		Cols     int    `json:"cols,omitempty"`
+		Rows     int    `json:"rows,omitempty"`
+		Archived bool   `json:"archived,omitempty"`
 	}
 	// AgentSessionResult is the pane told of, and its session; Away: the
 	// agent runs under none of kero's shells, and so do its commands.

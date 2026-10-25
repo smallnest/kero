@@ -346,6 +346,10 @@ func (s *pane) tick(now time.Time) bool {
 		s.progress = ""
 		title := s.lastTitle
 		s.lastTitle = ""
+		// The conversations store hears of it, as the pane's agent ends.
+		if s.info.AgentSession != nil {
+			s.d.noteEnded(s)
+		}
 		if s.info.AgentSession != nil {
 			a, dir := s.agentLocked()
 			s.info.AgentSession = nil
@@ -763,6 +767,8 @@ func (s *pane) close() {
 	clients := s.clients
 	s.clients = map[*attachment]struct{}{}
 	s.mu.Unlock()
+	// The conversations store hears of it, as its pane closes.
+	s.d.noteEnded(s)
 	for c := range clients {
 		c.send(proto.FrameClosed, nil)
 		c.finish()

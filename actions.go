@@ -94,11 +94,10 @@ func (a *App) run(id string, args map[string]string) {
 	case "sidebar.toggle":
 		a.toggleSidebar()
 	case "side.toggle":
-		a.toggleSide("")
-	case "changes.toggle":
+		a.toggleSide(a.prefs.Side)
+	case "changes.toggle", "files.toggle":
+		// This fork has no Files view: both open Changes, and close it.
 		a.toggleSide(sideChanges)
-	case "files.toggle":
-		a.toggleSide(sideFiles)
 	case "pet.toggle":
 		a.set.Pet = !a.set.Pet
 		a.applySettings(a.set)
