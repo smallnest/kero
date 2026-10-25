@@ -47,6 +47,7 @@ kero config check             # report unknown keys and bad values
 | `confirm-close`         | `true`    | Ask before closing a pane that a program is running in        |
 | `restore-sessions`      | `true`    | Start sessions again after kerod restarts, as after a reboot  |
 | `resume-agents`         | `true`    | As sessions start again, resume the conversation of the agent each pane ran |
+| `quit-ends-sessions`    | `false`   | Quitting, as with the close button, ⌘Q or the menu, ends this machine's sessions and their programs, and stops kerod, as Quit and End All Sessions does; it asks first, as `confirm-close` says, while a program runs. Other machines' sessions keep running ([more](./sessions.md#quitting)) |
 | `session-history`       | `false`   | List the agents' ended conversations in the sidebar, to resume or archive ([more](./sessions.md#ended-sessions)) |
 | `macos-show-app-icon`   | `dock-and-menubar` | Where Kero's icon shows on macOS: `dock-and-menubar`, `dock` or `menubar`. While it's in the menu bar, closing the window keeps Kero running there. Windows and Linux always show it in the notification area, where closing the window does the same |
 
@@ -58,6 +59,10 @@ kero config check             # report unknown keys and bad values
 | `language`           | `system` | The app's language: `system`, `en`, `ja` or `zh-Hans`           |
 | `background`         | `petal`  | The window's wash: `petal`, `mist`, `meadow`, `dusk` or `plain` |
 | `window-translucent` | `true`   | Let the desktop show through the window                         |
+| `window-opacity`     | `0.82`   | How much of the window's background the wash covers while translucent, 0 to 1 |
+| `window-blur`        | `true`   | Blur the desktop behind the translucent background; off is plain transparency |
+| `pet`                | `true`   | Kero the frog, who follows your sessions from the window's top edge |
+| `pet-offset`         | `0.5`    | Where Kero stands, 0 to 1 across the window; drag it there       |
 
 ## Terminal
 

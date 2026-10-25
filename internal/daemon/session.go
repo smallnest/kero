@@ -64,10 +64,11 @@ type pane struct {
 	// programs' status reports (OSC 7501), by id, and reported tells that
 	// one came; progress is the last OSC 9;4 after "9;", as "4;1;40",
 	// which only agents' rules read.
-	osc      oscScanner
-	records  map[string]proto.Record
-	reported bool
-	progress string
+	osc       oscScanner
+	records   map[string]proto.Record
+	reported  bool
+	progress  string
+	lastTitle string
 	// awaiting tells that the command the pane started with runs, whose
 	// end its shell will tell (OSC 133;D, see shellArgs).
 	awaiting bool
@@ -111,7 +112,8 @@ func (h *headless) Close() error {
 func newPane(d *Daemon, sid string, info proto.Pane) (*pane, error) {
 	s := &pane{d: d, sid: sid, info: info, clients: map[*attachment]struct{}{}, changed: make(chan struct{})}
 	s.info.Progress = -1
-	if s.info.Browser() {
+	// A browser's pane and a file's have no terminal of their own.
+	if s.info.Shown() {
 		return s, nil
 	}
 	if s.info.Cols <= 0 || s.info.Rows <= 0 {
@@ -205,6 +207,11 @@ func (s *pane) output(p []byte) {
 		return
 	}
 	before := s.info.Status
+	if s.term == nil {
+		// A browser's pane and a file's have no cells to feed.
+		s.mu.Unlock()
+		return
+	}
 	s.osc.scan(p, s.handleOSC, s.fullReset)
 	s.term.Feed(p)
 	s.dirty = true
@@ -222,6 +229,9 @@ func (s *pane) onTitle(title string) {
 	// s.mu is held (see session.mu).
 	if s.info.Title != title {
 		s.info.Title = title
+		if t := proto.ProgramTitle(title); t != "" {
+			s.lastTitle = t
+		}
 		s.looked = false
 		s.d.changed()
 	}
@@ -334,10 +344,16 @@ func (s *pane) tick(now time.Time) bool {
 		// session is no more to resume.
 		s.dropLive()
 		s.progress = ""
+		title := s.lastTitle
+		s.lastTitle = ""
+		// The conversations store hears of it, as the pane's agent ends.
 		if s.info.AgentSession != nil {
 			s.d.noteEnded(s)
+		}
+		if s.info.AgentSession != nil {
+			a, dir := s.agentLocked()
 			s.info.AgentSession = nil
-			s.d.save()
+			go s.d.agentExited(s, a, dir, title)
 		}
 	}
 	if proc != s.info.Process || agent != s.info.Agent || runtime != s.info.Runtime {
@@ -441,6 +457,9 @@ func (s *pane) look(now time.Time) bool {
 // screen returns the text of the screen: the last rows of the terminal's
 // text; s.mu is held.
 func (s *pane) screen() string {
+	if s.term == nil {
+		return ""
+	}
 	text := strings.TrimRight(s.term.Text(), "\n")
 	lines := strings.Split(text, "\n")
 	return strings.Join(lines[max(0, len(lines)-s.info.Rows):], "\n") + "\n"
@@ -702,8 +721,10 @@ func (s *pane) exited(proc *ptyProc) {
 		return
 	}
 	msg := fmt.Sprintf("\r\n\x1b[0;2m[Process exited with code %d]\x1b[0m", code)
-	s.term.Feed([]byte(msg))
-	s.frame()
+	if s.term != nil {
+		s.term.Feed([]byte(msg))
+		s.frame()
+	}
 	s.setStatus(proto.Exited)
 	if !s.viewed() {
 		s.info.Unread = true
@@ -740,13 +761,14 @@ func (s *pane) close() {
 		return
 	}
 	s.closed = true
-	s.d.noteEnded(s)
 	close(s.changed) // wakes those waiting on it
 	s.changed = make(chan struct{})
 	proc := s.proc
 	clients := s.clients
 	s.clients = map[*attachment]struct{}{}
 	s.mu.Unlock()
+	// The conversations store hears of it, as its pane closes.
+	s.d.noteEnded(s)
 	for c := range clients {
 		c.send(proto.FrameClosed, nil)
 		c.finish()

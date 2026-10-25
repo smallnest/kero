@@ -64,29 +64,19 @@ kero daemon restart      # restart it (sessions start again)
 kero daemon stop         # stop it and end every session
 ```
 
-## Past conversations
+### Quitting
 
-Kero remembers the conversations of Claude Code, Codex, Pi and OpenCode that ran in its panes, once [Kero's skill](./agents.md#install-the-skill) is set up for the agent, so you can pick one up after its session is closed.
+Quitting Kero keeps the sessions running, so that opening it again shows them, as they were. To have quitting end them, as **Quit and End All Sessions** does, set `quit-ends-sessions = true`. Then every quit ends this machine's sessions and their programs, and stops kerod. This applies to the close button, ⌘Q and the menu. Kero asks first while a program runs, as `confirm-close` says. Sessions on other machines keep running.
 
-- <kbd>⌘</kbd> <kbd>P</kbd> lists the last few under **Recent Conversations**, and finds older ones as you type.
-- **Session › Resume Conversation…** (<kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd>) lists them all.
-
-Picking one starts a session in the directory and project it ran in, under the name its session had, and resumes it as the agent's own resume option would. A conversation a pane still runs takes you to that pane instead. Each conversation shows by its session's name, else by its title: Claude Code's own, or what the agent showed as the pane's title.
-
-kerod keeps the last 200, in `conversations.json` beside its state, and each host keeps its own.
-
-```sh
-kero history             # the conversations, the last to run first
-kero history login       # those matching "login"
-kero resume 13b9         # resume one by its id, a prefix of it, or its name
+```ini
+quit-ends-sessions = true
 ```
 
-<a id="ended-sessions"></a>
+### Ended sessions
 
-### In the sidebar
+Turn on Settings › General › **Session history**, or `session-history = true`, to list the conversations no pane runs now at the bottom of the sidebar. A conversation leaves the list [when it runs again](#past-conversations), from any of the places that resume it. **Ended** shows the five newest. Click its header to unfold it, or **Show all** to list them all. Ended keeps the last 50 of each host. The conversations of your other hosts are among them, tagged with the host name.
 
-Turn on Settings › General › **Session history**, or `session-history = true`, to list them at the bottom of the sidebar too. **Ended** has the conversations no pane runs now, newest first: the five newest, then **Show all**. Those of your other hosts are among them, tagged with the host's name. Click its header to unfold it.
-
-- Click one to resume it, as the palette does.
-- Hover one and click the archive button to move it to **Archived**, below, where it can still be resumed. It leaves Archived when it runs again.
-- Right-click one to resume, archive or restore it, copy its id or folder, show the folder, or delete it, which only Kero forgets. Right-click **Ended** to archive them all, or **Archived** to delete them all.
+- Click one to start a session in its folder and project, under its session name, that resumes the conversation, as the palette does.
+- Hover over a conversation and click the archive button. The conversation moves to **Archived**.
+- Right-click a conversation to resume, archive, or forget it. You can also copy its id or folder, or show its folder.
+- Right-click **Ended** to archive them all, or **Archived** to forget them all. Forgetting a conversation only removes it from Kero. The agent keeps its own files.

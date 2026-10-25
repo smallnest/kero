@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/ui"
 
@@ -679,5 +680,38 @@ func TestAdListToggles(t *testing.T) {
 	tt.Frame()
 	if tt.HasText("EasyPrivacy") {
 		t.Error("the lists show while Block ads is off")
+	}
+}
+
+// A material only shows when the window is translucent and blurred.
+func TestVibrancyFor(t *testing.T) {
+	for _, c := range []struct {
+		vibrancy, blur bool
+		want           mygo.Vibrancy
+	}{
+		{true, true, mygo.VibrancySidebar},
+		{true, false, mygo.VibrancyNone},
+		{false, true, mygo.VibrancyNone},
+		{false, false, mygo.VibrancyNone},
+	} {
+		s := settings.Default()
+		s.Vibrancy, s.WindowBlur = c.vibrancy, c.blur
+		if got := vibrancyFor(s); got != c.want {
+			t.Errorf("translucent %v, blurred %v: %q, want %q", c.vibrancy, c.blur, got, c.want)
+		}
+	}
+}
+
+// With blur off, the wash is plain transparency, not opaque.
+func TestBlurlessBackgroundIsTranslucent(t *testing.T) {
+	// The wash's alpha in the sidebar, below its nav and above its tip.
+	a := testApp(t)
+	a.set.Vibrancy, a.set.WindowBlur = true, false
+	tt := ui.NewTester(a.view, 1100, 640)
+	tt.Frame()
+	for _, p := range [][2]int{{8, 300}, {8, 600}} {
+		if c := tt.Image().RGBAAt(p[0], p[1]); c.A >= 255 {
+			t.Errorf("the wash at %v is %v", p, c)
+		}
 	}
 }

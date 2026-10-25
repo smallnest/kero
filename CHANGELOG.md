@@ -1,25 +1,115 @@
 # Changelog
 
-## 2.1.19
+This is smallnest's fork of Kero. A fork release takes a number above
+upstream's, so it never takes an upstream tag's number; the notes of the
+upstream releases it includes follow its own.
 
-- **Session › New Session in Worktree…** (⌘⌥T) starts a session on a
-  new branch in a git worktree of its own, so agents working side by
-  side don't trip over each other's changes. Closing the session offers
-  to remove the worktree. `kero new --worktree <branch>` does the same
-  from the command line.
-- Kero remembers the conversations of Claude Code, Codex, Pi and
-  OpenCode that ran in its panes, so you can resume one after its
-  session is closed: ⌘P lists recent ones, and **Session › Resume
-  Conversation…** (⌘⇧O) lists them all. Turn on Settings › General ›
-  **Session history** to list them at the bottom of the sidebar too,
-  under **Ended** and **Archived**. `kero history` and `kero resume` do
-  the same from the command line. Thanks @ak4duy
-- Drop folders onto the sidebar to open them as projects. Thanks
-  @p1xelll
-- Dragging the sidebar's empty space moves the window, as the top bar
-  does. Thanks @jamdaniels for the request
+## Unreleased (smallnest/kero)
+
+- A **quick terminal** drops down from the top of the screen over any
+  app, as Ghostty's does. Give it a shortcut in **Settings › Keyboard**,
+  which works in every app, or bind it in the configuration file. It
+  keeps a session of its own while it is hidden.
+- **Background blur** off now leaves the background translucent, as the
+  setting says: it used to make the window opaque.
+
+## 2.1.20 (smallnest/kero)
+
+- This release has everything upstream's 2.1.19 has, whose notes
+  follow. The **Ended** section of the sidebar now lists the
+  conversations that this 2.1.19 records, so it works for every
+  conversation, on every host, and a conversation leaves the list when
+  it runs again.
+- **Quitting Kero** can end this computer's sessions and their programs,
+  and stop kerod, as **Quit and End All Sessions** does: set
+  `quit-ends-sessions = true`. It asks first while a program runs.
+- The window takes a **window-opacity** and a **window-blur** setting:
+  how much the background wash covers, 0 to 1, and whether the desktop
+  behind it is blurred.
+- **Kero the frog** stays in the window, and follows your sessions.
+  `pet = false` hides it, and `pet-offset` sets where it stands.
+- The sidebar groups sessions by project, with an icon for each, and
+  sorts them by date or by name, or in the order you drag them to.
+- The side panel has a **Files** view and a **Changes** view. ⇧⌘E shows
+  or hides the panel, and ⌥⌘F goes to Files.
+- The question that **Quit and End All Sessions** asks takes a click or
+  Escape, and **Cancel** closes it.
+- Chinese text keeps its monospaced font on Windows. Upstream took this
+  fix out of 2.1.19; this fork keeps it.
+- The window has more strings in Japanese.
+- Updates come from this fork's releases again, and they take their key
+  from this fork.
+
+## 2.1.19 (smallnest/kero)
+
+- **Session history**, off until you turn it on in **Settings › General**,
+  or with `session-history = true`: when Claude Code, Codex, Pi or OpenCode
+  ends, Kero keeps its conversation, in an **Ended** section at the bottom
+  of the sidebar. A click on one starts a session in its folder that
+  resumes the conversation; **Archived**, below it, holds the ones you put
+  aside. Kero keeps the last 50 of each, from every host, and the
+  section's menus resume, archive, restore, copy or delete them. Ended
+  sessions of this host come with the next update of kerod. Thanks
+  @ak4duy
+- Kero the frog has the colors of the icon's frog.
+- The question that **Quit and End All Sessions** asks no longer takes
+  Return, which a program may be reading: it takes a click or Escape, and
+  **Cancel** closes it.
+- The window has settings in Japanese.
 
 ## 2.1.18
+
+- A row above the tree of the **Files** view picks what a click on a
+  file does: show it under the tree, open it in a file pane with Kero's
+  editor and its syntax highlighting, or open it in the host's editor.
+  Kero keeps the choice.
+- This release also has what upstream's 2.1.18 has, whose notes
+  follow, credited to those who reported it.
+- This release takes in upstream's 2.1.15 to 2.1.17, whose notes follow:
+  Kero's icon in the menu bar and the menu it opens, `kero events`, the
+  browser's snapshots and saved cookies, programs that can ask for the
+  microphone and the camera, and Japanese.
+
+## 2.1.14 (smallnest/kero)
+
+- The side panel has a **Files** view beside **Changes**: a tree of the
+  session's folder, each file opening under it as its text, with syntax
+  highlighting, or as its image. It lists folders on the session's own
+  computer, a remote host's as easily as this one's, and hides `.git`.
+- **Open in a File Pane** shows a file of the Files view in a pane of its
+  own, in the app's editor, colored by its language. The pane comes back
+  after a restart, as a browser pane does. **Open in the Host's Editor**
+  still runs `$EDITOR` for the files an editor reads better than a view.
+- The panel's tabs switch on a click again: a click started a drag of the
+  window.
+- **View › Toggle Side Panel** (⇧⌘E, Ctrl+Shift+E on Windows and Linux)
+  opens the panel on the view you saw last, and closes it. **Toggle
+  Files** (⌥⌘F, Ctrl+Alt+F) goes straight to Files.
+
+## 2.1.13 (smallnest/kero)
+
+- Open a project by dropping a folder into the sidebar: drop one or more
+  folders on it, and Kero opens a session in each project not open yet.
+  Files, folders it cannot read and macOS app bundles are refused, and
+  folders always open on this computer, also with a remote session
+  selected. Thanks @p1xelll
+- Kero the frog sits on the window's edge: it hops when a session needs
+  you, reads along while an agent works, and dozes when all is calm.
+  Drag it along the edge, or turn it off in **Settings › Appearance**.
+- A **Sort and Group** menu in the sidebar orders sessions by when they
+  were created, and groups them by project, with a colored initial for
+  each project. Drag a project's name to reorder the sidebar, and fold a
+  project to hide its sessions.
+- **Settings › Appearance › Background opacity** goes from 0% to 100%,
+  with a blur toggle, so the window can be see-through or solid.
+- A new setting `quit-ends-sessions` ends this computer's sessions, and
+  their programs, when you quit Kero, as **Quit and End All Sessions**
+  does. Other computers' sessions keep running.
+- Remote hosts find `kero` when the path to it has a space in it, on
+  macOS and Windows, whose `sh` is bash and splits a list of paths at
+  spaces.
+
+## 2.1.18 (egoist/kero)
 
 - On a Mac, programs run in Kero can use the microphone and the camera,
   and control other apps: macOS asks first, as it does for other

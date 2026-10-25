@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/egoist/kero/blob/main/docs/index.md
+    url: https://github.com/smallnest/kero/blob/main/docs/index.md
     about: How sessions, panes, the CLI and configuration work.

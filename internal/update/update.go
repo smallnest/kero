@@ -31,10 +31,10 @@ import (
 
 // PublicKey checks Kero's releases: mygo.json's updates.publicKey, whose
 // private key signs the app's updates and the server build's archives.
-const PublicKey = "WzJsOGNIuf6mcEqo5ff8jub+NoQQOEk4JXreLPYjgyQ="
+const PublicKey = "CJGqv/HGMyORlUKh5NCvwLOb3p9Fblp1d3oj8qDMQ30="
 
 // Repo is the GitHub repository of Kero's releases.
-const Repo = "egoist/kero"
+const Repo = "smallnest/kero"
 
 // maxArchive bounds an archive's download.
 const maxArchive = 256 << 20

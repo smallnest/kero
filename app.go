@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -46,15 +47,28 @@ type prefs struct {
 	SidebarWidth  float32         `json:"sidebarWidth,omitempty"`
 	SidebarHidden bool            `json:"sidebarHidden,omitempty"`
 	Collapsed     map[string]bool `json:"collapsed,omitempty"`
-	FontSize      float32         `json:"fontSize,omitempty"`
+	// ProjectOrder is the order the user dragged projects into, by id,
+	// across every host; unlisted projects follow in the daemon's order.
+	ProjectOrder []string `json:"projectOrder,omitempty"`
+	// SidebarGroup is how the sidebar groups sessions: "" or "project",
+	// "none" or "date"; SidebarOrder is "created" or "updated".
+	SidebarGroup string  `json:"sidebarGroup,omitempty"`
+	SidebarOrder string  `json:"sidebarOrder,omitempty"`
+	FontSize     float32 `json:"fontSize,omitempty"`
 	// Side is the view the side panel shows, "" while it is hidden, and
 	// SideWidth its width.
 	Side      string  `json:"side,omitempty"`
 	SideWidth float32 `json:"sideWidth,omitempty"`
+	// FileOpen is what a click on a file of the side panel's Files view
+	// does: "preview" or "" shows it under the tree, "pane" opens it in a
+	// file pane, and "editor" in the host's editor.
+	FileOpen string `json:"fileOpen,omitempty"`
 	// EndedOpen and ArchivedOpen tell the sidebar's sections of the
 	// agents' ended conversations unfolded (session-history).
 	EndedOpen    bool `json:"endedOpen,omitempty"`
 	ArchivedOpen bool `json:"archivedOpen,omitempty"`
+	// QuickSession is the session the quick terminal shows (quick.go).
+	QuickSession string `json:"quickSession,omitempty"`
 }
 
 const (
@@ -99,6 +113,7 @@ type App struct {
 	selected   string
 	terms      map[string]*termEntry
 	webs       map[string]*webEntry // browser panes' pages, by pane
+	files      filePaneStates       // file panes' files, by pane
 	ads        adBlock              // what their pages block
 	icons      favicons             // and the icons they show
 	lru        []string
@@ -112,6 +127,7 @@ type App struct {
 	active   bool
 	focused  bool
 	statuses map[string]proto.Status // as last seen, for notifications
+	pet      petState                // Kero the frog, on the window's top edge
 	// idleTime tells how long the user has not used the machine's keyboard
 	// or mouse (mygo.Power.IdleTime), 0 when the system does not tell; nil
 	// in tests.
@@ -149,6 +165,8 @@ type App struct {
 	// spring in.
 	lastZone     dropZone
 	previewKey   string
+	projectAt    string // the project a drag last hovered, and its side
+	projectAfter bool
 	previewSince time.Time
 	previewShown bool
 	arrived      map[string]bool
@@ -159,6 +177,11 @@ type App struct {
 	from   *host
 	picker folderPicker // the folders of a host, to open a project in
 	side   sideState    // the side panel, beside a session's panes
+
+	// quitting is set while the quit quit-ends-sessions makes ends the
+	// sessions, either while it asks or once its answer does.
+	quitting bool
+	quick    quickTerm // the terminal the global shortcut drops down
 }
 
 // confirmation is a question the app asks before something it cannot undo.
@@ -169,6 +192,9 @@ type confirmation struct {
 	action  string
 	destroy bool
 	run     func()
+	// ends marks the question as one before a quit: Return may be what a
+	// program reads, so it takes a click or Escape.
+	ends bool
 	// alt is a second answer besides action and Cancel, which runs
 	// altRun; altDestroy marks it as one that destroys.
 	alt        string
@@ -296,7 +322,11 @@ func (a *App) setState(h *host, st proto.State) {
 	first, hostFirst := !a.loaded, !h.loaded
 	h.loaded = true
 	if st.Conversations != h.convGen || hostFirst {
+		// The sidebar's conversations are asked for anew, as they changed.
 		h.convGen, h.convKnown = st.Conversations, false
+		if a.set.SessionHistory {
+			a.loadHostConversations(h, st.Conversations)
+		}
 	}
 	// A divider dragged keeps the ratios it set, which the daemon hears of
 	// only once it is let go.
@@ -326,6 +356,19 @@ func (a *App) setState(h *host, st proto.State) {
 			a.dropWeb(id)
 		}
 	}
+	for id := range a.files {
+		if !live[id] {
+			delete(a.files, id)
+		}
+	}
+	if a.set.SessionHistory {
+		a.syncEnded()
+	} else {
+		for _, h := range a.hosts {
+			h.convs, h.convKnown, h.convAsked = nil, false, false
+		}
+	}
+	a.quickChanged()
 	if a.session(a.selected) == nil {
 		a.reselect()
 	} else if first || hostFirst && a.hostOf(a.selected) == h {
@@ -469,12 +512,16 @@ func (a *App) groups() []group {
 
 // hostGroups returns a host's projects, with their sessions.
 func (a *App) hostGroups(h *host) []group {
+	var projects []proto.Project
+	for _, p := range a.st.Projects {
+		if a.hostOf(p.ID) == h {
+			projects = append(projects, p)
+		}
+	}
+	a.orderProjects(projects)
 	var gs []group
 	known := map[string]bool{}
-	for _, p := range a.st.Projects {
-		if a.hostOf(p.ID) != h {
-			continue
-		}
+	for _, p := range projects {
 		known[p.ID] = true
 		g := group{host: h, project: p}
 		for i := range a.st.Sessions {
@@ -482,6 +529,7 @@ func (a *App) hostGroups(h *host) []group {
 				g.sessions = append(g.sessions, &a.st.Sessions[i])
 			}
 		}
+		a.sortSessions(g.sessions)
 		gs = append(gs, g)
 	}
 	other := group{host: h, project: proto.Project{ID: "", Name: locales.SidebarOtherProject()}}
@@ -491,9 +539,182 @@ func (a *App) hostGroups(h *host) []group {
 		}
 	}
 	if len(other.sessions) > 0 {
+		a.sortSessions(other.sessions)
 		gs = append(gs, other)
 	}
 	return gs
+}
+
+// orderProjects sorts ps as the user dragged them, by the ids in
+// ProjectOrder; projects it does not name keep the daemon's order, after
+// them.
+func (a *App) orderProjects(ps []proto.Project) {
+	if len(a.prefs.ProjectOrder) == 0 {
+		return
+	}
+	at := map[string]int{}
+	for i, id := range a.prefs.ProjectOrder {
+		if _, ok := at[id]; !ok {
+			at[id] = i
+		}
+	}
+	sort.SliceStable(ps, func(i, j int) bool {
+		ii, iok := at[ps[i].ID]
+		jj, jok := at[ps[j].ID]
+		switch {
+		case iok && jok:
+			return ii < jj
+		case iok:
+			return true
+		case jok:
+			return false
+		}
+		return false
+	})
+}
+
+// projectDrag is a project dragged by its name to another place under the
+// same host.
+type projectDrag struct {
+	host *host
+	id   string
+}
+
+// moveProject puts a project drag before or after target, under its
+// host, and keeps the order in the app's preferences.
+func (a *App) moveProject(d projectDrag, target string, after bool) {
+	if d.id == "" || target == "" || d.id == target {
+		return
+	}
+	var order []string
+	for _, g := range a.hostGroups(d.host) {
+		if g.project.ID != "" {
+			order = append(order, g.project.ID)
+		}
+	}
+	i := slices.Index(order, d.id)
+	j := slices.Index(order, target)
+	if i < 0 || j < 0 {
+		return
+	}
+	order = slices.Delete(order, i, i+1)
+	j = slices.Index(order, target)
+	if after {
+		j++
+	}
+	order = slices.Insert(order, j, d.id)
+	// Replace this host's ids in the order, leaving the other hosts' as
+	// they are: only their order among themselves matters.
+	hostIDs := map[string]bool{}
+	for _, g := range a.hostGroups(d.host) {
+		if g.project.ID != "" {
+			hostIDs[g.project.ID] = true
+		}
+	}
+	kept := a.prefs.ProjectOrder[:0]
+	for _, id := range a.prefs.ProjectOrder {
+		if !hostIDs[id] {
+			kept = append(kept, id)
+		}
+	}
+	a.prefs.ProjectOrder = append(kept, order...)
+	a.savePrefs()
+}
+
+// sortSessions orders sessions as the sidebar's Order says: the ones
+// created first, or the ones updated last.
+func (a *App) sortSessions(ss []*proto.Session) {
+	order := a.prefs.SidebarOrder
+	if order == "" {
+		order = "created"
+	}
+	sort.SliceStable(ss, func(i, j int) bool {
+		if order == "updated" {
+			return sessionUpdated(ss[i]) > sessionUpdated(ss[j])
+		}
+		return ss[i].Created < ss[j].Created
+	})
+}
+
+// sessionUpdated is when a session last did something, for the updated
+// order: its program's last write, else its status's since, else its
+// creation.
+func sessionUpdated(s *proto.Session) int64 {
+	if s.Activity > 0 {
+		return s.Activity
+	}
+	if s.Since > 0 {
+		return s.Since
+	}
+	return s.Created
+}
+
+// flatSessions are a host's sessions, ordered, for a sidebar that does
+// not group them by project.
+func (a *App) flatSessions(h *host) []*proto.Session {
+	var out []*proto.Session
+	for i := range a.st.Sessions {
+		if a.hostOf(a.st.Sessions[i].ID) == h {
+			out = append(out, &a.st.Sessions[i])
+		}
+	}
+	a.sortSessions(out)
+	return out
+}
+
+// dateGroup is sessions created on one day, for the sidebar's By Date.
+type dateGroup struct {
+	day      time.Time
+	sessions []*proto.Session
+}
+
+// dateGroups groups a host's sessions by the day they were created, the
+// newest day first, with each day's sessions in the chosen order.
+func (a *App) dateGroups(h *host) []dateGroup {
+	var all []*proto.Session
+	for i := range a.st.Sessions {
+		if a.hostOf(a.st.Sessions[i].ID) == h {
+			all = append(all, &a.st.Sessions[i])
+		}
+	}
+	sort.SliceStable(all, func(i, j int) bool { return all[i].Created > all[j].Created })
+	var gs []dateGroup
+	for _, s := range all {
+		d := time.UnixMilli(s.Created)
+		d = time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, d.Location())
+		if len(gs) == 0 || !gs[len(gs)-1].day.Equal(d) {
+			gs = append(gs, dateGroup{day: d})
+		}
+		gs[len(gs)-1].sessions = append(gs[len(gs)-1].sessions, s)
+	}
+	for i := range gs {
+		a.sortSessions(gs[i].sessions)
+	}
+	return gs
+}
+
+// dateLabel names a day in the sidebar's By Date: today, yesterday, or
+// the date.
+func dateLabel(day, now time.Time) string {
+	y, m, d := now.Date()
+	today := time.Date(y, m, d, 0, 0, 0, 0, now.Location())
+	switch {
+	case day.Equal(today):
+		return locales.SidebarToday()
+	case day.Equal(today.AddDate(0, 0, -1)):
+		return locales.SidebarYesterday()
+	}
+	return day.Format("2006-01-02")
+}
+
+// projectName returns a project's name, or "".
+func (a *App) projectName(id string) string {
+	for _, p := range a.st.Projects {
+		if p.ID == id {
+			return p.Name
+		}
+	}
+	return ""
 }
 
 // collapsed reports whether a group's sessions are hidden in the sidebar.
@@ -503,6 +724,24 @@ func (a *App) collapsed(g group) bool { return a.prefs.Collapsed[g.key()] }
 // collapsed projects left out unless selected.
 func (a *App) visibleOrder() []string {
 	var ids []string
+	switch a.prefs.SidebarGroup {
+	case "none":
+		for _, h := range a.hosts {
+			for _, s := range a.flatSessions(h) {
+				ids = append(ids, s.ID)
+			}
+		}
+		return ids
+	case "date":
+		for _, h := range a.hosts {
+			for _, dg := range a.dateGroups(h) {
+				for _, s := range dg.sessions {
+					ids = append(ids, s.ID)
+				}
+			}
+		}
+		return ids
+	}
 	for _, g := range a.groups() {
 		for _, s := range g.sessions {
 			if !a.collapsed(g) || s.ID == a.selected {
@@ -551,7 +790,10 @@ func (a *App) reportView() {
 			continue
 		}
 		id := ""
-		if a.watching(a.selected) && h == shown {
+		switch {
+		case a.quick.shown && h == a.local():
+			id = a.prefs.QuickSession
+		case a.watching(a.selected) && h == shown:
 			id = a.selected
 		}
 		if h.viewSent != nil && *h.viewSent == id {
@@ -603,7 +845,7 @@ func (g *gated) Read(p []byte) (int, error) {
 // ensureTerm attaches a terminal to a session, unless one is.
 func (a *App) ensureTerm(id string) {
 	h := a.hostOf(id)
-	if a.terms[id] != nil || h.conn != connReady || a.isBrowser(id) {
+	if a.terms[id] != nil || h.conn != connReady || a.shows(id) {
 		return
 	}
 	e := &termEntry{started: time.Now()}
@@ -787,11 +1029,11 @@ func (a *App) termOptions(id string, conn *gated) terminal.Options {
 			if !ok {
 				return false
 			}
-			e := a.terms[id]
-			if e == nil || e.term == nil {
+			t := a.termFor(id)
+			if t == nil {
 				return false
 			}
-			e.term.Send([]byte{b})
+			t.Send([]byte{b})
 			return true
 		},
 		// The wheel, the user's even over a window not focused, tells they
@@ -860,6 +1102,24 @@ func (a *App) apply(s settings.Settings, save bool) {
 	anew := old.Cursor != s.Cursor || old.CursorBlink != s.CursorBlink || old.OptionAsAlt != s.OptionAsAlt ||
 		old.Clipboard != s.Clipboard || old.RightClick != s.RightClick
 	light, dark := a.termThemes()
+	retune := func(t *terminal.Terminal) {
+		if font {
+			t.SetFont(a.termFont())
+		}
+		if themes {
+			t.SetTheme(light, dark)
+		}
+		if old.MinContrast != s.MinContrast {
+			t.SetMinimumContrast(s.MinContrast)
+		}
+		if old.CopyOnSelect != s.CopyOnSelect {
+			mode := terminal.CopyOnSelectNone
+			if s.CopyOnSelect {
+				mode = terminal.CopyOnSelectClipboard
+			}
+			t.SetCopyOnSelect(mode)
+		}
+	}
 	for id, e := range a.terms {
 		if e.term == nil {
 			continue
@@ -868,21 +1128,16 @@ func (a *App) apply(s settings.Settings, save bool) {
 			a.dropTerm(id) // attached again as it shows
 			continue
 		}
-		if font {
-			e.term.SetFont(a.termFont())
-		}
-		if themes {
-			e.term.SetTheme(light, dark)
-		}
-		if old.MinContrast != s.MinContrast {
-			e.term.SetMinimumContrast(s.MinContrast)
-		}
-		if old.CopyOnSelect != s.CopyOnSelect {
-			mode := terminal.CopyOnSelectNone
-			if s.CopyOnSelect {
-				mode = terminal.CopyOnSelectClipboard
+		retune(e.term)
+	}
+	if t := a.quickTermFor(a.quick.pane); t != nil {
+		if anew {
+			a.dropQuick()
+			if a.quick.shown {
+				a.attachQuick()
 			}
-			e.term.SetCopyOnSelect(mode)
+		} else {
+			retune(t)
 		}
 	}
 	if old.Appearance != s.Appearance && a.win != nil {
@@ -892,14 +1147,28 @@ func (a *App) apply(s settings.Settings, save bool) {
 	if old.Language != s.Language && a.win != nil {
 		mygo.App.SetLocale(localeTag(s.Language))
 	}
-	if old.Vibrancy != s.Vibrancy && a.win != nil {
-		a.win.SetVibrancy(vibrancyFor(s))
+	if old.Vibrancy != s.Vibrancy || old.WindowBlur != s.WindowBlur {
+		if a.win != nil {
+			a.win.SetVibrancy(vibrancyFor(s))
+		}
+		if a.setWin != nil {
+			a.setWin.SetVibrancy(vibrancyFor(s))
+		}
 	}
 	if !maps.Equal(old.Shortcuts, s.Shortcuts) && a.win != nil {
 		mygo.App.SetMenu(a.menu())
+		a.applyGlobalShortcuts()
 	}
 	if old.DockBadge != s.DockBadge {
 		a.notify(true)
+	}
+	if old.Pet != s.Pet && a.win != nil {
+		// Not from inside a view's build: the pet's window opens, or
+		// goes, once this frame is done.
+		a.update(a.syncPet)
+	}
+	if old.PetOffset != s.PetOffset && a.pet.win != nil {
+		a.update(a.petPlace)
 	}
 	if old.AppIcon != s.AppIcon && a.win != nil {
 		a.changeAppIcon()
@@ -915,8 +1184,14 @@ func (a *App) apply(s settings.Settings, save bool) {
 	if a.win != nil {
 		a.win.Invalidate()
 	}
+	if a.pet.win != nil {
+		a.pet.win.Invalidate()
+	}
 	if a.setWin != nil {
 		a.setWin.Invalidate()
+	}
+	if a.quick.win != nil {
+		a.quick.win.Invalidate()
 	}
 }
 
@@ -966,8 +1241,10 @@ func (a *App) reloadConfig() {
 	})
 }
 
+// vibrancyFor is the window's material, if Background blur is on: off,
+// the desktop shows behind the wash without it.
 func vibrancyFor(s settings.Settings) mygo.Vibrancy {
-	if s.Vibrancy {
+	if s.Vibrancy && s.WindowBlur {
 		return mygo.VibrancySidebar
 	}
 	return mygo.VibrancyNone
@@ -1421,26 +1698,83 @@ func (a *App) toggleProject(id string) {
 	a.savePrefs()
 }
 
-// quitAndEnd ends every session of this machine, and its kerod, then
-// quits: other machines' keep running.
-func (a *App) quitAndEnd() {
-	n := len(a.sessionsOf(a.local()))
-	a.confirm = &confirmation{
-		open:    true,
-		title:   locales.ConfirmQuitAllTitle(),
-		detail:  quitAllDetail(n, len(a.hosts) > 1),
-		action:  locales.ConfirmQuitAllAction(),
-		destroy: true,
-		run: func() {
-			cl := a.local().cl
-			go func() {
-				if cl != nil {
-					cl.Call("shutdown", nil, nil)
-				}
-				mygo.App.Quit()
-			}()
-		},
+// quitRequested is mygo's quit request, from Cmd+Q, the menu, the window's
+// close, or the Dock, and reports whether the quit goes ahead. With
+// quit-ends-sessions, a quit ends this machine's sessions as
+// endSessionsAndQuit does, so it asks what Quit and End All Sessions asks
+// while a program runs, and closes nothing until the answer says so.
+func (a *App) quitRequested() bool {
+	a.savePrefs()
+	if !a.set.QuitEndsSessions || a.quitting {
+		// A quit taken back before, or the one its answer makes: either
+		// way it is over.
+		a.quitting = false
+		return true
 	}
+	busy := a.busyCount(a.local())
+	switch {
+	case busy > 0 && a.set.ConfirmClose:
+		a.quitting = true
+		a.confirm = &confirmation{
+			open:    true,
+			title:   locales.ConfirmQuitAllTitle(),
+			detail:  quitAllDetail(busy, len(a.hosts) > 1),
+			action:  locales.ConfirmQuitAllAction(),
+			destroy: true,
+			ends:    true, // Return may be a program's to read
+			run:     a.endSessionsAndQuit,
+		}
+		return false
+	case busy == 0 && a.hostsLoaded():
+		// Nothing runs that the user could lose: the quit ends the
+		// sessions itself, as it goes.
+		return true
+	case !a.hostsLoaded():
+		// The sessions have not come yet, and with them what runs: take
+		// the quit back while the app shows them, and ask again when the
+		// user quits after.
+		a.quitting = true
+		a.bringToFront()
+		return false
+	default:
+		// Nothing runs, and the sessions are not all in sight, as when
+		// the app quits from the Dock while hidden: let it end them.
+		return true
+	}
+}
+
+// bringToFront shows the window, and brings it forward, so that the user
+// sees what the app asks, or ends.
+func (a *App) bringToFront() {
+	if a.win == nil {
+		return
+	}
+	a.win.Show() // it has no native window, as in tests
+	a.win.Restore()
+	a.win.Focus()
+}
+
+// quitEndsSession ends this machine's sessions without kerod to ask, as
+// when the app quits before it connects: the quit-ends-sessions the user
+// chose then takes the sessions' state, so that none starts again.
+func (a *App) quitEndsSession() {
+	for _, s := range a.sessionsOf(a.local()) {
+		if cl, err := client.Connect(true); err == nil {
+			cl.Call("close", proto.IDParams{ID: s.ID}, nil)
+			cl.Close()
+		}
+	}
+}
+
+// hostsLoaded reports whether every host has shown its sessions, as the
+// app asks before it ends this machine's.
+func (a *App) hostsLoaded() bool {
+	for _, h := range a.hosts {
+		if h.conn == connConnecting || (h.cl != nil && !h.loaded) {
+			return false
+		}
+	}
+	return true
 }
 
 // daemonStale reports whether kerod runs another version of Kero than
@@ -1501,8 +1835,43 @@ func (a *App) restartDaemon() {
 	}()
 }
 
+// quitAndEnd ends every session of this machine, and its kerod, then
+// quits: other machines' keep running.
+func (a *App) quitAndEnd() {
+	n := len(a.sessionsOf(a.local()))
+	a.confirm = &confirmation{
+		open:    true,
+		title:   locales.ConfirmQuitAllTitle(),
+		detail:  quitAllDetail(n, len(a.hosts) > 1),
+		action:  locales.ConfirmQuitAllAction(),
+		destroy: true,
+		ends:    true,
+		run:     a.endSessionsAndQuit,
+	}
+}
+
+// endSessionsAndQuit ends every session of this machine, and its kerod,
+// then quits: other machines' keep running. A shutdown that takes a
+// while is the daemon's to finish, as it is for Quit and End All
+// Sessions: the app does not wait on it.
+func (a *App) endSessionsAndQuit() {
+	h := a.local()
+	cl := h.cl
+	go func() {
+		if cl == nil {
+			a.quitEndsSession()
+		} else if cl.Call("shutdown", nil, nil) != nil {
+			// kerod went before it answered, or speaks another version:
+			// stop the one this machine runs.
+			stopDaemon()
+		}
+		mygo.App.Quit()
+	}()
+}
+
 // quitAllDetail says what Quit and End All ends: this machine's sessions,
 // as other machines' keep running.
+
 func quitAllDetail(n int, hosts bool) string {
 	d := locales.ConfirmQuitAllDetail(n)
 	if hosts {

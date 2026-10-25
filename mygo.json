@@ -1,21 +1,18 @@
 {
   "name": "Kero",
   "identifier": "sh.kero",
-  "version": "2.1.19",
+  "version": "2.1.20",
   "out": "build",
   "i18n": {
     "dir": "locales",
     "source": "en"
   },
   "updates": {
-    "publicKey": "WzJsOGNIuf6mcEqo5ff8jub+NoQQOEk4JXreLPYjgyQ=",
-    "github": "egoist/kero"
+    "publicKey": "CJGqv/HGMyORlUKh5NCvwLOb3p9Fblp1d3oj8qDMQ30=",
+    "github": "smallnest/kero"
   },
   "macos": {
-    "signingIdentity": "Developer ID Application: xinyu zeng (GJE9R5VE87)",
-    "notarize": {
-      "keychainProfile": "NOTARY"
-    },
+    "signingIdentity": "-",
     "entitlements": "entitlements.plist",
     "infoPlist": {
       "NSMicrophoneUsageDescription": "A program running in Kero would like to use the microphone.",

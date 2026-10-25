@@ -44,14 +44,10 @@ func (a *App) run(id string, args map[string]string) {
 		} else {
 			a.newSessionIn(h, proto.Home())
 		}
-	case "session.newWorktree":
-		a.newWorktreeSession()
 	case "project.open":
 		a.openProject()
 	case "palette.open":
 		a.openPalette()
-	case "conversation.resume":
-		a.openConversations()
 	case "session.attention":
 		a.jumpToAttention()
 	case "session.next":
@@ -97,14 +93,22 @@ func (a *App) run(id string, args map[string]string) {
 		a.focusDirection(id[len("pane."):])
 	case "sidebar.toggle":
 		a.toggleSidebar()
-	case "changes.toggle":
+	case "side.toggle":
+		a.toggleSide(a.prefs.Side)
+	case "changes.toggle", "files.toggle":
+		// This fork has no Files view: both open Changes, and close it.
 		a.toggleSide(sideChanges)
+	case "pet.toggle":
+		a.set.Pet = !a.set.Pet
+		a.applySettings(a.set)
 	case "text.bigger":
 		a.zoom(1, false)
 	case "text.smaller":
 		a.zoom(-1, false)
 	case "text.reset":
 		a.zoom(0, true)
+	case quickAction:
+		a.toggleQuick()
 	}
 	if a.win != nil {
 		a.win.Invalidate()
@@ -162,10 +166,14 @@ var actionTitles = map[string]func() string{
 	"pane.up":             locales.ActionPaneAbove,
 	"pane.down":           locales.ActionPaneBelow,
 	"sidebar.toggle":      locales.ActionToggleSidebar,
+	"side.toggle":         locales.ActionTogglePanel,
 	"changes.toggle":      locales.ActionToggleChanges,
+	"files.toggle":        locales.ActionToggleFiles,
 	"text.bigger":         locales.ActionBigger,
 	"text.smaller":        locales.ActionSmaller,
 	"text.reset":          locales.ActionActualSize,
+	"pet.toggle":          locales.ActionTogglePet,
+	quickAction:           locales.ActionQuickTerminal,
 }
 
 // actionTitle is an action's title as the menus, the palette and
@@ -179,9 +187,10 @@ func actionTitle(id string) string {
 }
 
 // accelerator is an action's shortcut in the menus: none while the user
-// types a new one in Settings.
+// types a new one in Settings, and none of a global one, which the system
+// takes before the menus.
 func (a *App) accelerator(act actions.Action) string {
-	if a.ss.recording != "" {
+	if a.ss.recording != "" || act.Global {
 		return ""
 	}
 	return actions.Keys(act, a.set.Shortcuts)
@@ -215,13 +224,13 @@ func (a *App) menu() *mygo.Menu {
 			{Label: locales.MenuQuit(), Accelerator: quitKeys, ToolTip: locales.MenuQuitTip(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
 			a.item("app.quitAll")}}
 	}
-	view := append(a.items("View", []string{"sidebar.toggle", "changes.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}),
+	view := append(a.items("View", []string{"sidebar.toggle", "side.toggle", "changes.toggle", "files.toggle", "pet.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}, []string{quickAction}),
 		mygo.Separator(), &mygo.MenuItem{Role: mygo.RoleToggleFullScreen}, &mygo.MenuItem{Role: mygo.RoleToggleDevTools})
 	return mygo.NewMenu([]*mygo.MenuItem{
 		kero,
 		{Label: locales.MenuSession(), Submenu: a.items("Session",
-			[]string{"session.new", "session.newHome", "session.newWorktree", "project.open"},
-			[]string{"palette.open", "conversation.resume", "session.attention", "session.next", "session.previous"},
+			[]string{"session.new", "session.newHome", "project.open"},
+			[]string{"palette.open", "session.attention", "session.next", "session.previous"},
 			[]string{"session.rename", "pane.restart"},
 			[]string{"pane.close", "session.close"})},
 		// The Edit menu's own items, then finding.
@@ -300,8 +309,10 @@ func (a *App) fromMay(id string, args map[string]string) bool {
 	case id == "session.new" || id == "session.newHome":
 		p := args["project"]
 		return p == "" || a.hostOf(p) == h
-	case strings.HasPrefix(id, "pane.") || id == "changes.toggle":
+	case strings.HasPrefix(id, "pane.") || id == "side.toggle" || id == "changes.toggle" || id == "files.toggle":
 		return a.session(a.selected) != nil && a.selectedHost() == h
+	case id == quickAction:
+		return false // this machine's screen is no other's to drop on
 	}
 	return true
 }

@@ -4,7 +4,7 @@
 # on, so that Kero on another machine shows this one's sessions, over SSH
 # (Settings > Hosts).
 #
-#   irm https://github.com/egoist/kero/releases/latest/download/install-server.ps1 | iex
+#   irm https://github.com/smallnest/kero/releases/latest/download/install-server.ps1 | iex
 #   & ([scriptblock]::Create((irm <that url>))) -Version 2.1.0 -NoService
 #   ... -Uninstall
 #
@@ -19,7 +19,7 @@ param(
 	[switch]$Uninstall
 )
 
-$repo = 'egoist/kero'
+$repo = 'smallnest/kero'
 $lib = Join-Path $env:LOCALAPPDATA 'Programs\kero-server'
 $kero = Join-Path $lib 'kero.exe'
 # The file that tells an install of this script's, which updates itself.

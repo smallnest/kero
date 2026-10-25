@@ -12,59 +12,57 @@ import (
 	"kero/locales"
 )
 
-// The sidebar's Ended and Archived (session-history): the coding agents'
-// conversations that kerod remembers and no pane runs now, to resume in a
-// session of their own, as the palette's Recent Conversations do.
-
-// endedShown is how many of Ended show until Show All.
 const endedShown = 5
 
+// hostEnded is a conversation of a host, for the sidebar.
 type hostEnded struct {
 	h *host
 	c proto.Conversation
 }
 
-// askConversations asks the hosts whose conversations changed for them,
-// as their states counted (State.Conversations).
-func (a *App) askConversations() {
+// loadHostConversations asks a host's kerod for the conversations it
+// remembers, for the sidebar, as of the host's count of the changes to
+// them gen: a later answer, or a turn of Session history off, drops it.
+func (a *App) loadHostConversations(h *host, gen uint64) {
+	h.convAsked = true
+	cl := h.cl
+	if cl == nil {
+		h.convAsked = false
+		return
+	}
+	go func() {
+		var list []proto.Conversation
+		err := cl.Call("conversations", nil, &list)
+		a.update(func() {
+			if h.convGen != gen || !h.convAsked {
+				return
+			}
+			h.convAsked = false
+			if err != nil {
+				return
+			}
+			h.convs, h.convKnown = list, true
+		})
+	}()
+}
+
+// syncEnded keeps the sidebar's ended conversations asking for those of
+// every host, while Session history is on.
+func (a *App) syncEnded() {
 	for _, h := range a.hosts {
-		cl := h.cl
-		if cl == nil || h.convKnown || h.convAsked {
+		if h.cl == nil || h.convAsked || h.convKnown {
 			continue
 		}
-		h.convAsked = true
-		gen := h.convGen
-		go func() {
-			var list []proto.Conversation
-			err := cl.Call("conversations", nil, &list)
-			a.update(func() {
-				h.convAsked = false
-				if err != nil {
-					// An older kerod knows of none: ask it no more.
-					h.convs, h.convKnown = nil, true
-					return
-				}
-				h.convs, h.convKnown = list, h.convGen == gen
-			})
-		}()
+		a.loadHostConversations(h, h.convGen)
 	}
 }
 
 func (a *App) endedSections(c *ui.Context, pal *palette) {
-	a.askConversations()
-	// Those a pane runs now show as their sessions.
-	running := map[proto.AgentSession]bool{}
-	for _, s := range a.st.Sessions {
-		for _, p := range s.Panes {
-			if p.AgentSession != nil {
-				running[*p.AgentSession] = true
-			}
-		}
-	}
 	var ended, archived []hostEnded
 	for _, h := range a.hosts {
 		for _, cv := range h.convs {
-			if running[proto.AgentSession{Agent: cv.Agent, ID: cv.ID}] {
+			// A conversation a pane runs is in the sidebar's sessions.
+			if cv.Session != "" {
 				continue
 			}
 			if cv.Archived {
@@ -159,10 +157,24 @@ func (a *App) endedRow(c *ui.Context, pal *palette, h *host, cv proto.Conversati
 		})
 		if hovered && !cv.Archived {
 			iconButton(c, "archive", archiveIcon, locales.EndedArchive(), pal, func() {
-				a.archiveConversation(h, cv, true)
+				a.conversationCall(h, "conversation.archive", cv, nil)
 			})
 		} else {
 			ui.Text(c, ago(cv.Updated, now)).FontSize(12).TextColor(pal.textFaint).SingleLine().Shrink(0)
+		}
+	})
+}
+
+// conversationCall asks a host to forget or archive a conversation, as
+// the sidebar's menus do.
+func (a *App) conversationCall(h *host, method string, cv proto.Conversation, run func()) {
+	a.callOn(h, method, proto.ConversationParams{Agent: cv.Agent, ID: cv.ID, Archived: method == "conversation.archive"}, func(err error) {
+		if err != nil {
+			a.toast(err.Error())
+			return
+		}
+		if run != nil {
+			run()
 		}
 	})
 }
@@ -173,10 +185,10 @@ func (a *App) endedMenu(m *ui.Menu, h *host, cv proto.Conversation) {
 	}
 	if cv.Archived {
 		if m.Item(locales.EndedRestore()).Chosen() {
-			a.archiveConversation(h, cv, false)
+			a.conversationCall(h, "conversation.unarchive", cv, nil)
 		}
 	} else if m.Item(locales.EndedArchive()).Chosen() {
-		a.archiveConversation(h, cv, true)
+		a.conversationCall(h, "conversation.archive", cv, nil)
 	}
 	m.Separator()
 	if m.Item(locales.SessionCopyId()).Chosen() {
@@ -188,18 +200,23 @@ func (a *App) endedMenu(m *ui.Menu, h *host, cv proto.Conversation) {
 	if m.Item(locales.SessionRevealIn(fileManager())).Disabled(cv.Dir == "" || h.remote()).Chosen() {
 		openPath(cv.Dir)
 	}
-	m.Separator()
-	if m.Item(locales.EndedDelete()).Chosen() {
-		a.forgetConversation(h, cv)
+	if !cv.Archived {
+		m.Separator()
+		if m.Item(locales.EndedDelete()).Chosen() {
+			a.conversationCall(h, "conversation.forget", cv, nil)
+		}
 	}
 }
 
 func (a *App) endedSectionMenu(m *ui.Menu, key string, list []hostEnded) {
+	each := func(method string) {
+		for _, he := range list {
+			a.conversationCall(he.h, method, he.c, nil)
+		}
+	}
 	if key == "ended" {
 		if m.Item(locales.EndedArchiveAll()).Chosen() {
-			for _, he := range list {
-				a.archiveConversation(he.h, he.c, true)
-			}
+			each("conversation.archive")
 		}
 		return
 	}
@@ -210,38 +227,17 @@ func (a *App) endedSectionMenu(m *ui.Menu, key string, list []hostEnded) {
 			detail:  locales.EndedDeleteAllDetail(),
 			action:  locales.EndedDelete(),
 			destroy: true,
-			run: func() {
-				for _, he := range list {
-					a.forgetConversation(he.h, he.c)
-				}
-			},
+			run:     func() { each("conversation.forget") },
 		}
 	}
 }
 
-// archiveConversation moves a conversation to Archived, or back, at once,
-// as its kerod will.
-func (a *App) archiveConversation(h *host, cv proto.Conversation, archived bool) {
-	if i := slices.IndexFunc(h.convs, func(o proto.Conversation) bool { return o.Agent == cv.Agent && o.ID == cv.ID }); i >= 0 {
-		h.convs[i].Archived = archived
-	}
-	a.callOn(h, "conversation.archive", proto.ConversationParams{Agent: cv.Agent, ID: cv.ID, Archived: archived}, nil)
-}
-
-// forgetConversation has a conversation's kerod forget it; the agent
-// keeps its own history of it.
-func (a *App) forgetConversation(h *host, cv proto.Conversation) {
-	h.convs = slices.DeleteFunc(h.convs, func(o proto.Conversation) bool { return o.Agent == cv.Agent && o.ID == cv.ID })
-	a.callOn(h, "conversation.forget", proto.ConversationParams{Agent: cv.Agent, ID: cv.ID}, nil)
-}
-
-// skillHint tells, while there's no conversation to list, that listing
-// them needs Kero's skill, which tells kerod each conversation's id: when
-// no kind of agent has it.
+// skillHint tells, while nothing has ended, that ended sessions need
+// Kero's skill, which tells kerod each conversation's id.
 func (a *App) skillHint(c *ui.Context, pal *palette) {
-	if now := c.Now(); now.Sub(a.skillsAt) > 30*time.Second {
+	if now := c.Now(); now.Sub(a.skillsAt) > 5*time.Second {
 		a.skillsAt = now
-		a.skillMissing = !slices.ContainsFunc(cli.SkillStates(), func(st cli.SkillState) bool { return st.State != "missing" })
+		a.skillMissing = slices.ContainsFunc(cli.SkillStates(), func(st cli.SkillState) bool { return st.State == "missing" })
 	}
 	if !a.skillMissing {
 		return

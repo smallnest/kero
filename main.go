@@ -91,6 +91,9 @@ func runApp() {
 			if a.setWin != nil {
 				a.setWin.SetTitle(locales.SettingsTitle())
 			}
+			if a.pet.win != nil {
+				a.pet.win.SetTitle(locales.PetName())
+			}
 			if a.tray != nil {
 				a.tray.SetMenu(a.trayMenu())
 			}
@@ -110,8 +113,13 @@ func runApp() {
 		}
 	})
 	mygo.App.OnWindowAllClosed(a.lastWindowClosed)
-	mygo.App.OnBeforeQuit(func(*mygo.QuitEvent) {
-		a.savePrefs()
+	// The question quit-ends-sessions may ask comes before the windows
+	// close, and takes the quit back.
+	mygo.App.OnBeforeQuit(func(e *mygo.QuitEvent) {
+		// quitRequested saves the prefs too.
+		if !a.quitRequested() {
+			e.PreventDefault()
+		}
 	})
 	// Windows leaves an icon in the notification area after its app until
 	// the pointer passes over it.
@@ -127,7 +135,9 @@ func runApp() {
 	mygo.App.WhenReady(func() {
 		a.openWindow()
 		a.applyTray()
+		a.applyGlobalShortcuts()
 		a.idleTime = mygo.Power.IdleTime
+		a.syncPet()
 		go a.watchReturn()
 		a.connect()
 		a.syncHosts()

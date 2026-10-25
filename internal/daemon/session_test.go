@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -288,4 +289,37 @@ func TestAgentPane(t *testing.T) {
 	}
 	a.shellPID = os.Getpid()
 	check("under the app server a's Codex started", server.Process.Pid, "", "b", true)
+}
+
+func TestEnded(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "config")
+	t.Setenv("KERO_CONFIG", cfg)
+	d := &Daemon{}
+	a := &proto.AgentSession{Agent: "claude", ID: "a"}
+	d.endedLocked(a, "/repo", "off", "", 1)
+	if len(d.ended) != 0 {
+		t.Fatalf("recorded with session history off: %+v", d.ended)
+	}
+	if err := os.WriteFile(cfg, []byte("session-history = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d.endedLocked(a, "/repo", "one", "", 1)
+	d.endedLocked(&proto.AgentSession{Agent: "codex", ID: "b"}, "/repo", "", "", 2)
+	d.endedLocked(&proto.AgentSession{Agent: "claude", ID: "x; rm"}, "/repo", "", "", 3)
+	d.endedLocked(nil, "/repo", "", "", 3)
+	d.endedLocked(a, "/wt", "two", "", 4)
+	d.endedLocked(&proto.AgentSession{Agent: "codex", ID: "b"}, "/repo", "", "Fix bug", 2)
+	if len(d.ended) != 2 || d.ended[0].ID != "a" || d.ended[0].Dir != "/wt" || d.ended[0].Titled || d.ended[1].ID != "b" || d.ended[1].Name != "Fix bug" || !d.ended[1].Titled {
+		t.Fatalf("ended %+v", d.ended)
+	}
+	if n, f := endedName(&session{name: "Fix bug", agentNamed: true}, "vim"); n != "" || f != "Fix bug" {
+		t.Fatalf("an agent's name %q, %q", n, f)
+	}
+	d.ended[1].Archived = true
+	for i := range endedCap + 5 {
+		d.endedLocked(&proto.AgentSession{Agent: "claude", ID: fmt.Sprint("n", i)}, "/repo", "", "", int64(10+i))
+	}
+	if len(d.ended) != endedCap+1 || !d.ended[endedCap].Archived || d.ended[0].ID != fmt.Sprint("n", endedCap+4) {
+		t.Fatalf("capped to %d, last %+v", len(d.ended), d.ended[len(d.ended)-1])
+	}
 }

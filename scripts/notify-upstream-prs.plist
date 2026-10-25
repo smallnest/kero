@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Runs scripts/notify-upstream-prs.sh every 30 minutes. Install with
+     scripts/notify-upstream-prs.sh --install, which fills in the paths and
+     larkUser; see that script. Output goes to /tmp/kero-upstream-prs.log. -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>sh.kero.notify-upstream-prs</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>__SCRIPT__</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>__REPO__</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>__PATH__</string>
+		<key>larkUser</key>
+		<string>__LARK_USER__</string>
+		<key>HOME</key>
+		<string>__HOME__</string>
+	</dict>
+	<key>StartInterval</key>
+	<integer>1800</integer>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardOutPath</key>
+	<string>/tmp/kero-upstream-prs.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/kero-upstream-prs.log</string>
+</dict>
+</plist>

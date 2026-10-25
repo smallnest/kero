@@ -238,13 +238,18 @@ func (d *Daemon) noteConversations() {
 // noteEnded remembers the conversation of a pane whose agent ends, or
 // whose pane closes, now; p.mu is held.
 func (d *Daemon) noteEnded(p *pane) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if c := paneConversation(p, "", ""); c != nil {
 		// The session's name and project stay as last noted.
 		old, ok := d.convs.find(c.Agent, c.ID)
 		if ok {
 			c.Name = old.Name
 		}
-		d.convs.note(*c, time.Now().UnixMilli())
+		// As when its agent last wrote: a pane closed by a restore, whose
+		// agent comes back in a restored pane, must leave it the latest
+		// (note is by Updated, the last first).
+		d.convs.note(*c, p.info.Activity)
 		// Ended, it moves to the sidebar's Ended, if it shows.
 		d.convs.mu.Lock()
 		d.convs.gen++

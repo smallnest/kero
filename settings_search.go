@@ -27,6 +27,7 @@ func settingsIndex() []searchEntry {
 		{"general", locales.SetSessionName(), "session-name title sidebar focused lead folder pane"},
 		{"general", locales.SetFocusFollowsMouse(), "focus-follows-mouse hover pointer niri hyprland sloppy"},
 		{"general", locales.SetAskBeforeClosing(), "confirm-close quit kill"},
+		{"general", locales.SetQuitEndsSessions(), "quit-ends-sessions quit exit stop kill end clean cleanly leave window close background process"},
 		{"general", locales.SetRestoreSessions(), "restore-sessions reboot persist"},
 		{"general", locales.SetResumeAgents(), "resume-agents claude codex pi opencode conversation restore reboot"},
 		{"general", locales.SetSessionHistory(), "session-history ended sessions archived resume claude codex conversation"},
@@ -40,6 +41,9 @@ func settingsIndex() []searchEntry {
 		{"appearance", locales.SetAppearance(), "window-theme dark light mode system"},
 		{"appearance", locales.SetLanguage(), "language locale translation chinese english 语言 中文"},
 		{"appearance", locales.SetTranslucent(), "window-translucent vibrancy blur material transparency"},
+		{"appearance", locales.SetWindowOpacity(), "window-opacity opacity translucent transparency see-through dim 透明度 不透明度"},
+		{"appearance", locales.SetWindowBlur(), "window-blur blur frosted vibrancy material transparency 模糊 毛玻璃"},
+		{"appearance", locales.SetPet(), "pet frog kero mascot sprite companion agent status drag offset position 小精灵 青蛙 宠物"},
 		{"appearance", locales.SetBackground(), "background wash petal mist meadow dusk plain gradient color"},
 
 		{"terminal", locales.SetFont(), "font-family typeface jetbrains mono nerd"},
@@ -140,10 +144,14 @@ var actionWords = map[string]string{
 	"pane.up":             "focus move navigate above",
 	"pane.down":           "focus move navigate below",
 	"sidebar.toggle":      "show hide sidebar sessions list",
+	"side.toggle":         "side panel toggle show hide close",
 	"changes.toggle":      "git diff branch panel changes",
+	"files.toggle":        "file tree browser folder explore panel",
 	"text.bigger":         "zoom in font size larger increase text",
 	"text.smaller":        "zoom out font size decrease text",
 	"text.reset":          "zoom reset font size default text",
+	quickAction:           "quake doom drop down dropdown hotkey global visor guake iterm console",
+	"pet.toggle":          "frog kero mascot sprite show hide pet companion 小青蛙 精灵 宠物",
 }
 
 // pageWords find Settings' pages in the palette besides their titles.

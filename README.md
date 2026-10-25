@@ -6,13 +6,22 @@ Run Claude Code, Codex, a dev server or a test watcher each in its own session. 
 
 - **Sessions outlive the window.** They run in `kerod`, a small daemon, so quitting Kero leaves them running. Reopen it and every pane and its scrollback is back.
 - **Status at a glance.** Each pane is working, waiting, idle, error or exited. <kbd>⌘</kbd> <kbd>J</kbd> jumps to the one that needs you, and Kero notifies you when an agent finishes, fails or is blocked.
+- **A frog on the window's edge.** Kero the frog peeks over the top of the window: it hops when a session needs you, reads along while an agent works, and dozes when all is calm. Press it, or turn it off in **Settings › Appearance**.
 - **A CLI agents can drive.** `kero` starts sessions, splits panes, types into them, waits on them and reads their screens.
 - **Remote hosts.** Run agents on a Linux box, a cloud VM, a Mac, a Windows PC or WSL and see them in the same sidebar, over SSH or Tailscale. They keep running when your laptop sleeps. See [Remote Hosts](docs/remote.md).
 - **Ghostty under the hood.** Terminals render with libghostty, so Ghostty themes, fonts and config keys just work.
 
 ## Install
 
-Download Kero from the [releases page](https://github.com/egoist/kero/releases), then choose **Kero › Install Command Line Tool…** to put `kero` on your `PATH`.
+Download Kero from the [releases page](https://github.com/smallnest/kero/releases), then choose **Kero › Install Command Line Tool…** to put `kero` on your `PATH`.
+
+> **On macOS, the app is not signed with an Apple Developer ID.** The first time you open it, Control-click (or right-click) **Kero.app** and choose **Open**, then confirm. If macOS still refuses, run:
+>
+> ```sh
+> xattr -d com.apple.quarantine /Applications/Kero.app
+> ```
+>
+> Apps installed from the earlier `egoist/kero` releases do not update to these releases on their own: install one of these once.
 
 ```sh
 kero new -n fix-login -- claude
@@ -21,13 +30,13 @@ kero new -n fix-login -- claude
 To run sessions on a Linux server, a Mac or a Windows PC, install the server build there, then add the machine in **Settings › Hosts**:
 
 ```sh
-curl -fsSL https://github.com/egoist/kero/releases/latest/download/install-server.sh | sh
+curl -fsSL https://github.com/smallnest/kero/releases/latest/download/install-server.sh | sh
 ```
 
 On Windows, in PowerShell:
 
 ```powershell
-irm https://github.com/egoist/kero/releases/latest/download/install-server.ps1 | iex
+irm https://github.com/smallnest/kero/releases/latest/download/install-server.ps1 | iex
 ```
 
 See the [docs](docs/index.md) for more.

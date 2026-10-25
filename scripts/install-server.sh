@@ -5,7 +5,7 @@
 # or launchd's), so that Kero on another machine shows this one's sessions
 # (Settings › Hosts). Windows has install-server.ps1.
 #
-#   curl -fsSL https://github.com/egoist/kero/releases/latest/download/install-server.sh | sh
+#   curl -fsSL https://github.com/smallnest/kero/releases/latest/download/install-server.sh | sh
 #   sh install-server.sh [--version 2.1.0] [--no-service] [--dry-run]
 #   sh install-server.sh --uninstall
 #
@@ -14,7 +14,7 @@
 # update takes it.
 set -eu
 
-repo=egoist/kero
+repo=smallnest/kero
 version='@VERSION@'
 lib="$HOME/.local/lib/kero"
 bin="$HOME/.local/bin"

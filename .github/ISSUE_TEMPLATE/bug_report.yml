@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting. Please search [existing issues](https://github.com/egoist/kero/issues) first, and update to the [latest release](https://github.com/egoist/kero/releases) to check it still happens.
+        Thanks for reporting. Please search [existing issues](https://github.com/smallnest/kero/issues) first, and update to the [latest release](https://github.com/smallnest/kero/releases) to check it still happens.
   - type: textarea
     id: what
     attributes:

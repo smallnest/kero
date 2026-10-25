@@ -156,7 +156,9 @@ func TestSidebarKeepsTerminalDrops(t *testing.T) {
 
 func TestDragPaneToSide(t *testing.T) {
 	a := testDropApp(t)
-	tt := ui.NewTester(a.view, 1100, 640)
+	// The side panel closes: the panes take the window's width here.
+	a.prefs.Side = ""
+	tt := ui.NewTester(a.view, 1300, 640)
 	tt.Frame()
 	grip, ok := tt.Find("zsh")
 	if !ok {
@@ -280,7 +282,9 @@ func TestHeaderPadBelowTopLeft(t *testing.T) {
 // not from a press on a pane, which focuses it.
 func TestWindowDragRegions(t *testing.T) {
 	a := testApp(t)
-	tt := ui.NewTester(a.view, 1100, 640)
+	// The side panel closes: the panes take the window's width here.
+	a.prefs.Side = ""
+	tt := ui.NewTester(a.view, 1300, 640)
 	tt.Frame()
 	// Pane b's header, past its title: it moves the window, and leaves
 	// the focus where it was.

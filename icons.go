@@ -35,6 +35,7 @@ var (
 	chevronUpIcon   = glyph("f7-chevron-up")
 	chevronDownIcon = glyph("f7-chevron-down")
 	folderIcon      = glyph("f7-folder")
+	docIcon         = glyph("f7-doc-text")
 	searchIcon      = glyph("f7-search")
 	terminalIcon    = glyph("meteor-terminal")
 	returnIcon      = glyph("f7-return")
@@ -77,8 +78,11 @@ func init() {
 // programIcon is the logo of the pane's foreground program, as Claude's
 // for Claude Code and Node.js's for a script node runs; the terminal's
 // while the shell is in the foreground or the program has none; a globe
-// for a browser.
+// for a browser, a page for a file.
 func programIcon(p *proto.Pane) *ui.SVG {
+	if p.FilePane() {
+		return docIcon
+	}
 	if p.Browser() {
 		return globeIcon
 	}

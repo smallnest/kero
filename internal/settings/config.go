@@ -44,6 +44,21 @@ type key struct {
 	set  func(*Settings, []string) error
 }
 
+// float32Key is numberKey for a setting kept as a float32, which reads
+// and writes its shortest form, not the double's.
+func float32Key(name, doc string, f func(*Settings) *float32) key {
+	return key{name: name, doc: doc,
+		get: func(s *Settings) []string { return []string{strconv.FormatFloat(float64(*f(s)), 'g', -1, 32)} },
+		set: func(s *Settings, v []string) error {
+			n, err := strconv.ParseFloat(v[len(v)-1], 32)
+			if err != nil {
+				return fmt.Errorf("%q is not a number", v[len(v)-1])
+			}
+			*f(s) = float32(n)
+			return nil
+		}}
+}
+
 func boolKey(name, doc string, f func(*Settings) *bool) key {
 	return key{name: name, doc: doc,
 		get: func(s *Settings) []string { return []string{strconv.FormatBool(*f(s))} },
@@ -114,10 +129,26 @@ var keys = []key{
 	boolKey("confirm-close", "ask before closing a pane a program runs in", func(s *Settings) *bool { return &s.ConfirmClose }),
 	boolKey("restore-sessions", "start sessions again after kerod restarts, as after a reboot", func(s *Settings) *bool { return &s.RestoreSessions }),
 	boolKey("resume-agents", "as sessions start again, resume the conversation of the coding agent each pane ran", func(s *Settings) *bool { return &s.ResumeAgents }),
+	boolKey("quit-ends-sessions", "quitting ends this machine's sessions and its kerod, as Quit and End All Sessions does; other machines' keep running", func(s *Settings) *bool { return &s.QuitEndsSessions }),
 	boolKey("session-history", "list the coding agents' ended conversations in the sidebar, to resume or archive", func(s *Settings) *bool { return &s.SessionHistory }),
 	choiceKey("macos-show-app-icon", "where Kero's icon shows; closing the window keeps Kero running in the menu bar while it shows there. Windows and Linux always show it in the notification area",
 		func(s *Settings) *string { return &s.AppIcon }, AppIcons...),
 
+	{name: "window-opacity", doc: "how much of the window's background the wash covers while translucent, 0 to 1",
+		get: func(s *Settings) []string {
+			return []string{strconv.FormatFloat(float64(s.WindowOpacity), 'g', -1, 32)}
+		},
+		set: func(s *Settings, v []string) error {
+			n, err := strconv.ParseFloat(v[len(v)-1], 32)
+			if err != nil {
+				return fmt.Errorf("%q is not a number", v[len(v)-1])
+			}
+			s.WindowOpacity = float32(n)
+			return nil
+		}},
+	boolKey("window-blur", "blur the desktop behind the translucent background; off, the wash is plain transparency", func(s *Settings) *bool { return &s.WindowBlur }),
+	boolKey("pet", "Kero the frog on the window's top edge, who follows your sessions", func(s *Settings) *bool { return &s.Pet }),
+	float32Key("pet-offset", "where Kero stands across the window, 0 to 1; drag it there", func(s *Settings) *float32 { return &s.PetOffset }),
 	choiceKey("window-theme", "the app's appearance", func(s *Settings) *string { return &s.Appearance }, "system", "light", "dark"),
 	choiceKey("language", "the app's language; system follows the system's", func(s *Settings) *string { return &s.Language }, append([]string{"system"}, Languages...)...),
 	mapChoice("background", "the window's wash", func(s *Settings) *string { return &s.Background },
@@ -310,7 +341,9 @@ var keys = []key{
 					bad = append(bad, fmt.Sprintf("%q is not <keys>=<action>", b))
 					continue
 				}
-				keys, id := accelerator(b[:i]), strings.TrimSpace(b[i+1:])
+				// Ghostty marks a global shortcut global:; kero's actions
+				// know which are.
+				keys, id := accelerator(strings.TrimPrefix(strings.TrimSpace(b[:i]), "global:")), strings.TrimSpace(b[i+1:])
 				if id == "unbind" {
 					for _, a := range actions.All {
 						if strings.EqualFold(actions.Keys(a, sc), keys) {

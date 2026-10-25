@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Runs scripts/sync-upstream.sh every 30 minutes. Install with
+     scripts/sync-upstream.sh --install, which fills in the paths; see the
+     fetch-upstream skill. Output goes to /tmp/kero-sync-upstream.log. -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>sh.kero.sync-upstream</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>__REPO__/scripts/sync-upstream.sh</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>__REPO__</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>__PATH__</string>
+	</dict>
+	<key>StartInterval</key>
+	<integer>1800</integer>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardOutPath</key>
+	<string>/tmp/kero-sync-upstream.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/kero-sync-upstream.log</string>
+</dict>
+</plist>
