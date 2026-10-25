@@ -4,7 +4,7 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
-## Unreleased (smallnest/kero)
+## 2.1.21 (smallnest/kero)
 
 - A **quick terminal** drops down from the top of the screen over any
   app, as Ghostty's does. Give it a shortcut in **Settings › Keyboard**,
@@ -12,6 +12,10 @@ upstream releases it includes follow its own.
   keeps a session of its own while it is hidden.
 - **Background blur** off now leaves the background translucent, as the
   setting says: it used to make the window opaque.
+- Return presses the action of a confirmation, such as **Close Pane**,
+  though Cancel comes first. Thanks @iamvicliu.
+- On Windows and Linux, Kero tells when an agent finishes in the
+  session you watch only while Kero is the app in front, as on macOS.
 
 ## 2.1.20 (smallnest/kero)
 
