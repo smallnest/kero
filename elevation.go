@@ -84,6 +84,12 @@ func button(c *ui.Context, key, label, keys string, primary bool, pal *palette) 
 	return sizedButton(c, key, label, keys, primary, 30, 8, pal)
 }
 
+// defaultButton is button, focused when its dialog first appears, so that
+// Return presses it.
+func defaultButton(c *ui.Context, key, label, keys string, primary bool, pal *palette) bool {
+	return sizedButtonAt(c, key, label, keys, primary, 30, 8, pal, true)
+}
+
 // fieldButton is a button beside a text field, of the field's height and
 // corners, as a form's Add.
 func fieldButton(c *ui.Context, key, label string, primary bool, pal *palette) bool {
@@ -91,17 +97,14 @@ func fieldButton(c *ui.Context, key, label string, primary bool, pal *palette) b
 }
 
 func sizedButton(c *ui.Context, key, label, keys string, primary bool, height, radius float32, pal *palette) bool {
-	return sizedButtonEl(c, key, label, keys, primary, height, radius, pal).Clicked()
+	return sizedButtonAt(c, key, label, keys, primary, height, radius, pal, false)
 }
 
-func buttonEl(c *ui.Context, key, label, keys string, primary bool, pal *palette) ui.Element {
-	return sizedButtonEl(c, key, label, keys, primary, 30, 8, pal)
-}
-
-// sizedButtonEl is the button of sizedButton, before its click is read, for
-// one to take the focus, as AutoFocus.
-func sizedButtonEl(c *ui.Context, key, label, keys string, primary bool, height, radius float32, pal *palette) ui.Element {
+func sizedButtonAt(c *ui.Context, key, label, keys string, primary bool, height, radius float32, pal *palette, focus bool) bool {
 	b := ui.ButtonBase(c.Key(key)).Height(height).Padding(0, 14).Gap(8).Radius(radius).AlignItems(ui.Center).Label(label)
+	if focus {
+		b.AutoFocus()
+	}
 	bg, fg := pal.control, pal.text
 	if primary {
 		bg, fg = pal.accent, ui.Hex("#ffffff")
@@ -121,7 +124,7 @@ func sizedButtonEl(c *ui.Context, key, label, keys string, primary bool, height,
 			ui.Text(c, keys).FontSize(12).TextColor(fg.Alpha(0.55)).SingleLine()
 		}
 	})
-	return b
+	return b.Clicked()
 }
 
 // borderless returns the theme with kero's look: its accent, and no lines

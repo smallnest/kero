@@ -451,7 +451,7 @@ func confirmDialog(c *ui.Context, pal *palette, pending **confirmation) bool {
 			if cf.alt != "" && button(c, "alt", cf.alt, "", false, pal) {
 				alt = true
 			}
-			if button(c, "ok", cf.action, "↩", true, pal) {
+			if defaultButton(c, "ok", cf.action, "↩", true, pal) || c.Shortcut(0, ui.KeyEnter) {
 				run = true
 			}
 		})
