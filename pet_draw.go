@@ -11,16 +11,21 @@ import (
 
 // --- the frog ---
 
-// The frog's colors, which stay the same in either appearance: a mint
-// frog on a desktop, not a UI.
+// The frog's colors, which stay the same in either appearance: a frog on
+// a desktop, not a UI. Body, belly and line are the icon's frog
+// (resources/icon.png), so the frog on the edge is the Kero in the Dock.
 var (
-	petBody  = ui.Hex("#8ed6a4")
-	petBelly = ui.Hex("#f7f1dc")
-	petInk   = ui.Hex("#26362d")
-	petCheek = ui.Hex("#f29b96")
-	petLeaf  = ui.Hex("#5cae79")
-	petSpark = ui.Hex("#f4c95d")
-	petTear  = ui.Hex("#7bb8ea")
+	petBody  = ui.Hex("#c6eb72")
+	petBelly = ui.Hex("#fdf4a2")
+	petLine  = ui.Hex("#203501") // the icon's outline around body and hands
+	// petRim is the width of the line round the head, the hands and the
+	// far arm, at the frog's size.
+	petRim   float32 = 1.6
+	petInk           = ui.Hex("#26362d")
+	petCheek         = ui.Hex("#f29b96")
+	petLeaf          = ui.Hex("#5cae79")
+	petSpark         = ui.Hex("#f4c95d")
+	petTear          = ui.Hex("#7bb8ea")
 )
 
 // petLook is where the frog is in its motion: offsets and expression.
@@ -133,13 +138,24 @@ func (a *App) petDraw(p *ui.Painter, r ui.Rect, mood petMood, hovered bool) {
 		case mood == petWorking && l.tap:
 			lhy = bottom - 10.5 - 3*float32(math.Abs(float64(petWave(float32(p.Now().Sub(a.pet.since).Seconds()), 0.5))))
 		}
-		p.Line(cx-30, headY+23, lhx, lhy-4, 9.5, petBody)
+		p.Line(cx-30, headY+23, lhx, lhy-4, 9.5, petLine)
+		p.Line(cx-30, headY+23, lhx, lhy-4, 9.5-petRim*2, petBody)
 		p.Line(cx+30, headY+23, rhx, rhy-4, 9.5, petBody)
 
-		// The eye bumps, then the head: a frog, not a ghost.
-		p.FillPath(petEllipse(cx-22, headY-30, 15, 15), petBody)
-		p.FillPath(petEllipse(cx+22, headY-30, 15, 15), petBody)
-		p.FillPath(petHead(cx, headY, 88, 64), petBody)
+		// The eye bumps, then the head: a frog, not a ghost. Its line, as
+		// the icon's, goes round the head and hands alone: the head drawn
+		// a line wide larger in the line's color, then in the body's over
+		// the bumps, so that the body's own edge and tops show.
+		eyeL, eyeR := petEllipse(cx-22, headY-30, 15, 15), petEllipse(cx+22, headY-30, 15, 15)
+		big, small := petHead(cx, headY, 88+petRim*2, 64+petRim*2), petHead(cx, headY, 88, 64)
+		p.FillPath(big, petLine)
+		for _, c := range []ui.Color{petLine, petBody} {
+			p.FillPath(eyeL, c)
+			p.FillPath(eyeR, c)
+		}
+		p.FillPath(small, petLine)
+		p.FillPath(small, petBody)
+		p.FillPath(small, petBody)
 		// A breath of light on the crown.
 		p.Transform(ui.Rotation(-22), cx-19, headY-17, func() {
 			p.FillPath(petEllipse(cx-19, headY-17, 13, 7.5), ui.RGBA(255, 255, 255, 0.16))
@@ -258,6 +274,7 @@ func petEyeSad(p *ui.Painter, x, y float32) {
 // petHand is a little mitten with two fingers, turned by angle.
 func petHand(p *ui.Painter, x, y, r, angle float32) {
 	p.Transform(ui.Rotation(angle), x, y+r, func() {
+		p.StrokePath(petEllipse(x, y, r, r*0.88), petRim, petLine)
 		p.FillPath(petEllipse(x, y, r, r*0.88), petBody)
 		p.Line(x-r*0.36, y+1, x-r*0.36, y+r*0.54, 1.1, petInk.Alpha(0.16))
 		p.Line(x+r*0.08, y+1, x+r*0.08, y+r*0.6, 1.1, petInk.Alpha(0.16))
