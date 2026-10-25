@@ -222,6 +222,17 @@ func backdrop(c *ui.Context, pal *palette, row ui.Element, s settings.Settings) 
 	row.LinearGradient(glow)
 }
 
+// translucentGlass makes surfaces that sit on the wash, the sidebar's rows
+// and the cards, let it through, a tenth of what the wash lets through of
+// the desktop, so that a thin wash still shows a faint surface: with
+// translucency off they stay as they are.
+func translucentGlass(c ui.Color, pal *palette, s settings.Settings) ui.Color {
+	if !s.Vibrancy {
+		return c
+	}
+	return c.Alpha(min(1, 1-0.2*washOpacity(s)))
+}
+
 // washes returns a background's base and glow.
 func washes(id string, dark bool) (base, glow ui.LinearGradient) {
 	w, ok := washTable[id]

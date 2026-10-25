@@ -1147,7 +1147,9 @@ func (a *App) apply(s settings.Settings, save bool) {
 	if old.Language != s.Language && a.win != nil {
 		mygo.App.SetLocale(localeTag(s.Language))
 	}
-	if old.Vibrancy != s.Vibrancy || old.WindowBlur != s.WindowBlur {
+	// The wash changes with the material or its blur, which a change of
+	// opacity too, its alpha only, would leave as it was.
+	if old.Vibrancy != s.Vibrancy || old.WindowBlur != s.WindowBlur || old.WindowOpacity != s.WindowOpacity {
 		if a.win != nil {
 			a.win.SetVibrancy(vibrancyFor(s))
 		}

@@ -4,6 +4,12 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## Unreleased (smallnest/kero)
+
+- While the window is translucent, the sidebar's rows and the cards let
+  the desktop through as much as the background does, so that it shows
+  through the window rather than only at its edges.
+
 ## 2.1.21 (smallnest/kero)
 
 - A **quick terminal** drops down from the top of the screen over any
