@@ -11,8 +11,22 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+# Tell the user in Lark/Feishu when the run fails or syncs something new,
+# through lark-cli with the bot, to larkUser (export it; open_id "ou_…").
+# A quiet run says nothing. A failed send never fails the run.
+notify() {
+	[ -n "${larkUser:-}" ] || return 0
+	if ! command -v lark-cli >/dev/null 2>&1; then
+		log "lark-cli is not in PATH, so no Lark message"
+		return 0
+	fi
+	lark-cli im +messages-send --as bot --user-id "$larkUser" --text "$1" >/dev/null 2>&1 ||
+		log "the Lark message did not go out"
+}
+
 log() { printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
-die() { log "error: $*"; exit 1; }
+# A run that stops on purpose says why in Lark, and so in the log.
+die() { log "error: $*"; notify "kero sync failed: $*"; exit 1; }
 
 # --install writes and loads the launchd job of sync-upstream.plist;
 # --uninstall unloads it. Both use the repository as it is now.
@@ -109,5 +123,8 @@ if [ "$ff_main" = 1 ] || [ "$merge_dev" = 1 ]; then
 	git push --quiet origin main || die "pushing main failed"
 	git push --quiet origin dev || die "pushing dev failed"
 	log "pushed main and dev"
+	notify "kero sync: main and dev are up to date with upstream
+main: $(git log -1 --oneline main)
+dev: $(git log -1 --oneline dev)"
 fi
 log "done"
