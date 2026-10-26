@@ -4,17 +4,22 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
-## Unreleased (smallnest/kero)
+## 2.1.22 (smallnest/kero)
 
+- The **sidebar** sorts and groups sessions: **Sort and Group** at its
+  top groups them by project, by date, or not at all, and orders them by
+  when they were created or last updated. Each project shows a colored
+  initial, its sessions step in beneath it, and dragging a project's
+  name moves it among the others. A project folded away keeps the
+  session you are in, its badge showing a red dot while it does.
+- **View › Toggle Files** (⌥⌘F) opens the side panel on the **Files**
+  view, and closes it again. It was named Toggle Side Panel, and opened
+  Changes.
+- A session's time and its ⌘ number show whole in a narrow sidebar,
+  rather than being squeezed by a long name.
 - While the window is translucent, the sidebar's rows and the cards let
   the desktop through as much as the background does, so that it shows
   through the window rather than only at its edges.
-
-## 2.1.22 (smallnest/kero)
-
-- This release takes upstream's 2.1.21 and 2.1.22: a session's time and
-  its ⌘ number show whole in a narrow sidebar, and a client's reset
-  connection counts as its close. Upstream's 2.1.21 notes follow.
 
 ## 2.1.21 (smallnest/kero)
 
