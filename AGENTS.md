@@ -52,6 +52,44 @@ git cherry-pick -x <sha>
 
 Keep `-x`, so the commit names where it came from.
 
+## The fork's features keep working
+
+Each fork feature came as a pull request upstream never merged, and it
+lives in `dev`, not only in its branch. Merging upstream, or any branch,
+must keep every one: resolve a conflict by keeping both sides, never by
+taking upstream's file whole, and check them after the merge rather than
+only that it builds.
+
+| Feature | PR | Code to find | Tests |
+|---|---|---|---|
+| Files view in the side panel | #241 | `sideFiles`, `filesView`, `filesRoot` | `TestSideToggle`, `TestFilePane`, `TestFileTreeRel` |
+| Sidebar sort and group, project badges, folded projects | #214 | `sortButton`, `sessionSidebar`, `projectBadgeColor`, `projectInitial`, `dateHeader` | `TestProjectOrder`, `TestProjectDrag`, `TestSessionAlign`, `TestCollapseSelectedProject`, `TestSidebarRowKeepsTime` |
+| Background opacity and blur | #211 | `washOpacity`, `vibrancyFor`, `WindowBlur` | `TestVibrancyFor`, `TestBlurlessBackgroundIsTranslucent`, `TestTranslucentGlass` |
+| The menu of installed monospaced fonts | #209 | `fontOptions` | `TestFontOptionsInstalled` |
+| Kero the frog | #206 | `pet.go`, `petState` | `go test . -run TestPet` |
+| Quitting ends this machine's sessions | #219 | `quitRequested`, `quitAndEnd`, `QuitEndsSessions` | `TestQuitEndsSessions` |
+
+```sh
+for s in sideFiles filesView sortButton sessionSidebar projectBadgeColor fontOptions petState quitRequested vibrancyFor; do
+	grep -rq "$s" --include='*.go' . || echo "missing: $s"
+done
+go test . -run 'TestSideToggle|TestFilePane|TestProjectOrder|TestProjectDrag|TestSessionAlign|TestCollapseSelectedProject|TestSidebarRowKeepsTime|TestQuitEndsSessions|TestFontOptionsInstalled|TestVibrancyFor|TestBlurlessBackgroundIsTranslucent|TestTranslucentGlass'
+```
+
+The branches the pull requests came from (`feat/files-view`,
+`sidebar-sort`, `window-opacity`, `font-picker`, `kero-pet`,
+`quit-ends-sessions`) are behind `dev` and may be rebased: a commit that
+looks missing there says nothing about `dev`. Check the code and the
+tests above.
+
+Two merges showed why. One took upstream's `view.go` whole: 2.1.21 lost
+the sidebar's sort button, its colored badges and its indentation, while
+the data side stayed, and nothing failed to build or test. The other left
+`files.toggle` with a "this fork has no Files view" case: the menu entry
+named Toggle Side Panel opened Changes. Neither shows in the app's
+strings either, since a locale file keeps the words of a view that no
+code opens, and a feature's test can go missing with its code.
+
 ## Which repository releases come from
 
 Kero here releases as `smallnest/kero`: `mygo.json` `updates.github`,
@@ -76,6 +114,8 @@ go build ./... && go vet ./... && go test . ./internal/...
 go tool mygo i18n check
 bun install && bun run --filter website build   # when the website changes
 ```
+
+Before pushing a merge, run the check above for the fork's features too.
 
 `bun install` rewrites `bun.lock`. Restore it unless the dependencies
 really changed.
