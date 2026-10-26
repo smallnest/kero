@@ -1,9 +1,10 @@
 #!/bin/sh
-# Sync this fork with upstream (egoist/kero): fetch, fast-forward main,
-# merge upstream/main into dev, test, and push both.
+# Sync this fork with upstream (egoist/kero): fetch, merge upstream/main
+# into dev, test, and push dev. main takes no part: it is not upstream's,
+# any more than dev is, and dev merges upstream/main itself.
 #
 # It refuses to touch anything when it can't be sure the repository is
-# quiet: the tree must be clean, and both branches must equal origin.
+# quiet: the tree must be clean, and dev must equal origin/dev.
 #
 # Run it by hand with scripts/sync-upstream.sh. Every 30 minutes, install
 # it as a launchd job: scripts/sync-upstream.sh --install (--uninstall ends
@@ -66,24 +67,13 @@ git fetch --quiet --prune origin
 git fetch --quiet --prune upstream
 
 [ "$(git rev-parse dev)" = "$(git rev-parse origin/dev)" ] || die "dev is not origin/dev"
-ff_main=0
-if git merge-base --is-ancestor upstream/main main; then
-	if [ "$(git rev-list --count main..upstream/main)" -gt 0 ]; then
-		[ "$(git rev-parse main)" = "$(git rev-parse origin/main)" ] || die "main is not origin/main"
-		ff_main=1
-	fi
-else
-	log "main: has commits of its own, or is behind origin; leaving it"
-fi
 merge_dev=0
-# A later merge of main into dev hides upstream/main behind it, so dev can
-# hold all of upstream's commits yet not have upstream/main in it.
-git merge-base --is-ancestor upstream/main dev ||
-	{ git merge-base --is-ancestor upstream/main main && git merge-base --is-ancestor main dev; } ||
-	merge_dev=1
+# A later merge of upstream into dev hides upstream/main behind it, so dev
+# can hold all of upstream's commits yet not have upstream/main in it.
+git merge-base --is-ancestor upstream/main dev || merge_dev=1
 
 # merge_tree tries the merge on a remote one, before anything changes, so
-# that a conflict leaves the tree clean and main untouched.
+# that a conflict leaves the tree clean.
 #
 # CHANGELOG.md always conflicts: this fork writes its own notes in it,
 # under its own title, where upstream writes a new release at the top,
@@ -120,19 +110,8 @@ if [ "$merge_dev" = 1 ]; then
 	rm -f "$merge_try"
 fi
 
-# From here a check that stops the run leaves a branch moved, for the
-# next run to find.
-if [ "$ff_main" = 1 ]; then
-	git checkout --quiet main || die "checkout main failed"
-	git merge --ff-only --quiet upstream/main || die "main can't fast-forward"
-	# main may change its own files (a released mygo.json), so try the
-	# merge again, over it.
-	log "main: fast-forwarded to $(git log -1 --oneline upstream/main)"
-else
-	log "main: up to date"
-fi
-
-git checkout --quiet dev || die "checkout dev failed"
+# From here a check that stops the run leaves dev moved, for the next run
+# to find.
 if [ "$merge_dev" = 1 ]; then
 	git merge --no-edit --quiet upstream/main >/dev/null 2>&1 && merge_dev=2 ||
 		{ git merge --abort 2>/dev/null || true; merge_tree; }
@@ -156,12 +135,10 @@ else
 	log "dev: up to date"
 fi
 
-if [ "$ff_main" = 1 ] || [ "$merge_dev" = 1 ]; then
-	git push --quiet origin main || die "pushing main failed"
+if [ "$merge_dev" = 1 ]; then
 	git push --quiet origin dev || die "pushing dev failed"
-	log "pushed main and dev"
-	notify "kero sync: main and dev are up to date with upstream
-main: $(git log -1 --oneline main)
+	log "pushed dev"
+	notify "kero sync: dev is up to date with upstream
 dev: $(git log -1 --oneline dev)"
 fi
 log "done"
