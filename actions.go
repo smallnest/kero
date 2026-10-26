@@ -230,7 +230,12 @@ func (a *App) menu() *mygo.Menu {
 			a.item("app.quitAll")}}
 	}
 	view := append(a.items("View", []string{"sidebar.toggle", "side.toggle", "changes.toggle", "files.toggle", "pet.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}, []string{quickAction}),
-		mygo.Separator(), &mygo.MenuItem{Role: mygo.RoleToggleFullScreen}, &mygo.MenuItem{Role: mygo.RoleToggleDevTools})
+		mygo.Separator(), &mygo.MenuItem{Role: mygo.RoleToggleFullScreen})
+	// The inspector is a development build's: a production build leaves it
+	// out, and its window's DevTools off, where the item would do nothing.
+	if mygo.IsDev() {
+		view = append(view, &mygo.MenuItem{Role: mygo.RoleToggleDevTools})
+	}
 	return mygo.NewMenu([]*mygo.MenuItem{
 		kero,
 		{Label: locales.MenuSession(), Submenu: a.items("Session",
