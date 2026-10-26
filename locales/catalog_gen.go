@@ -3828,11 +3828,11 @@ func (msgs Messages) ActionTogglePet() string {
 	return Catalog.Format(msgs.locale, "actionTogglePet", nil)
 }
 
-// ActionToggleFiles says "Toggle Side Panel"
+// ActionToggleFiles says "Toggle Files"
 // in the language the app shows.
 func ActionToggleFiles() string { return In(i18n.Locale()).ActionToggleFiles() }
 
-// ActionToggleFiles says "Toggle Side Panel"
+// ActionToggleFiles says "Toggle Files"
 // in the language of msgs.
 func (msgs Messages) ActionToggleFiles() string {
 	return Catalog.Format(msgs.locale, "actionToggleFiles", nil)
