@@ -144,7 +144,8 @@ Usage:
   kero hosts remove|check <name>
   kero hosts install <name|address> [--version v]
                                 install Kero there, over SSH
-  kero daemon status|stop|restart
+  kero daemon status|stop|restart|update [version]
+  kero daemon stop --force         kill a kerod that does not stop
   kero daemon serve [--listen tailnet://:7373]…
                                 run kerod in the foreground, never idle,
                                 as a service does
@@ -972,9 +973,13 @@ func daemonCmd(args []string, host string) error {
 		}
 		return nil
 	case "stop", "restart":
+		f, err := parse(args[1:], nil, map[string]string{"force": "force", "f": "force"})
+		if err != nil {
+			return err
+		}
 		// The service's manager stops and restarts it, but Task
 		// Scheduler, whose kerod stops as any, and starts with the task.
-		if service.Installed() {
+		if service.Installed() && !f.set["force"] {
 			var err error
 			if sub == "stop" {
 				err = service.Stop()
@@ -988,7 +993,7 @@ func daemonCmd(args []string, host string) error {
 				return err
 			}
 		}
-		if err := StopDaemon(); err != nil {
+		if err := client.Stop(f.set["force"]); err != nil {
 			return err
 		}
 		if sub == "restart" {
@@ -1118,27 +1123,8 @@ func remoteDaemonCmd(sub string, args []string, host string) error {
 }
 
 // StopDaemon stops the running daemon, which saves its sessions to start
-// them again, whatever its version.
-func StopDaemon() error {
-	pid := client.DaemonPID()
-	if pid == 0 {
-		return nil
-	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return err
-	}
-	if client.Interrupt(p) != nil {
-		p.Kill()
-	}
-	for range 100 {
-		if client.DaemonPID() == 0 {
-			return nil
-		}
-		time.Sleep(30 * time.Millisecond)
-	}
-	return errors.New("kerod did not stop")
-}
+// them again, whatever its version: one that does not answer is killed.
+func StopDaemon() error { return client.Stop(false) }
 
 // conversations lists the conversations kerod remembers, of a project
 // (by id or name) when one is named, matching query when there is one.

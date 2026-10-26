@@ -63,11 +63,17 @@ func (d *Daemon) listen() *listeners {
 	l := &listeners{d: d, on: map[string]*listener{}}
 	set := settings.Load()
 	specs := d.opts.Listen
-	if specs == nil {
-		specs = set.Listen
-		go l.follow(set)
+	if specs != nil {
+		l.set(specs, set.ListenAllow, true)
+		return l
 	}
-	l.set(specs, set.ListenAllow, true)
+	// The others, after kerod answers: one takes a while, Tailscale
+	// Serve's, and the socket a client waits on answers at once.
+	l.set(nil, set.ListenAllow, false)
+	go func() {
+		l.set(set.Listen, set.ListenAllow, true)
+		l.follow(set)
+	}()
 	return l
 }
 
@@ -92,9 +98,10 @@ func (l *listeners) follow(last settings.Settings) {
 }
 
 // set makes the listeners those of specs, stopping the others, and lets
-// in whom allow says. Once kerod has started, a Tailscale Serve socket
-// waits for the next kerod: the umask it takes would be any program's
-// kerod started meanwhile (see Run).
+// in whom allow says. Boot ones, at kerod's start, rather than ones a
+// change of the configuration adds, as Run has started kerod's programs:
+// a Tailscale Serve socket waits for the next kerod, as the umask it
+// takes would be any program's kerod started meanwhile.
 func (l *listeners) set(specs, allow []string, boot bool) {
 	want := map[string]remote.Listen{}
 	for _, s := range specs {

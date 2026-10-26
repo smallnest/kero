@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,10 +38,11 @@ type Dialer interface {
 // Local is this machine's kerod, which a dial starts unless NoStart.
 type Local struct{ NoStart bool }
 
-func (l Local) Dial() (net.Conn, error) { return dial(l.NoStart) }
+func (l Local) Dial() (net.Conn, error) { return dial(l.NoStart, false) }
 
-// dial connects to the daemon, starting it unless noStart.
-func dial(noStart bool) (net.Conn, error) {
+// dial connects to the daemon, starting it unless noStart: as a client of
+// kerod 3 does when v3, which a daemon forces answers as it listens.
+func dial(noStart, v3 bool) (net.Conn, error) {
 	sock := proto.SocketPath()
 	conn, err := net.Dial("unix", sock)
 	if err == nil {
@@ -53,6 +56,7 @@ func dial(noStart bool) (net.Conn, error) {
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for {
+		time.Sleep(20 * time.Millisecond)
 		conn, err = net.Dial("unix", sock)
 		if err == nil {
 			return conn, nil
@@ -60,7 +64,6 @@ func dial(noStart bool) (net.Conn, error) {
 		if time.Now().After(deadline) {
 			return nil, fmt.Errorf("kerod did not start: %w (see %s)", err, filepath.Join(proto.Dir(), "kerod.log"))
 		}
-		time.Sleep(20 * time.Millisecond)
 	}
 }
 
@@ -118,7 +121,8 @@ func handshake(conn net.Conn, hello proto.Hello) (proto.Welcome, *bufio.Reader, 
 		return proto.Welcome{}, nil, err
 	}
 	r := bufio.NewReaderSize(conn, 64<<10)
-	conn.SetReadDeadline(time.Now().Add(15 * time.Second))
+	// A kerod that does not answer this soon is not answering.
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	line, err := proto.ReadLine(r, 64<<10)
 	conn.SetReadDeadline(time.Time{})
 	if err != nil {
@@ -140,13 +144,145 @@ func handshake(conn net.Conn, hello proto.Hello) (proto.Welcome, *bufio.Reader, 
 // DaemonPID returns the pid of the daemon running, whatever its version,
 // or 0.
 func DaemonPID() int {
-	conn, err := dial(true)
+	conn, err := dial(true, false)
 	if err != nil {
 		return 0
 	}
 	defer conn.Close()
 	w, _, _ := handshake(conn, proto.Hello{Kind: "control"})
 	return w.PID
+}
+
+// stopTimeout is how long the daemon has to stop before it is killed:
+// time to save its sessions, short enough that a stuck one does not hold
+// up kero daemon stop.
+const stopTimeout = 2 * time.Second
+
+// StopTimeout is how long the daemon has to stop before it is killed.
+func StopTimeout() time.Duration { return stopTimeout }
+
+// pid is the pid a lock holds: its first word, as a kerod writes it, and
+// a shorter pid's leaves those of a longer one after it.
+func pid(lock []byte) int {
+	pid, _ := strconv.Atoi(strings.TrimSpace(string(lock)))
+	return pid
+}
+
+// namedByKerod tells whether the process of pid is kerod, by how it runs
+// (kerodCmd), which Linux tells from its command line. Elsewhere, only
+// one that runs, rather than a zombie whose killer left it.
+func namedByKerod(pid int) bool {
+	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if os.IsNotExist(err) {
+		return true // not one that runs: a zombie's, or not Linux's
+	}
+	if err != nil {
+		return false
+	}
+	return strings.Contains(strings.ReplaceAll(string(b), "\x00", " "), kerodCmd)
+}
+
+// Stop stops this machine's daemon, which saves its sessions to start
+// them again. One that does not answer in stopTimeout is killed, losing
+// what it did not save: force kills it at once, without asking.
+func Stop(force bool) error {
+	w, ok := daemonWelcome()
+	if ok && !force {
+		if p, err := os.FindProcess(w.PID); err == nil && Interrupt(p) == nil {
+			for end := time.Now().Add(stopTimeout); time.Now().Before(end); {
+				if v, ok := daemonWelcome(); !ok || v.PID != w.PID || v.Started != w.Started {
+					return nil
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}
+	pid, err := LockedPID()
+	if err != nil || pid == 0 {
+		return err
+	}
+	if force {
+		return kill(pid)
+	}
+	// One stopped answers none, and its lock names it: whether it is
+	// kerod, its command line tells.
+	if !namedByKerod(pid) {
+		return errors.New("kerod does not answer, and the process holding its lock may not be kerod: kero daemon stop --force kills it")
+	}
+	return kill(pid)
+}
+
+// daemonWelcome returns the daemon's welcome, and whether it answered: as
+// one that is stuck answers none, and one of another version, an error.
+// It asks as a version of kerod 3 does: one of several, which answers
+// whatever its protocol.
+func daemonWelcome() (proto.Welcome, bool) {
+	conn, err := dial(true, true)
+	if err != nil {
+		return proto.Welcome{}, false
+	}
+	defer conn.Close()
+	w, _, err := handshake(conn, proto.Hello{Kind: "control3"})
+	return w, err == nil && w.PID != 0
+}
+
+// kill kills the daemon of pid, and takes away what it leaves: its socket,
+// which nothing listens on now (ClearDaemon), and its lock.
+func kill(pid int) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	if err := p.Kill(); err != nil && Running(pid) {
+		return err
+	}
+	for end := time.Now().Add(stopTimeout); Running(pid) && time.Now().Before(end); {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if Running(pid) {
+		return fmt.Errorf("kerod (pid %d) did not die", pid)
+	}
+	ClearDaemon()
+	return nil
+}
+
+// LockedPID returns the pid of the daemon whose lock kerod.lock is, or 0:
+// the daemon writes it as it starts (daemon.Run). A free lock names none,
+// whoever holds it, as one released writes it empty.
+func LockedPID() (int, error) {
+	f, err := os.OpenFile(filepath.Join(proto.Dir(), "kerod.lock"), os.O_RDWR, 0o600)
+	if errors.Is(err, os.ErrNotExist) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	if lockFile(f) == nil {
+		UnlockFile(f)
+		// A free lock names none: one released, or of a kerod that died
+		// leaving its pid.
+		return 0, nil
+	}
+	b, err := io.ReadAll(io.NewSectionReader(f, 0, 32))
+	if err != nil {
+		return 0, err
+	}
+	n := pid(b)
+	if n == 0 || !Running(n) {
+		return 0, nil
+	}
+	return n, nil
+}
+
+// ClearDaemon removes the socket of a daemon that is gone, and empties
+// its lock.
+func ClearDaemon() {
+	os.Remove(proto.SocketPath())
+	if f, err := os.OpenFile(filepath.Join(proto.Dir(), "kerod.lock"), os.O_RDWR, 0o600); err == nil {
+		f.Truncate(0)
+		f.Close()
+	}
 }
 
 // Client is a control connection.

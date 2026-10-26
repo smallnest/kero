@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -134,6 +135,13 @@ func Run(opts Options) error {
 		time.Sleep(100 * time.Millisecond)
 	}
 	os.Unsetenv(takeoverEnv)
+	// The lock says whose it is, for kero daemon stop to kill this
+	// kerod when it no longer answers: one that cannot save its
+	// sessions (client.Stop).
+	lock.Truncate(0)
+	lock.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
+	// A free lock, a dead kerod's, names no one.
+	defer ClearLock()
 
 	sock := proto.SocketPath()
 	os.Remove(sock)
@@ -224,9 +232,23 @@ func (d *Daemon) successor() {
 	cmd := exec.Command(d.exe, os.Args[1:]...)
 	cmd.Dir = proto.Home()
 	cmd.Env = append(os.Environ(), takeoverEnv+"=1")
+	// Before this one lets go: a lock freed with this one's pid in it
+	// would read as this one, which is gone.
+	ClearLock()
 	if _, err := detach.Start(cmd); err != nil {
 		d.log.Printf("restarting: %v", err)
 	}
+}
+
+// ClearLock empties kerod's lock, which names its daemon's pid: as it
+// exits, or before the one that takes over from it starts.
+func ClearLock() {
+	f, err := os.OpenFile(filepath.Join(proto.Dir(), "kerod.lock"), os.O_RDWR, 0o600)
+	if err != nil {
+		return
+	}
+	f.Truncate(0)
+	f.Close()
 }
 
 // underService reports whether a service manager runs kerod, which starts

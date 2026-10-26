@@ -14,6 +14,14 @@ upstream releases it includes follow its own.
   restarted; now Kero carries on.
 - **View › Toggle Developer Tools** shows only in development builds,
   where the inspector is: a release build left it out.
+- While the window is translucent, the sidebar's rows and the cards let
+  the desktop through as much as the background does, so that it shows
+  through the window rather than only at its edges.
+- A kerod that does not answer no longer leaves the app connecting: the
+  client waits 2 seconds for its greeting, and `kero daemon stop` kills a
+  kerod that does not stop in 2 seconds, and removes its socket. kerod
+  writes its pid in `kerod.lock` as it starts, for the stop to find it.
+- `kero daemon stop --force` kills kerod at once, by the pid in its lock.
 
 ## 2.1.22 (smallnest/kero)
 
