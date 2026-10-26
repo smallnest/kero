@@ -5,3 +5,10 @@ node_modules/
 .DS_Store
 /kero
 /kero.exe
+
+# Local agent tools: not kero's files. They made the tree dirty, and the
+# 30-minute upstream sync refused every run.
+/.agents/
+/.claude/skills/
+/agent/
+/skills-lock.json
