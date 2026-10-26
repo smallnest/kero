@@ -173,7 +173,7 @@ func TestFileTreeRel(t *testing.T) {
 }
 
 // The panel's shortcut opens it on the view it showed last, and closes
-// it; this fork has no Files view, so both views' go to Changes.
+// it; each view's own opens it on that view.
 func TestSideToggle(t *testing.T) {
 	a := testApp(t)
 	s := &a.st.Sessions[0]
@@ -202,12 +202,20 @@ func TestSideToggle(t *testing.T) {
 	// A view's own opens the panel on it, and closes it again.
 	a.run("files.toggle", nil)
 	tt.Frame()
-	if a.prefs.Side != sideChanges {
+	if a.prefs.Side != sideFiles {
 		t.Errorf("files.toggle showed %q", a.prefs.Side)
+	}
+	if !tt.HasText(locales.SideFiles()) {
+		t.Errorf("the panel did not show Files; texts %q", tt.Texts())
 	}
 	a.run("files.toggle", nil)
 	if a.prefs.Side != "" {
 		t.Errorf("files.toggle left the panel open on %q", a.prefs.Side)
+	}
+	a.run("changes.toggle", nil)
+	tt.Frame()
+	if a.prefs.Side != sideChanges {
+		t.Errorf("changes.toggle showed %q", a.prefs.Side)
 	}
 }
 

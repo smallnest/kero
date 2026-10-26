@@ -93,15 +93,15 @@ type sideFile struct {
 	err        string
 }
 
-// toggleSide opens or closes the panel, whatever its view: it shows the
-// view the user saw last, or view when it shows the other one.
+// toggleSide opens or closes the panel, whatever its view: closed, it
+// opens on view, or on the view the user saw last.
 func (a *App) toggleSide(view string) {
 	switch {
 	case a.prefs.Side == "":
-		// Closed: it opens on the view seen last, or on view.
-		v := a.side.view
+		// Closed: it opens on view, or on the view seen last.
+		v := view
 		if v == "" {
-			v = view
+			v = a.side.view
 		}
 		if v == "" {
 			v = sideChanges
