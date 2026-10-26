@@ -202,3 +202,37 @@ func timeAfter(path string) time.Time {
 	st, _ := os.Stat(path)
 	return st.ModTime().Add(time.Second)
 }
+
+// pane.tick ends an agent's conversation while holding the pane's lock,
+// as it holds it all through the tick: noting it there must not take the
+// lock again, which would stop the daemon and every session with it.
+func TestNoteEndedUnderPaneLock(t *testing.T) {
+	d := &Daemon{changeCh: make(chan struct{}, 1), saveCh: make(chan struct{}, 1)}
+	p := &pane{d: d, info: proto.Pane{AgentSession: &proto.AgentSession{Agent: "claude", ID: "a"}}}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		p.mu.Lock()
+		d.noteEndedLocked(p)
+		p.mu.Unlock()
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("noteEndedLocked waits for the pane's lock it holds")
+	}
+	// And a pane closing notes it without the lock, as it has none.
+	done = make(chan struct{})
+	go func() {
+		defer close(done)
+		d.noteEnded(p)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("noteEnded did not take the pane's lock")
+	}
+	if len(d.convs.list) != 1 {
+		t.Errorf("conversations %+v", d.convs.list)
+	}
+}

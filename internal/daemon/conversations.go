@@ -236,10 +236,17 @@ func (d *Daemon) noteConversations() {
 }
 
 // noteEnded remembers the conversation of a pane whose agent ends, or
-// whose pane closes, now; p.mu is held.
+// whose pane closes, now.
 func (d *Daemon) noteEnded(p *pane) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	d.noteEndedLocked(p)
+}
+
+// noteEndedLocked is noteEnded while p.mu is held: pane.tick calls it with
+// the lock it already holds, since locking p.mu again there deadlocks the
+// daemon, and every session with it.
+func (d *Daemon) noteEndedLocked(p *pane) {
 	if c := paneConversation(p, "", ""); c != nil {
 		// The session's name and project stay as last noted.
 		old, ok := d.convs.find(c.Agent, c.ID)

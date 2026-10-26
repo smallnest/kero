@@ -348,7 +348,9 @@ func (s *pane) tick(now time.Time) bool {
 		s.lastTitle = ""
 		// The conversations store hears of it, as the pane's agent ends.
 		if s.info.AgentSession != nil {
-			s.d.noteEnded(s)
+			// This tick holds s.mu: locking it again here would stop
+			// the daemon for good.
+			s.d.noteEndedLocked(s)
 		}
 		if s.info.AgentSession != nil {
 			a, dir := s.agentLocked()
