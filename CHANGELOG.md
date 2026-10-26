@@ -4,11 +4,16 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
-## Unreleased (smallnest/kero)
+## 2.1.23 (smallnest/kero)
 
 - **Session history** is gone, with the sidebar's **Ended** and
   **Archived** lists and the `session-history` setting: a session you
   closed was never one of the ones it listed, which the palette lists.
+- A deadlock in kerod is fixed: when an agent's own program ended in a
+  pane, the daemon stopped answering, and Kero with it, until it was
+  restarted; now Kero carries on.
+- **View › Toggle Developer Tools** shows only in development builds,
+  where the inspector is: a release build left it out.
 
 ## 2.1.22 (smallnest/kero)
 
