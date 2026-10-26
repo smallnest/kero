@@ -1031,19 +1031,3 @@ func TestCollapseSelectedProject(t *testing.T) {
 		t.Error("the opened project's badge still shows the dot")
 	}
 }
-
-// The ended conversations follow the sessions in every grouping: under
-// the projects, and after the list that none or dates make.
-func TestEndedInEveryGrouping(t *testing.T) {
-	for _, group := range []string{"", "none", "date"} {
-		a := testApp(t)
-		a.set.SessionHistory = true
-		a.prefs.SidebarGroup = group
-		a.local().convs = []proto.Conversation{{Agent: "claude", ID: "c1", Name: "done", Updated: 100}}
-		tt := ui.NewTester(a.view, 1100, 640)
-		tt.Frame()
-		if !tt.HasText(locales.EndedTitle()) {
-			t.Errorf("grouping %q: no ended section; texts %q", group, tt.Texts())
-		}
-	}
-}

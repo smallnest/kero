@@ -344,7 +344,6 @@ func (s *pane) tick(now time.Time) bool {
 		// session is no more to resume.
 		s.dropLive()
 		s.progress = ""
-		title := s.lastTitle
 		s.lastTitle = ""
 		// The conversations store hears of it, as the pane's agent ends.
 		if s.info.AgentSession != nil {
@@ -353,9 +352,7 @@ func (s *pane) tick(now time.Time) bool {
 			s.d.noteEndedLocked(s)
 		}
 		if s.info.AgentSession != nil {
-			a, dir := s.agentLocked()
 			s.info.AgentSession = nil
-			go s.d.agentExited(s, a, dir, title)
 		}
 	}
 	if proc != s.info.Process || agent != s.info.Agent || runtime != s.info.Runtime {

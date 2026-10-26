@@ -1101,34 +1101,6 @@
   "worktreeRemove": "Remove Worktree",
   "worktreeKeep": "Keep Worktree",
   "worktreeRemoveAnyway": "Remove Anyway",
-  "setSessionHistory": "Session history",
-  "setSessionHistoryDetail": "List the coding agents' ended conversations in the sidebar, to resume them later or archive them.",
-  "endedTitle": "Ended",
-  "endedArchived": "Archived",
-  "endedArchive": "Archive",
-  "endedShowAll": "Show all {n}",
-  "@endedShowAll": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "endedResume": "Resume",
-  "endedRestore": "Restore",
-  "endedDelete": "Delete",
-  "endedArchiveAll": "Archive All",
-  "endedDeleteAll": "Delete All…",
-  "endedDeleteAllTitle": "Delete {n} archived conversations?",
-  "@endedDeleteAllTitle": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "endedDeleteAllDetail": "Kero forgets them; each agent keeps its own history of the conversation.",
-  "endedSetUpSkill": "Set up Kero's skill for your agents to list their ended conversations here",
   "actionQuickTerminal": "Quick Terminal",
   "toastGlobalShortcutFailed": "Couldn’t use {keys} for the quick terminal: {error}",
   "setShortcutGlobal": "Works in every app"

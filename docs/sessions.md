@@ -71,12 +71,3 @@ Quitting Kero keeps the sessions running, so that opening it again shows them, a
 ```ini
 quit-ends-sessions = true
 ```
-
-### Ended sessions
-
-Turn on Settings › General › **Session history**, or `session-history = true`, to list the conversations no pane runs now at the bottom of the sidebar. A conversation leaves the list [when it runs again](#past-conversations), from any of the places that resume it. **Ended** shows the five newest. Click its header to unfold it, or **Show all** to list them all. Ended keeps the last 50 of each host. The conversations of your other hosts are among them, tagged with the host name.
-
-- Click one to start a session in its folder and project, under its session name, that resumes the conversation, as the palette does.
-- Hover over a conversation and click the archive button. The conversation moves to **Archived**.
-- Right-click a conversation to resume, archive, or forget it. You can also copy its id or folder, or show its folder.
-- Right-click **Ended** to archive them all, or **Archived** to forget them all. Forgetting a conversation only removes it from Kero. The agent keeps its own files.

@@ -39,7 +39,6 @@ func (d *Daemon) stateLocked() proto.State {
 		Sessions: make([]proto.Session, 0, len(d.sessions)),
 		Viewed:   d.viewedID(),
 		Started:  d.started.UnixMilli(),
-		Ended:    slices.Clone(d.ended),
 	}
 	for _, s := range d.sessions {
 		st.Sessions = append(st.Sessions, d.sessionInfo(s))
@@ -387,7 +386,6 @@ func (d *Daemon) removePane(id string) error {
 	delete(d.panes, id)
 	s := d.sessionOfLocked(p)
 	if s != nil {
-		d.paneEndedLocked(p, s)
 		s.panes = slices.DeleteFunc(s.panes, func(o *pane) bool { return o == p })
 		if s.layout != nil {
 			// The focus goes to the neighbor taking the room.
@@ -421,47 +419,6 @@ func (d *Daemon) removePane(id string) error {
 	return nil
 }
 
-func (d *Daemon) agentExited(p *pane, a *proto.AgentSession, dir, title string) {
-	d.mu.Lock()
-	name, title := endedName(d.sessionOfLocked(p), title)
-	d.endedLocked(a, dir, name, title, time.Now().UnixMilli())
-	d.mu.Unlock()
-	d.changed()
-}
-
-func (d *Daemon) endedCall(method, id string) (any, error) {
-	d.mu.Lock()
-	i := slices.IndexFunc(d.ended, func(e proto.EndedSession) bool { return e.ID == id })
-	if i < 0 {
-		d.mu.Unlock()
-		return nil, fmt.Errorf("no ended session %q", id)
-	}
-	e := d.ended[i]
-	if method == "ended.archive" || method == "ended.unarchive" {
-		d.ended[i].Archived = method == "ended.archive"
-	} else {
-		// A resume takes it at once, so that a second click finds it gone.
-		d.ended = slices.Delete(d.ended, i, i+1)
-	}
-	d.mu.Unlock()
-	if method != "ended.resume" {
-		d.changed()
-		return true, nil
-	}
-	name := e.Name
-	if e.Titled {
-		name = ""
-	}
-	info, err := d.create(proto.CreateParams{Dir: e.Dir, Name: name, Command: resumeCommand(&e.AgentSession)})
-	if err != nil {
-		d.mu.Lock()
-		d.ended = slices.Insert(d.ended, min(i, len(d.ended)), e)
-		d.mu.Unlock()
-		return nil, err
-	}
-	d.changed()
-	return info, nil
-}
 
 // removeSession closes a session and its panes.
 func (d *Daemon) removeSession(ref string) error {
@@ -475,7 +432,6 @@ func (d *Daemon) removeSession(ref string) error {
 	panes := s.panes
 	for _, p := range panes {
 		delete(d.panes, p.info.ID)
-		d.paneEndedLocked(p, s)
 	}
 	d.mu.Unlock()
 	for _, p := range panes {

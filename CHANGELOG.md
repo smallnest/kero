@@ -4,6 +4,12 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## Unreleased (smallnest/kero)
+
+- **Session history** is gone, with the sidebar's **Ended** and
+  **Archived** lists and the `session-history` setting: a session you
+  closed was never one of the ones it listed, which the palette lists.
+
 ## 2.1.22 (smallnest/kero)
 
 - The **sidebar** sorts and groups sessions: **Sort and Group** at its

@@ -365,22 +365,18 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 			return nil, fmt.Errorf("no pane runs %s session %q", p.Agent, p.Session)
 		}
 		pn.mu.Lock()
-		old, dir := pn.agentLocked()
-		title := pn.lastTitle
+		old, _ := pn.agentLocked()
 		pn.info.AgentSession = as
 		id := pn.info.ID
 		pn.mu.Unlock()
 		d.mu.Lock()
 		sid := pn.sid
-		// It runs again: no longer ended, nor archived.
-		d.ended = slices.DeleteFunc(d.ended, func(e proto.EndedSession) bool { return e.AgentSession == *as })
 		d.mu.Unlock()
 		if old != nil && *old != *as {
 			// The pane runs another conversation now: the old one ended.
-			d.agentExited(pn, old, dir, title)
-		} else {
-			d.changed()
+			d.noteConversations()
 		}
+		d.changed()
 		// The conversations store (upstream) hears of it too.
 		d.noteConversations()
 		return proto.AgentSessionResult{Pane: id, Session: sid, Away: away}, nil
@@ -427,18 +423,6 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		}
 		d.changed()
 		return true, nil
-
-	case "ended":
-		d.mu.Lock()
-		defer d.mu.Unlock()
-		return slices.Clone(d.ended), nil
-
-	case "ended.resume", "ended.archive", "ended.unarchive", "ended.delete":
-		var p proto.IDParams
-		if err := decode(&p); err != nil {
-			return nil, err
-		}
-		return d.endedCall(method, p.ID)
 
 	case "project.create":
 		var p proto.ProjectParams

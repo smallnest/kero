@@ -63,10 +63,6 @@ type prefs struct {
 	// does: "preview" or "" shows it under the tree, "pane" opens it in a
 	// file pane, and "editor" in the host's editor.
 	FileOpen string `json:"fileOpen,omitempty"`
-	// EndedOpen and ArchivedOpen tell the sidebar's sections of the
-	// agents' ended conversations unfolded (session-history).
-	EndedOpen    bool `json:"endedOpen,omitempty"`
-	ArchivedOpen bool `json:"archivedOpen,omitempty"`
 	// QuickSession is the session the quick terminal shows (quick.go).
 	QuickSession string `json:"quickSession,omitempty"`
 }
@@ -144,11 +140,6 @@ type App struct {
 	find    findState
 	confirm *confirmation
 	wtAsk   *worktreeAsk
-	// endedAll shows all of the sidebar's Ended; skillMissing tells, as
-	// of skillsAt, that no kind of agent has Kero's skill (ended.go).
-	endedAll     bool
-	skillMissing bool
-	skillsAt     time.Time
 	sideDrag     float32 // the width as a drag of the sidebar's edge began
 	pendingToast string
 	// later are actions that change what the view is building, run once
@@ -321,13 +312,6 @@ func (a *App) event(h *host, cl *client.Client, m proto.Message) {
 func (a *App) setState(h *host, st proto.State) {
 	first, hostFirst := !a.loaded, !h.loaded
 	h.loaded = true
-	if st.Conversations != h.convGen || hostFirst {
-		// The sidebar's conversations are asked for anew, as they changed.
-		h.convGen, h.convKnown = st.Conversations, false
-		if a.set.SessionHistory {
-			a.loadHostConversations(h, st.Conversations)
-		}
-	}
 	// A divider dragged keeps the ratios it set, which the daemon hears of
 	// only once it is let go.
 	var dragged *proto.Layout
@@ -359,13 +343,6 @@ func (a *App) setState(h *host, st proto.State) {
 	for id := range a.files {
 		if !live[id] {
 			delete(a.files, id)
-		}
-	}
-	if a.set.SessionHistory {
-		a.syncEnded()
-	} else {
-		for _, h := range a.hosts {
-			h.convs, h.convKnown, h.convAsked = nil, false, false
 		}
 	}
 	a.quickChanged()

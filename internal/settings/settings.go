@@ -29,7 +29,6 @@ type Settings struct {
 	RestoreSessions   bool   `json:"restoreSessions"`   // after kerod restarts, as after a reboot
 	ResumeAgents      bool   `json:"resumeAgents"`      // as it restores sessions: the agents' own
 	QuitEndsSessions  bool   `json:"quitEndsSessions"`  // quitting ends this machine's sessions, as app.quitAll
-	SessionHistory    bool   `json:"sessionHistory"`    // the sidebar lists the agents' ended conversations
 	QuitConfirm       bool   `json:"quitConfirm"`       // tell, the first time, that quitting keeps sessions
 	AppIcon           string `json:"appIcon"`           // macOS: AppIcons; elsewhere the icon is always in the notification area
 

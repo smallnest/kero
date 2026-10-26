@@ -270,11 +270,6 @@ func (a *App) sidebar(c *ui.Context, pal *palette, bar ui.TitleBar) {
 		n := 0 // the rows shown, for ⌘1–9 (Ctrl+1–9 elsewhere)
 		if g := a.prefs.SidebarGroup; g == "none" || g == "date" {
 			a.sessionSidebar(c, pal, g, &n)
-			// The ended conversations follow the sessions in every
-			// grouping, as they do under the projects below.
-			if a.set.SessionHistory {
-				a.endedSections(c, pal)
-			}
 			return
 		}
 		gi := 0 // the groups shown, the first of which sits higher
@@ -306,9 +301,6 @@ func (a *App) sidebar(c *ui.Context, pal *palette, bar ui.TitleBar) {
 				a.groupView(c, pal, g, gi, &n)
 				gi++
 			}
-		}
-		if a.set.SessionHistory {
-			a.endedSections(c, pal)
 		}
 	})
 	a.sidebarFooter(c, pal)
