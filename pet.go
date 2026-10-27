@@ -114,11 +114,12 @@ func (a *App) petShow() {
 		DisableFullScreen: true,
 		SkipTaskbar:       true,
 		Hidden:            true,
-		// A panel floats over every app, on the Space the user is on. A
-		// child window of the main one does not: macOS keeps it under the
-		// windows of its parent's siblings. It takes no keyboard.
-		Panel:   true,
-		Content: ui.View(a.petView),
+		// It floats over other apps' windows, and gives way to the ones
+		// that open over it, as petPlace keeps it off them. Not a child
+		// window of the main one: macOS keeps that under every window.
+		// Its own window is no page: a page hides until its app draws it.
+		AlwaysOnTop: true,
+		Content:     ui.View(a.petView),
 	})
 	win := p.win
 	p.offs = []func(){
@@ -130,6 +131,8 @@ func (a *App) petShow() {
 			a.petSet = nil
 		}),
 		a.win.OnMove(a.petPlace),
+		// The pet gives way where it shows under them.
+		a.win.OnFocus(a.petPlace),
 		a.win.OnResize(a.petPlace),
 		a.win.OnShow(a.petPlace),
 		a.win.OnHide(win.Hide),
@@ -180,9 +183,31 @@ func (a *App) petPlace() {
 			p.win.Invalidate()
 		}
 	}
+	// It shows over other apps' windows, and gives way where a window of
+	// this app's own is over it: the main one, or Settings.
+	for _, cover := range []*mygo.Window{a.win, a.setWin} {
+		if petCovers(cover, r) {
+			p.win.Hide()
+			return
+		}
+	}
 	if !p.win.IsVisible() {
 		p.win.ShowInactive()
 	}
+}
+
+// petCovers tells whether w, up right now, may be over the pet's window at
+// r: its frame, as the pet's is framed.
+func petCovers(w *mygo.Window, r mygo.Rectangle) bool {
+	if w == nil || w.IsDestroyed() || !w.IsVisible() || w.IsMinimized() {
+		return false
+	}
+	return petOverlaps(w.Bounds(), r)
+}
+
+// petOverlaps tells whether two windows' frames overlap.
+func petOverlaps(a, b mygo.Rectangle) bool {
+	return a.X < b.X+b.Width && b.X < a.X+a.Width && a.Y < b.Y+b.Height && b.Y < a.Y+a.Height
 }
 
 // petSizeKnob follows the pet's size slider, from one frame to the next:

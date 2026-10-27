@@ -110,6 +110,12 @@ func (a *App) openSettings(page string) {
 		Vibrancy: vibrancyFor(a.set),
 		Content:  ui.View(a.settingsView),
 	}))
+	// The pet hides under it while it is over it.
+	a.setWin.OnMove(a.petPlace)
+	a.setWin.OnResize(a.petPlace)
+	a.setWin.OnShow(a.petPlace)
+	a.setWin.OnHide(a.petPlace)
+	a.setWin.OnFocus(a.petPlace)
 	a.setWin.OnClosed(func() {
 		offUpdates()
 		a.setWin = nil
