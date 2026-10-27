@@ -4,6 +4,11 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.26 (smallnest/kero)
+
+- The pet's settings — the switch, the pet, and its size — share a
+  group of their own in Settings › Appearance.
+
 ## 2.1.25 (smallnest/kero)
 
 - **Codex pet size** is a setting: the slider in Settings › Appearance,
