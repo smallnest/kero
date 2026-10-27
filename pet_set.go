@@ -83,14 +83,34 @@ func (a *App) petSetLoad() *petSet {
 // petSetReload reads the pet again, as settings changed, or a pack
 // installed, and so the pets the settings may show.
 func (a *App) petSetReload() {
-	// A pet installed from the CLI, without settings changed: read the
-	// list again rather than on every frame.
-	time.AfterFunc(1500*time.Millisecond, func() { a.update(func() { petsGen++ }) })
+	a.petListAgain()
 	petsGen++
 	a.petSet = a.petSetLoad()
 	if a.pet.win != nil {
 		a.pet.win.Invalidate()
 	}
+}
+
+// petSetGrow reads the pet again at its new size, while the settings keep
+// the old one: no list of pets reads again until they do.
+func (a *App) petSetGrow() {
+	a.petSet = a.petSetLoad()
+	if a.pet.win != nil {
+		a.pet.win.Invalidate()
+	}
+}
+
+// petListTick is the timer that reads the pets the settings may show
+// again, for a pet installed from the CLI, without settings changed.
+var petListTick *time.Timer
+
+// petListAgain reads the pets the settings may show again, once in a
+// while: until then, listPets reads them once.
+func (a *App) petListAgain() {
+	if petListTick != nil {
+		petListTick.Stop()
+	}
+	petListTick = time.AfterFunc(1500*time.Millisecond, func() { a.update(func() { petsGen++ }) })
 }
 
 // petSetState is the spritesheet row of each mood: an agent that works is

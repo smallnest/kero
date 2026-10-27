@@ -88,7 +88,7 @@ func TestPetSpot(t *testing.T) {
 		x      int
 	}{{0.5, 540}, {0.25, 290}, {0, 40}} {
 		r, bottom := petSpot(main, work, c.offset, setH)
-		if bottom || r.Y != 300-petH+petPerch || r.Height != petH || r.X != c.x {
+		if bottom || r.Y != 194 || r.Height != petH || r.X != c.x { // its speech's top, petH above its hands
 			t.Errorf("offset %v: %+v bottom %v, want x %d", c.offset, r, bottom, c.x)
 		}
 	}
@@ -116,6 +116,15 @@ func TestPetSpot(t *testing.T) {
 		if bottom != c.bottom || got.Height != c.height || got.Y != c.y {
 			t.Errorf("%s at %d: %+v bottom %v, want y %d height %d bottom %v", c.name, c.mainY, got, bottom, c.y, c.height, c.bottom)
 		}
+	}
+	// A frog, or a small Codex pet, stands inside a window at its bottom,
+	// as tall as the frog shows there: a window at the screen's top leaves
+	// no room for its hands above it. Its window shows the frog below the
+	// edge: its bottom left there at 607.
+	main.Y = 25
+	got, bottom := petSpot(main, work, 0.5, 87)
+	if !bottom || got.Height != petH || got.Y != 607 {
+		t.Errorf("inside: %+v bottom %v, want y 607", got, bottom)
 	}
 }
 

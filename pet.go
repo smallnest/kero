@@ -114,10 +114,8 @@ func (a *App) petShow() {
 		DisableFullScreen: true,
 		SkipTaskbar:       true,
 		Hidden:            true,
-		// It floats over other apps' windows, and gives way to the ones
-		// that open over it, as petPlace keeps it off them. Not a child
-		// window of the main one: macOS keeps that under every window.
-		// Its own window is no page: a page hides until its app draws it.
+		// It floats over other apps' windows, where a child window of the
+		// main one stays under every window's.
 		AlwaysOnTop: true,
 		Content:     ui.View(a.petView),
 	})
@@ -131,8 +129,6 @@ func (a *App) petShow() {
 			a.petSet = nil
 		}),
 		a.win.OnMove(a.petPlace),
-		// The pet gives way where it shows under them.
-		a.win.OnFocus(a.petPlace),
 		a.win.OnResize(a.petPlace),
 		a.win.OnShow(a.petPlace),
 		a.win.OnHide(win.Hide),
@@ -183,26 +179,26 @@ func (a *App) petPlace() {
 			p.win.Invalidate()
 		}
 	}
-	// It shows over other apps' windows, and gives way where a window of
-	// this app's own is over it: the main one, or Settings.
-	for _, cover := range []*mygo.Window{a.win, a.setWin} {
-		if petCovers(cover, r) {
-			p.win.Hide()
-			return
-		}
+	// It floats over other apps' windows. Where a window of this app's own
+	// is over it, the main one or Settings, it gives way.
+	if petOver(a, r) {
+		p.win.Hide()
+		return
 	}
-	if !p.win.IsVisible() {
-		p.win.ShowInactive()
-	}
+	// Shown afresh on every move: with a window over it just gone, it shows
+	// again, where its own state may say it shows.
+	p.win.ShowInactive()
 }
 
-// petCovers tells whether w, up right now, may be over the pet's window at
-// r: its frame, as the pet's is framed.
-func petCovers(w *mygo.Window, r mygo.Rectangle) bool {
-	if w == nil || w.IsDestroyed() || !w.IsVisible() || w.IsMinimized() {
-		return false
+// petOver tells whether a window of the app's own, up now, is over the
+// pet's window at r: the main one, or Settings.
+func petOver(a *App, r mygo.Rectangle) bool {
+	for _, w := range []*mygo.Window{a.win, a.setWin} {
+		if w != nil && !w.IsDestroyed() && w.IsVisible() && !w.IsMinimized() && petOverlaps(w.Bounds(), r) {
+			return true
+		}
 	}
-	return petOverlaps(w.Bounds(), r)
+	return false
 }
 
 // petOverlaps tells whether two windows' frames overlap.
@@ -210,23 +206,12 @@ func petOverlaps(a, b mygo.Rectangle) bool {
 	return a.X < b.X+b.Width && b.X < a.X+a.Width && a.Y < b.Y+b.Height && b.Y < a.Y+a.Height
 }
 
-// petSizeKnob follows the pet's size slider, from one frame to the next:
-// held, a drag grows the pet but keeps its size out of the settings, and
-// when it goes, or a keyboard step moved it, the settings keep it.
-func (a *App) petSizeKnob(sl ui.Element, held *bool) {
-	if now := sl.Pressed(); *held && !now {
-		a.applySettings(a.set)
-	} else {
-		*held = now
-	}
-}
-
 // petGrow puts the pet at its size, and where it stands now, on the next
 // frame: a slider dragged asks for this, rather than the settings
 // applied, and saved, on each frame of the drag.
 func (a *App) petGrow() {
 	if a.petSet != nil {
-		a.petSetReload()
+		a.petSetGrow()
 	}
 	a.petPlace()
 }

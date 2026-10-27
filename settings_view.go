@@ -110,12 +110,6 @@ func (a *App) openSettings(page string) {
 		Vibrancy: vibrancyFor(a.set),
 		Content:  ui.View(a.settingsView),
 	}))
-	// The pet hides under it while it is over it.
-	a.setWin.OnMove(a.petPlace)
-	a.setWin.OnResize(a.petPlace)
-	a.setWin.OnShow(a.petPlace)
-	a.setWin.OnHide(a.petPlace)
-	a.setWin.OnFocus(a.petPlace)
 	a.setWin.OnClosed(func() {
 		offUpdates()
 		a.setWin = nil
@@ -667,18 +661,12 @@ func (a *App) appearancePage(c *ui.Context, pal *palette) {
 		})
 		settingRow(c, pal, locales.SetPetSize(), locales.SetPetSizeDetail(), func() {
 			v := float64(s.PetSize)
-			var held bool // whether the knob is held, as the frame goes
-			sl := slider(c, "pet-size", &v, 0.5, 3, 160, pal).OnChange(func() {
+			slider(c, "pet-size", &v, 0.5, 3, 160, pal).OnChange(func() {
 				// The pet grows as the knob drags; the settings keep its
-				// size when the knob goes, or a keyboard step, one at a
-				// time.
+				// size when the knob goes.
 				s.PetSize = float32(int(v*10+0.5)) / 10
 				a.petGrow()
-				if !held {
-					a.applySettings(a.set)
-				}
 			})
-			a.petSizeKnob(sl, &held)
 			ui.Textf(c, "%.1f×", s.PetSize).FontSize(12.5).TextColor(pal.textMuted).Width(40).FontFeatures("tnum")
 		})
 	})
