@@ -67,8 +67,8 @@ func (a *App) petSetReload() {
 }
 
 // petSetState is the spritesheet row of each mood: an agent that works is
-// at its desk, one that waits asks for you, a failure fails, a finish
-// jumps, and a doze is the longest row a sheet of its version has.
+// at its desk, one that waits asks for you, a failure fails, and a finish
+// jumps. A pet at rest, or asleep, is idle: it rests as it always does.
 func petSetState(p *pets.Pet, mood petMood) pets.State {
 	switch mood {
 	case petWorking:
@@ -79,17 +79,28 @@ func petSetState(p *pets.Pet, mood petMood) pets.State {
 		return pets.Jump
 	case petFailed:
 		return pets.Fail
-	case petAsleep:
-		if p.Has(pets.Review) {
-			return pets.Review
-		}
-		return pets.LookRight
 	}
 	return pets.Idle
 }
 
+// petSetBlinks is how often a pet at rest blinks, its idle row's last
+// frames, and petSetBlink how long the blink shows.
+const (
+	petSetBlinks = 5 * time.Second
+	petSetBlink  = 300 * time.Millisecond
+)
+
 // petSetFrameAt is the frame of a state at now, which turns over since.
 func (a *App) petSetFrameAt(state pets.State, since, now time.Time) int {
+	if state == pets.Idle {
+		// The idle row plays from its first frame, and now and then its
+		// last ones close its eyes.
+		if rest := now.Sub(since) % petSetBlinks; rest < petSetBlink {
+			if frames := pets.Frames[pets.Idle]; frames > 1 {
+				return frames - 1
+			}
+		}
+	}
 	period := petSetFrame
 	if a.pet.calm {
 		period = petSetCalm
