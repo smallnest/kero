@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"kero/internal/actions"
 	"kero/internal/proto"
+	"kero/internal/settings"
 	"kero/locales"
 )
 
@@ -65,33 +67,58 @@ func TestPetDozes(t *testing.T) {
 // for it, at the left, center or right, and otherwise inside at the
 // bottom.
 func TestPetSpot(t *testing.T) {
+	a := testApp(t)
+	// The room a Codex pet takes above the edge at its default size: 1.5
+	// times the Codex app's 82 DIPs, and a little.
+	setH := petSetBodyH(a)
+	if setH != 123+8 {
+		t.Fatalf("petSetBodyH = %v, want %d", setH, 131)
+	}
+	for _, size := range []float32{0.5, 1, 1.5, 2, 3} {
+		a.set.PetSize = size
+		if h := petSetBodyH(a); h != float32(math.Round(float64(82*size)))+8 {
+			t.Errorf("size %v: petSetBodyH = %v", size, h)
+		}
+	}
+	a.set.PetSize = settings.DefaultPetSize
 	work := mygo.Rectangle{X: 0, Y: 25, Width: 1440, Height: 875}
 	main := mygo.Rectangle{X: 100, Y: 300, Width: 1000, Height: 700}
 	for _, c := range []struct {
 		offset float32
 		x      int
 	}{{0.5, 505}, {0.25, 255}, {0, 8}} {
-		r, bottom := petSpot(main, work, c.offset)
+		r, bottom := petSpot(main, work, c.offset, setH)
 		if bottom || r.Y != 300-petH+petPerch || r.Height != petH || r.X != c.x {
 			t.Errorf("offset %v: %+v bottom %v, want x %d", c.offset, r, bottom, c.x)
 		}
 	}
-	// Little room above: the speech gives way, the frog still stands on
-	// the edge.
-	main.Y = 120
-	r, bottom := petSpot(main, work, 0.5)
-	if bottom || r.Y != work.Y || r.Height != 120+petPerch-work.Y || r.Height < petBodyH {
-		t.Errorf("little room: %+v bottom %v", r, bottom)
+	// Little room above: the speech gives way, the frog or a Codex pet
+	// still stands on the edge, as tall as one shows. edge is the main
+	// window's top where what is above it is just setH; no room, the pet
+	// stands inside at the bottom.
+	edge := work.Y + int(setH) - petPerch
+	enough := int(setH)
+	if petH < enough {
+		enough = petH
 	}
-	// No room for the frog: it stands inside at the bottom.
-	main.Y = 80
-	r, bottom = petSpot(main, work, 0.5)
-	if !bottom || r.Y != 80+700-petH || r.Height != petH {
-		t.Errorf("no room: %+v bottom %v", r, bottom)
+	for _, c := range []struct {
+		name   string
+		mainY  int
+		bottom bool
+		height int
+	}{
+		{"little room", edge + 1, false, petH},
+		{"enough", edge, false, enough},
+		{"no room", edge - 1, true, petH},
+	} {
+		main.Y = c.mainY
+		got, bottom := petSpot(main, work, 0.5, setH)
+		if bottom != c.bottom || got.Height != c.height {
+			t.Errorf("%s at %d: %+v bottom %v", c.name, c.mainY, got, bottom)
+		}
 	}
 }
 
-// The middle of a pet dragged to left stands where petOffsetAt says.
 func TestPetOffsetAt(t *testing.T) {
 	main := mygo.Rectangle{X: 100, Width: 1000}
 	for _, c := range []struct {
@@ -173,8 +200,8 @@ func TestPetSettingRow(t *testing.T) {
 	tt := ui.NewTester(a.settingsView, 820, 640)
 	tt.Frame()
 	shot(t, tt, "settings-pet")
-	if !tt.HasText(locales.SetPet()) {
-		t.Errorf("the Appearance page does not offer the pet; texts %q", tt.Texts())
+	if !tt.HasText(locales.SetPet()) || !tt.HasText(locales.SetPetSize()) {
+		t.Errorf("the Appearance page does not offer the pet and its size; texts %q", tt.Texts())
 	}
 }
 

@@ -4,6 +4,14 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.25 (smallnest/kero)
+
+- **Codex pet size** is a setting: the slider in Settings › Appearance,
+  or `pet-size`, sets how tall a Codex pet shows, against the Codex
+  app's size. The default is 1.5.
+- kerod is found by `ps`, which macOS has too, as `kero daemon stop`
+  needs it.
+
 ## 2.1.24 (smallnest/kero)
 
 - **Codex pets** show on the window's edge: the **Pet** setting in

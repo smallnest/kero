@@ -1147,7 +1147,7 @@ func (a *App) apply(s settings.Settings, save bool) {
 		// goes, once this frame is done.
 		a.update(a.syncPet)
 	}
-	if old.PetOffset != s.PetOffset && a.pet.win != nil {
+	if (old.PetOffset != s.PetOffset || old.PetSize != s.PetSize) && a.pet.win != nil {
 		a.update(a.petPlace)
 	}
 	if old.PetSet != s.PetSet && a.pet.win != nil {

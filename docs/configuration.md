@@ -63,6 +63,7 @@ kero config check             # report unknown keys and bad values
 | `pet`                | `true`   | Kero the frog, who follows your sessions from the window's top edge |
 | `pet-offset`         | `0.5`    | Where Kero stands, 0 to 1 across the window; drag it there       |
 | `pet-set`            | `kero`   | The pet on the window's edge: `kero` the frog, `codex` for the Codex app's active pet, or a pet's directory name in `~/.codex/pets`
+| `pet-size`           | `1.5`    | How tall a Codex pet shows, against the Codex app's size: 0.5 to 3
 
 ## Terminal
 

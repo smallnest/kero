@@ -575,5 +575,7 @@
   "commonUse": "使用",
   "setPetInstallFailed": "无法安装宠物：{error}",
   "setPetWhich": "宠物",
-  "setPetKeroCopy": "Kero 安装的副本"
+  "setPetKeroCopy": "Kero 安装的副本",
+  "setPetSize": "Codex 宠物大小",
+  "setPetSizeDetail": "Codex 宠物的显示高度，以 Codex 应用的显示为准：1 与它相同，默认为 1.5。"
 }

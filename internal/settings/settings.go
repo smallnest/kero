@@ -42,6 +42,7 @@ type Settings struct {
 	Pet           bool    `json:"pet"`           // the frog on the window's top edge
 	PetOffset     float32 `json:"petOffset"`     // where it stands, 0 to 1 across the window
 	PetSet        string  `json:"petSet"`        // who: "kero", a Codex pet's directory name, or "codex" for the active one
+	PetSize       float32 `json:"petSize"`       // how tall a Codex pet shows, against the Codex app's frame
 
 	// Terminal
 	FontFamily   string  `json:"fontFamily"` // "" the font kero carries; "monospace" the system's
@@ -158,6 +159,7 @@ func Default() Settings {
 		Pet:             true,
 		PetOffset:       0.5,
 		PetSet:          PetSetKero,
+		PetSize:         DefaultPetSize,
 		DimUnfocused:    true,
 		FontSize:        13,
 		LineHeight:      1.22,
@@ -342,6 +344,9 @@ func (s *Settings) normalize() {
 	}
 	if !validPetName(s.PetSet) {
 		s.PetSet = d.PetSet
+	}
+	if s.PetSize < 0.5 || s.PetSize > 3 {
+		s.PetSize = d.PetSize
 	}
 	if s.WindowOpacity < 0 || s.WindowOpacity > 1 {
 		s.WindowOpacity = d.WindowOpacity

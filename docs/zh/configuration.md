@@ -63,6 +63,7 @@ kero config check             # 报告未知的配置项和无效的值
 | `pet`                | `true`   | 小青蛙 Kero：趴在窗口上沿，跟着你的会话                          |
 | `pet-offset`         | `0.5`    | Kero 站在窗口宽度的哪里，0 到 1；直接拖动即可                    |
 | `pet-set`            | `kero`   | 窗口上沿显示的宠物：`kero` 小青蛙、`codex` 表示 Codex 应用当前启用的宠物，或 `~/.codex/pets` 中某个宠物目录的名字
+| `pet-size`           | `1.5`    | Codex 宠物的显示高度，相对 Codex 应用的大小：0.5 到 3
 
 ## 终端
 

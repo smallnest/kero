@@ -5865,3 +5865,23 @@ func SetPetKeroCopy() string { return In(i18n.Locale()).SetPetKeroCopy() }
 func (msgs Messages) SetPetKeroCopy() string {
 	return Catalog.Format(msgs.locale, "setPetKeroCopy", nil)
 }
+
+// SetPetSize says "Codex pet size"
+// in the language the app shows.
+func SetPetSize() string { return In(i18n.Locale()).SetPetSize() }
+
+// SetPetSize says "Codex pet size"
+// in the language of msgs.
+func (msgs Messages) SetPetSize() string {
+	return Catalog.Format(msgs.locale, "setPetSize", nil)
+}
+
+// SetPetSizeDetail says "How tall a Codex pet shows, against the Codex app’s: 1 is the same, and 1.5 is the default."
+// in the language the app shows.
+func SetPetSizeDetail() string { return In(i18n.Locale()).SetPetSizeDetail() }
+
+// SetPetSizeDetail says "How tall a Codex pet shows, against the Codex app’s: 1 is the same, and 1.5 is the default."
+// in the language of msgs.
+func (msgs Messages) SetPetSizeDetail() string {
+	return Catalog.Format(msgs.locale, "setPetSizeDetail", nil)
+}

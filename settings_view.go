@@ -656,6 +656,13 @@ func (a *App) appearancePage(c *ui.Context, pal *palette) {
 		settingRow(c, pal, locales.SetPetWhich(), a.petGallery(), func() {
 			a.petChooser(c, pal)
 		})
+		settingRow(c, pal, locales.SetPetSize(), locales.SetPetSizeDetail(), func() {
+			v := float64(s.PetSize)
+			slider(c, "pet-size", &v, 0.5, 3, 160, pal).OnChange(func() {
+				s.PetSize = float32(int(v*10+0.5)) / 10
+			})
+			ui.Textf(c, "%.1f×", s.PetSize).FontSize(12.5).TextColor(pal.textMuted).Width(40).FontFeatures("tnum")
+		})
 	})
 	ui.Column(c).Gap(8).Children(func() {
 		groupTitle(c, pal, locales.SetBackground())

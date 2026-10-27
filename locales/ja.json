@@ -575,5 +575,7 @@
   "commonUse": "使う",
   "setPetInstallFailed": "ペットをインストールできませんでした：{error}",
   "setPetWhich": "ペット",
-  "setPetKeroCopy": "Kero のコピー"
+  "setPetKeroCopy": "Kero のコピー",
+  "setPetSize": "Codex ペットのサイズ",
+  "setPetSizeDetail": "Codex ペットの表示する高さです。Codex アプリとの比率で指定します。1 で同じ高さ、既定は 1.5 です。"
 }

@@ -148,6 +148,7 @@ var keys = []key{
 	boolKey("window-blur", "blur the desktop behind the translucent background; off, the wash is plain transparency", func(s *Settings) *bool { return &s.WindowBlur }),
 	boolKey("pet", "Kero the frog on the window's top edge, who follows your sessions", func(s *Settings) *bool { return &s.Pet }),
 	float32Key("pet-offset", "where Kero stands across the window, 0 to 1; drag it there", func(s *Settings) *float32 { return &s.PetOffset }),
+	float32Key("pet-size", "how tall a Codex pet shows, against the Codex app's 82 DIPs, 0.5 to 3", func(s *Settings) *float32 { return &s.PetSize }),
 	stringKey("pet-set", `the pet on the window's edge: kero, codex (the Codex app's active pet), or a Codex pet's directory name in ~/.codex/pets, or in kero's own`, func(s *Settings) *string { return &s.PetSet }),
 	choiceKey("window-theme", "the app's appearance", func(s *Settings) *string { return &s.Appearance }, "system", "light", "dark"),
 	choiceKey("language", "the app's language; system follows the system's", func(s *Settings) *string { return &s.Language }, append([]string{"system"}, Languages...)...),

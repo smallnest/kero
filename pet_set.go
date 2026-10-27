@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -18,9 +19,19 @@ import (
 const (
 	petSetFrame  = 150 * time.Millisecond // the Codex app's pace, 6⅔ frames a second
 	petSetCalm   = time.Second            // with less motion
-	petSetGround = 82                     // how tall a frame shows, in DIPs, feet on the edge
-	petSetBodyH  = 90                     // tall enough for a frame
+	petSetFrame0 = 82                     // how tall the Codex app shows a frame, in DIPs, its feet on the edge
 )
+
+// petSetGround is how tall a Codex pet's frame shows, in DIPs, from its
+// size setting: feet on the edge.
+func petSetGround(a *App) float32 {
+	n := float64(petSetFrame0) * float64(a.set.PetSize)
+	return float32(math.Round(n))
+}
+
+// petSetBodyH is how tall the room for a Codex pet is: its frame, and a
+// little, where it stands.
+func petSetBodyH(a *App) float32 { return petSetGround(a) + 8 }
 
 // petSet is the pet kero shows, where it is no frog.
 type petSet struct {
@@ -98,12 +109,14 @@ func (a *App) petShows() *petSet {
 // petSetDraw draws a Codex pet into its box, feet on the window's edge,
 // as the Codex app draws it: a frame of the sheet, the row of its mood,
 // cut out and shown a pixel art pixel for a few of the screen's.
-func petSetDraw(p *ui.Painter, r ui.Rect, set *petSet, state pets.State, frame int) {
+func (a *App) petSetDraw(p *ui.Painter, r ui.Rect, set *petSet, state pets.State, frame int) {
 	src := set.pet.Frame(state, frame)
-	h := float32(petSetGround)
+	h := petSetGround(a)
 	w := h * pets.FrameW / pets.FrameH
 	x, y := r.X+(r.W-w)/2, r.Y+r.H-h
-	p.FillPath(petEllipse(r.X+r.W/2, r.Y+r.H-1.5, w*0.38, 5), ui.RGBA(15, 25, 20, 0.13))
+	// Its shadow, as much taller as it is.
+	k := h / petSetFrame0
+	p.FillPath(petEllipse(r.X+r.W/2, r.Y+r.H-1.5*k, w*0.38, 5*k), ui.RGBA(15, 25, 20, 0.13))
 	f := ui.Rect{X: float32(src.Min.X), Y: float32(src.Min.Y), W: pets.FrameW, H: pets.FrameH}
 	p.ImageRegion(set.pet.Sheet, f, ui.Rect{X: x, Y: y, W: w, H: h}, ui.ImageOptions{})
 }
