@@ -68,6 +68,10 @@ func petSpot(win, work mygo.Rectangle, offset float32, setH float32) (mygo.Recta
 			x = float32(win.X) + wide - petW - 8
 		}
 		y, height = float32(win.Y+win.Height-petH), float32(petH)
+		// A Codex pet taller than the frog needs the top of its window.
+		if setH+petPerch >= petH {
+			y, height = float32(win.Y+win.Height)-setH-petPerch, setH+petPerch
+		}
 	}
 	return mygo.Rectangle{X: int(math.Round(float64(x))), Y: int(math.Round(float64(y))), Width: petW, Height: int(math.Round(float64(height)))}, inside
 }

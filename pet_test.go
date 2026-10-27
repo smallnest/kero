@@ -106,9 +106,10 @@ func TestPetSpot(t *testing.T) {
 		{"little room", edge + 1, false, work.Y, petH},
 		{"enough", edge, false, work.Y, petH},
 		// No room for a Codex pet, or the window's top off the screen: it
-		// stands inside the window at its bottom edge.
-		{"no room", edge - 1, true, edge - 1 + 700 - petH, petH},
-		{"half on", 13, true, 595, petH},
+		// stands inside the window at its bottom edge, as tall as it stands
+		// above the edge, so that the whole of it shows.
+		{"no room", edge - 1, true, edge - 1 + 700 - int(setH) - petPerch, int(setH) + petPerch},
+		{"half on", 13, true, 13 + 700 - int(setH) - petPerch, int(setH) + petPerch},
 	} {
 		main.Y = c.mainY
 		got, bottom := petSpot(main, work, 0.5, setH)
