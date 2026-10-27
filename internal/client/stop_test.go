@@ -42,7 +42,9 @@ func fakeDaemon(t *testing.T, command string) *daemon {
 		t.Fatal(err)
 	}
 	d := &daemon{path: filepath.Join(proto.Dir(), "kerod.lock")}
-	d.cmd = exec.Command("/bin/sh", "-c", command)
+	// A process named as kerod is, so that a stop that does not get an
+	// answer kills it.
+	d.cmd = exec.Command("/bin/bash", "-c", "exec -a 'kero "+kerodCmd+"' /bin/sh -c '"+command+"'")
 	d.cmd.Stdin, d.cmd.Stdout, d.cmd.Stderr = quiet, quiet, quiet
 	if err := d.cmd.Start(); err != nil {
 		t.Fatal(err)

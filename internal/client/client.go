@@ -168,18 +168,16 @@ func pid(lock []byte) int {
 	return pid
 }
 
-// namedByKerod tells whether the process of pid is kerod, by how it runs
-// (kerodCmd), which Linux tells from its command line. Elsewhere, only
-// one that runs, rather than a zombie whose killer left it.
+// namedByKerod tells whether the process of pid is kerod, by what ps
+// says of it, as Linux and macOS both answer: one that runs, rather than
+// a zombie whose killer left it, and one kerod's command line runs
+// (kerodCmd).
 func namedByKerod(pid int) bool {
-	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-	if os.IsNotExist(err) {
-		return true // not one that runs: a zombie's, or not Linux's
-	}
+	b, err := exec.Command("ps", "-o", "args=", "-p", strconv.Itoa(pid)).Output()
 	if err != nil {
 		return false
 	}
-	return strings.Contains(strings.ReplaceAll(string(b), "\x00", " "), kerodCmd)
+	return strings.Contains(string(b), kerodCmd)
 }
 
 // Stop stops this machine's daemon, which saves its sessions to start
