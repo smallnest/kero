@@ -64,8 +64,8 @@ func TestPetDozes(t *testing.T) {
 }
 
 // The pet stands over the window's top edge where the screen leaves room
-// for it, at the left, center or right, and otherwise inside at the
-// bottom.
+// for it, at the left, center or right, and otherwise hangs from the
+// window's top edge, inside.
 func TestPetSpot(t *testing.T) {
 	a := testApp(t)
 	// The room a Codex pet takes above the edge at its default size: 1.5
@@ -93,28 +93,33 @@ func TestPetSpot(t *testing.T) {
 		}
 	}
 	// Little room above: the speech gives way, the frog or a Codex pet
-	// still stands on the edge, as tall as one shows. edge is the main
-	// window's top where what is above it is just setH; no room, the pet
-	// stands inside at the bottom.
+	// still stands on the edge, its feet on it. edge is the main
+	// window's top where what is above it is just setH.
 	edge := work.Y + int(setH) - petPerch
-	enough := int(setH)
-	if petH < enough {
-		enough = petH
-	}
 	for _, c := range []struct {
 		name   string
 		mainY  int
 		bottom bool
+		y      int
 		height int
 	}{
-		{"little room", edge + 1, false, petH},
-		{"enough", edge, false, enough},
-		{"no room", edge - 1, true, petH},
+		{"little room", edge + 1, false, work.Y, petH},
+		{"enough", edge, false, work.Y, petH},
+		// No room for a Codex pet: it hangs inside at the window's top
+		// edge, what it says down to its feet on the edge, as many below
+		// it as it would be above it.
+		{"no room", edge - 1, true, edge - petPerch + 1, int(setH) - 1},
+		// The window's top barely on the screen: it hangs inside, its
+		// hands at the edge, as many below it as it would be above it.
+		{"half on", 13, true, 13, petPerch},
 	} {
 		main.Y = c.mainY
 		got, bottom := petSpot(main, work, 0.5, setH)
-		if bottom != c.bottom || got.Height != c.height {
-			t.Errorf("%s at %d: %+v bottom %v", c.name, c.mainY, got, bottom)
+		if bottom != c.bottom || got.Height != c.height || got.Y != c.y {
+			t.Errorf("%s at %d: %+v bottom %v, want y %d height %d bottom %v", c.name, c.mainY, got, bottom, c.y, c.height, c.bottom)
+		}
+		if bottom && got.Y+got.Height != main.Y+petPerch {
+			t.Errorf("%s at %d: its feet are not on the edge: %+v", c.name, c.mainY, got)
 		}
 	}
 }

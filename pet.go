@@ -182,50 +182,6 @@ func (a *App) petPlace() {
 	}
 }
 
-// petSpot is where the pet's window goes for a main window at main, in a
-// screen's work area: above the window's top edge where it fits, hands
-// over the edge, else inside at its bottom edge. offset is where across
-// the window its middle stands, 0 at the left to 1 at the right. setH is
-// the room a Codex pet needs above the edge; bottom tells which edge.
-func petSpot(main, work mygo.Rectangle, offset float32, setH float32) (mygo.Rectangle, bool) {
-	off := offset
-	if off < 0 {
-		off = 0
-	}
-	if off > 1 {
-		off = 1
-	}
-	x := main.X + int(off*float32(main.Width)) - petW/2
-	// Above the window, as much of the pet as the screen leaves room for:
-	// its speech gives way first, then it stands at the bottom instead.
-	above := main.Y + petPerch - work.Y
-	if float32(above) >= setH {
-		if x < work.X+8 {
-			x = work.X + 8
-		}
-		if x > work.X+work.Width-petW-8 {
-			x = work.X + work.Width - petW - 8
-		}
-		y := work.Y
-		if main.Y+petPerch-petH > y {
-			y = main.Y + petPerch - petH
-		}
-		height := petH
-		if h := main.Y + petPerch - y + int(setH) - petBodyH; h < height {
-			height = h
-		}
-		return mygo.Rectangle{X: x, Y: y, Width: petW, Height: height}, false
-	}
-	// Inside the window at its bottom, the pet stays within its width.
-	if x < main.X+8 {
-		x = main.X + 8
-	}
-	if x > main.X+main.Width-petW-8 {
-		x = main.X + main.Width - petW - 8
-	}
-	return mygo.Rectangle{X: x, Y: main.Y + main.Height - petH, Width: petW, Height: petH}, true
-}
-
 // petCurrent tells what the pet should feel now: the most urgent thing
 // among the sessions, and how many sessions are that. A host the app lost
 // says nothing, as for the sidebar's counts.
