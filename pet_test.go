@@ -70,6 +70,7 @@ func TestPetSpot(t *testing.T) {
 	a := testApp(t)
 	// The room a Codex pet takes above the edge at its default size: 1.5
 	// times the Codex app's 82 DIPs, and a little.
+	a.set.PetSize = settings.DefaultPetSize
 	setH := petSetBodyH(a)
 	if setH != 123+8 {
 		t.Fatalf("petSetBodyH = %v, want %d", setH, 131)
@@ -80,21 +81,20 @@ func TestPetSpot(t *testing.T) {
 			t.Errorf("size %v: petSetBodyH = %v", size, h)
 		}
 	}
-	a.set.PetSize = settings.DefaultPetSize
 	work := mygo.Rectangle{X: 0, Y: 25, Width: 1440, Height: 875}
 	main := mygo.Rectangle{X: 100, Y: 300, Width: 1000, Height: 700}
 	for _, c := range []struct {
 		offset float32
 		x      int
-	}{{0.5, 505}, {0.25, 255}, {0, 8}} {
+	}{{0.5, 540}, {0.25, 290}, {0, 40}} {
 		r, bottom := petSpot(main, work, c.offset, setH)
 		if bottom || r.Y != 300-petH+petPerch || r.Height != petH || r.X != c.x {
 			t.Errorf("offset %v: %+v bottom %v, want x %d", c.offset, r, bottom, c.x)
 		}
 	}
-	// Little room above: the speech gives way, the frog or a Codex pet
-	// still stands on the edge, its feet on it. edge is the main
-	// window's top where what is above it is just setH.
+	// Little room above: the speech gives way, the Codex pet still stands
+	// on the edge, its feet on it, and as wide as a pet its size is. edge
+	// is the main window's top where what is above it is just setH.
 	edge := work.Y + int(setH) - petPerch
 	for _, c := range []struct {
 		name   string
@@ -103,8 +103,8 @@ func TestPetSpot(t *testing.T) {
 		y      int
 		height int
 	}{
-		{"little room", edge + 1, false, work.Y, petH},
-		{"enough", edge, false, work.Y, petH},
+		{"little room", edge + 1, false, 39, petH}, // at the edge's left, where it shows above the window
+		{"enough", edge, false, 38, petH},
 		// No room for a Codex pet, or the window's top off the screen: it
 		// stands inside the window at its bottom edge, as tall as it stands
 		// above the edge, so that the whole of it shows.

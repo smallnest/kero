@@ -114,9 +114,11 @@ func (a *App) petShow() {
 		DisableFullScreen: true,
 		SkipTaskbar:       true,
 		Hidden:            true,
-		AlwaysOnTop:       true,
-		Parent:            a.win,
-		Content:           ui.View(a.petView),
+		// A panel floats over every app, on the Space the user is on. A
+		// child window of the main one does not: macOS keeps it under the
+		// windows of its parent's siblings. It takes no keyboard.
+		Panel:   true,
+		Content: ui.View(a.petView),
 	})
 	win := p.win
 	p.offs = []func(){
@@ -273,6 +275,8 @@ func (a *App) petView(c *ui.Context) {
 	_, h := c.Size()
 	roomy := h >= petH-1
 	showing := roomy && a.petSays(now, mood)
+	set := a.petShows()
+	var body ui.Element
 	clicked := false
 	ui.Column(c).Fill().Justify(ui.End).AlignItems(ui.Center).Children(func() {
 		if roomy {
@@ -298,7 +302,6 @@ func (a *App) petView(c *ui.Context) {
 			})
 		}
 
-		set := a.petShows()
 		name := locales.PetName()
 		if set != nil {
 			name = set.pet.Name
@@ -307,7 +310,12 @@ func (a *App) petView(c *ui.Context) {
 		if set != nil {
 			bodyH = petSetBodyH(a)
 		}
-		body := ui.Box(c.Key("kero")).Size(petW, bodyH).Shrink(0).Cursor(ui.CursorGrab).
+		// Its width keeps its frame's proportions, at any size.
+		wide := float32(petW)
+		if set != nil {
+			wide = petSetWide(a)
+		}
+		body = ui.Box(c.Key("kero")).Size(wide, bodyH).Shrink(0).Cursor(ui.CursorGrab).
 			Description(petDescription(name, label))
 		hovered := body.Hovered()
 		state := pets.Idle
@@ -334,6 +342,19 @@ func (a *App) petView(c *ui.Context) {
 	})
 	if clicked {
 		a.petPetted(now, mood)
+	}
+
+	// A Codex pet that stands with nothing to say in a window too short
+	// for the frog: its window is its own, and its head shows.
+	if lift := petLift(a, set, roomy, showing); lift > 0 {
+		x, y := float32(-lift), float32(-lift)
+		r := body.Bounds()
+		if r.W > 0 {
+			x, y = -r.X, -r.Y
+		}
+		c.Root().Children(func() {
+			ui.Box(c.Key("lift")).Absolute().Left(x + petLiftCloak).Top(y + petLiftCloak).Clip()
+		})
 	}
 
 	// Rebuild when what the pet says, or how awake it is, turns over;
