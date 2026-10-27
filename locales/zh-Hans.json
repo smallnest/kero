@@ -249,7 +249,7 @@
   "setTranslucent": "半透明窗口",
   "setTranslucentDetail": "让桌面透过窗口背景显示出来。",
   "petName": "小青蛙 Kero",
-  "setPetDetail": "趴在窗口上沿的小青蛙：会话需要你时它会跳，智能体工作时它会一起看，安静久了就打盹。",
+  "setPetDetail": "codex-pets.net、codexpet.top 等网站提供 Codex 宠物及安装说明。Kero 会列出 ~/.codex/pets 里的每个 Codex 宠物。",
   "setPet": "小青蛙 Kero",
   "setWindowBlurDetail": "模糊半透明背景后的桌面。关闭后就是普通透明，0% 不透明度时直接看到桌面。",
   "setWindowBlur": "背景模糊",
@@ -563,5 +563,17 @@
   "worktreeRemoveAnyway": "仍然删除",
   "actionQuickTerminal": "快速终端",
   "toastGlobalShortcutFailed": "无法将 {keys} 用于快速终端：{error}",
-  "setShortcutGlobal": "在任何应用中都可用"
+  "setShortcutGlobal": "在任何应用中都可用",
+  "setPetInstall": "安装宠物包…",
+  "setPetInstallDetail": "一个 .codex-pet.zip，或任何含 pet.json 和精灵图的 zip，与 Codex 应用的 ~/.codex/pets 格式相同。codex-pets.net 和 codexpet.top 的宠物包都可用。",
+  "setPetInstalled": "已安装 {name}。",
+  "setPetMissing": "Kero 显示的是小青蛙：没有找到宠物 {name}（{error}）。",
+  "setPetBuiltin": "其他宠物",
+  "setPetBuiltinDetail": "安装这些 Codex 宠物，与小青蛙 Kero 一起显示。Kero 会从自己的仓库下载每个宠物。",
+  "setPetInstalling": "正在安装…",
+  "setPetBuiltinInstalled": "显示中",
+  "commonUse": "使用",
+  "setPetInstallFailed": "无法安装宠物：{error}",
+  "setPetWhich": "宠物",
+  "setPetKeroCopy": "Kero 安装的副本"
 }

@@ -8,20 +8,23 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"kero/internal/pets"
 	"kero/internal/proto"
 	"kero/locales"
 )
 
-// Kero the frog lives in a small, transparent window of its own, perched
-// on the main window's top edge: it peeks over the edge, its hands on the
-// title bar, and follows the sessions. It hops when one needs the user,
-// scans left and right while an agent works, cheers a finish, shakes at a
-// failure, and dozes when everything is calm. A click pets it, and takes
-// the user to the session that needs them.
+// The pet lives in a small, transparent window of its own, perched on the
+// main window's top edge, and follows the sessions. By default it is Kero
+// the frog: it peeks over the edge, its hands on the title bar, hops when
+// a session needs the user, scans left and right while an agent works,
+// cheers a finish, shakes at a failure, and dozes when everything is
+// calm. Settings › Appearance shows a Codex pet there instead, as a
+// spritesheet of frames (pet_set.go). A click pets it, and takes the user
+// to the session that needs them.
 
 const (
 	// The pet window: wide enough for a sentence, tall enough for its
-	// speech above the frog.
+	// speech above the pet.
 	petW       = 190
 	petH       = 118
 	petBodyH   = 87
@@ -69,6 +72,9 @@ type petState struct {
 	moved    bool
 	grab     float32
 	startX   float32
+	// setAgain tells that the pet set the settings name was not found,
+	// and was told of, while the window has shown.
+	setAgain bool
 }
 
 // syncPet shows or hides the pet, as the settings and the window say.
@@ -91,6 +97,8 @@ func (a *App) petShow() {
 	p.since, p.lastActive, p.wink = now, now, time.Time{}
 	p.calm = mygo.Theme.Preferences().ReduceMotion
 	p.mood, _ = a.petCurrent(now)
+	p.setAgain = false
+	a.petSetReload()
 	p.win = mygo.NewWindow(mygo.WindowOptions{
 		Title:             locales.PetName(),
 		Width:             petW,
@@ -116,6 +124,7 @@ func (a *App) petShow() {
 			if a.pet.win == win {
 				a.pet.win = nil
 			}
+			a.petSet = nil
 		}),
 		a.win.OnMove(a.petPlace),
 		a.win.OnResize(a.petPlace),
@@ -251,7 +260,7 @@ func (a *App) petNote(at time.Time) {
 }
 
 // petView is the pet's window: its speech, when it has something to say,
-// over the frog.
+// over the pet.
 func (a *App) petView(c *ui.Context) {
 	c.Root().Background(ui.Transparent)
 	pal := paletteFor(c)
@@ -289,11 +298,28 @@ func (a *App) petView(c *ui.Context) {
 			})
 		}
 
-		body := ui.Box(c.Key("kero")).Size(petW, petBodyH).Shrink(0).Cursor(ui.CursorGrab).
-			Description(petDescription(label))
+		set := a.petShows()
+		name := locales.PetName()
+		if set != nil {
+			name = set.pet.Name
+		}
+		bodyH := float32(petBodyH)
+		if set != nil {
+			bodyH = petSetBodyH
+		}
+		body := ui.Box(c.Key("kero")).Size(petW, bodyH).Shrink(0).Cursor(ui.CursorGrab).
+			Description(petDescription(name, label))
 		hovered := body.Hovered()
+		state := pets.Idle
+		if set != nil {
+			state = petSetState(set.pet, mood)
+		}
 		body.Draw(func(p *ui.Painter, r ui.Rect) {
-			a.petDraw(p, r, mood, hovered)
+			if set != nil {
+				petSetDraw(p, r, set, state, a.petSetFrameAt(state, a.pet.since, p.Now()))
+			} else {
+				a.petDraw(p, r, mood, hovered)
+			}
 			p.After(a.petTick())
 		})
 		a.petDrag(body)
@@ -327,13 +353,13 @@ func (a *App) petView(c *ui.Context) {
 	}
 }
 
-// petDescription is what assistive technology hears of the frog: its
+// petDescription is what assistive technology hears of the pet: its
 // name, and what it says, if anything.
-func petDescription(label string) string {
+func petDescription(name, label string) string {
 	if label == "" {
-		return locales.PetName()
+		return name
 	}
-	return locales.PetName() + ": " + label
+	return name + ": " + label
 }
 
 // petSpeech says what the pet's bubble says, and how it looks.
@@ -389,7 +415,7 @@ func (a *App) petTick() time.Duration {
 	return petFrame
 }
 
-// petPetted is a click on the frog: it wakes, winks, and takes the user
+// petPetted is a click on the pet: it wakes, winks, and takes the user
 // to a session that waits on them, if another one does.
 func (a *App) petPetted(now time.Time, mood petMood) {
 	a.pet.lastActive, a.pet.since, a.pet.wink, a.pet.mood = now, now, now, mood

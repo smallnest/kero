@@ -2552,11 +2552,11 @@ func (msgs Messages) PetName() string {
 	return Catalog.Format(msgs.locale, "petName", nil)
 }
 
-// SetPetDetail says "A little frog on the window’s top edge: it hops when a session needs you, reads along while one works, and dozes wh…"
+// SetPetDetail says "Who shows on the window’s edge: Kero the frog, or any Codex pet in ~/.codex/pets, such as those from sites like cod…"
 // in the language the app shows.
 func SetPetDetail() string { return In(i18n.Locale()).SetPetDetail() }
 
-// SetPetDetail says "A little frog on the window’s top edge: it hops when a session needs you, reads along while one works, and dozes wh…"
+// SetPetDetail says "Who shows on the window’s edge: Kero the frog, or any Codex pet in ~/.codex/pets, such as those from sites like cod…"
 // in the language of msgs.
 func (msgs Messages) SetPetDetail() string {
 	return Catalog.Format(msgs.locale, "setPetDetail", nil)
@@ -5742,4 +5742,126 @@ func SetShortcutGlobal() string { return In(i18n.Locale()).SetShortcutGlobal() }
 // in the language of msgs.
 func (msgs Messages) SetShortcutGlobal() string {
 	return Catalog.Format(msgs.locale, "setShortcutGlobal", nil)
+}
+
+// SetPetInstall says "Install a Pet Pack…"
+// in the language the app shows.
+func SetPetInstall() string { return In(i18n.Locale()).SetPetInstall() }
+
+// SetPetInstall says "Install a Pet Pack…"
+// in the language of msgs.
+func (msgs Messages) SetPetInstall() string {
+	return Catalog.Format(msgs.locale, "setPetInstall", nil)
+}
+
+// SetPetInstallDetail says "A .codex-pet.zip, or any zip of pet.json and a spritesheet, as the Codex app’s ~/.codex/pets holds them. Packs from…"
+// in the language the app shows.
+func SetPetInstallDetail() string { return In(i18n.Locale()).SetPetInstallDetail() }
+
+// SetPetInstallDetail says "A .codex-pet.zip, or any zip of pet.json and a spritesheet, as the Codex app’s ~/.codex/pets holds them. Packs from…"
+// in the language of msgs.
+func (msgs Messages) SetPetInstallDetail() string {
+	return Catalog.Format(msgs.locale, "setPetInstallDetail", nil)
+}
+
+// SetPetInstalled says "Installed {name}."
+// in the language the app shows.
+func SetPetInstalled(name string) string { return In(i18n.Locale()).SetPetInstalled(name) }
+
+// SetPetInstalled says "Installed {name}."
+// in the language of msgs.
+func (msgs Messages) SetPetInstalled(name string) string {
+	return Catalog.Format(msgs.locale, "setPetInstalled", map[string]any{"name": name})
+}
+
+// SetPetMissing says "Kero shows Kero the frog: it found no pet {name} ({error})."
+// in the language the app shows.
+func SetPetMissing(name string, error string) string {
+	return In(i18n.Locale()).SetPetMissing(name, error)
+}
+
+// SetPetMissing says "Kero shows Kero the frog: it found no pet {name} ({error})."
+// in the language of msgs.
+func (msgs Messages) SetPetMissing(name string, error string) string {
+	return Catalog.Format(msgs.locale, "setPetMissing", map[string]any{"name": name, "error": error})
+}
+
+// SetPetBuiltin says "Other pets"
+// in the language the app shows.
+func SetPetBuiltin() string { return In(i18n.Locale()).SetPetBuiltin() }
+
+// SetPetBuiltin says "Other pets"
+// in the language of msgs.
+func (msgs Messages) SetPetBuiltin() string {
+	return Catalog.Format(msgs.locale, "setPetBuiltin", nil)
+}
+
+// SetPetBuiltinDetail says "Install these Codex pets to show them beside Kero the frog. Kero downloads each from its own repository."
+// in the language the app shows.
+func SetPetBuiltinDetail() string { return In(i18n.Locale()).SetPetBuiltinDetail() }
+
+// SetPetBuiltinDetail says "Install these Codex pets to show them beside Kero the frog. Kero downloads each from its own repository."
+// in the language of msgs.
+func (msgs Messages) SetPetBuiltinDetail() string {
+	return Catalog.Format(msgs.locale, "setPetBuiltinDetail", nil)
+}
+
+// SetPetInstalling says "Installing…"
+// in the language the app shows.
+func SetPetInstalling() string { return In(i18n.Locale()).SetPetInstalling() }
+
+// SetPetInstalling says "Installing…"
+// in the language of msgs.
+func (msgs Messages) SetPetInstalling() string {
+	return Catalog.Format(msgs.locale, "setPetInstalling", nil)
+}
+
+// SetPetBuiltinInstalled says "Showing"
+// in the language the app shows.
+func SetPetBuiltinInstalled() string { return In(i18n.Locale()).SetPetBuiltinInstalled() }
+
+// SetPetBuiltinInstalled says "Showing"
+// in the language of msgs.
+func (msgs Messages) SetPetBuiltinInstalled() string {
+	return Catalog.Format(msgs.locale, "setPetBuiltinInstalled", nil)
+}
+
+// CommonUse says "Use"
+// in the language the app shows.
+func CommonUse() string { return In(i18n.Locale()).CommonUse() }
+
+// CommonUse says "Use"
+// in the language of msgs.
+func (msgs Messages) CommonUse() string {
+	return Catalog.Format(msgs.locale, "commonUse", nil)
+}
+
+// SetPetInstallFailed says "Couldn’t install the pet: {error}"
+// in the language the app shows.
+func SetPetInstallFailed(error string) string { return In(i18n.Locale()).SetPetInstallFailed(error) }
+
+// SetPetInstallFailed says "Couldn’t install the pet: {error}"
+// in the language of msgs.
+func (msgs Messages) SetPetInstallFailed(error string) string {
+	return Catalog.Format(msgs.locale, "setPetInstallFailed", map[string]any{"error": error})
+}
+
+// SetPetWhich says "Pet"
+// in the language the app shows.
+func SetPetWhich() string { return In(i18n.Locale()).SetPetWhich() }
+
+// SetPetWhich says "Pet"
+// in the language of msgs.
+func (msgs Messages) SetPetWhich() string {
+	return Catalog.Format(msgs.locale, "setPetWhich", nil)
+}
+
+// SetPetKeroCopy says "Kero’s copy"
+// in the language the app shows.
+func SetPetKeroCopy() string { return In(i18n.Locale()).SetPetKeroCopy() }
+
+// SetPetKeroCopy says "Kero’s copy"
+// in the language of msgs.
+func (msgs Messages) SetPetKeroCopy() string {
+	return Catalog.Format(msgs.locale, "setPetKeroCopy", nil)
 }

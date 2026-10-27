@@ -397,7 +397,7 @@
   "setTranslucent": "Translucent window",
   "setTranslucentDetail": "Let the desktop show through the window’s background.",
   "petName": "Kero, the frog",
-  "setPetDetail": "A little frog on the window’s top edge: it hops when a session needs you, reads along while one works, and dozes when all is calm.",
+  "setPetDetail": "Who shows on the window’s edge: Kero the frog, or any Codex pet in ~/.codex/pets, such as those from sites like codex-pets.net and codexpet.top. Install a pet as that site says, then pick it in Pet.",
   "setPet": "Kero the frog",
   "setWindowBlurDetail": "Blur the desktop behind the translucent background. Off, the window is plain transparency, and 0% opacity shows the desktop alone.",
   "setWindowBlur": "Background blur",
@@ -1103,5 +1103,17 @@
   "worktreeRemoveAnyway": "Remove Anyway",
   "actionQuickTerminal": "Quick Terminal",
   "toastGlobalShortcutFailed": "Couldn’t use {keys} for the quick terminal: {error}",
-  "setShortcutGlobal": "Works in every app"
+  "setShortcutGlobal": "Works in every app",
+  "setPetInstall": "Install a Pet Pack…",
+  "setPetInstallDetail": "A .codex-pet.zip, or any zip of pet.json and a spritesheet, as the Codex app’s ~/.codex/pets holds them. Packs from codex-pets.net and codexpet.top work.",
+  "setPetInstalled": "Installed {name}.",
+  "setPetMissing": "Kero shows Kero the frog: it found no pet {name} ({error}).",
+  "setPetBuiltin": "Other pets",
+  "setPetBuiltinDetail": "Install these Codex pets to show them beside Kero the frog. Kero downloads each from its own repository.",
+  "setPetInstalling": "Installing…",
+  "setPetBuiltinInstalled": "Showing",
+  "commonUse": "Use",
+  "setPetInstallFailed": "Couldn’t install the pet: {error}",
+  "setPetWhich": "Pet",
+  "setPetKeroCopy": "Kero’s copy"
 }

@@ -41,6 +41,7 @@ type Settings struct {
 	WindowBlur    bool    `json:"windowBlur"`    // blur the desktop behind the wash
 	Pet           bool    `json:"pet"`           // the frog on the window's top edge
 	PetOffset     float32 `json:"petOffset"`     // where it stands, 0 to 1 across the window
+	PetSet        string  `json:"petSet"`        // who: "kero", a Codex pet's directory name, or "codex" for the active one
 
 	// Terminal
 	FontFamily   string  `json:"fontFamily"` // "" the font kero carries; "monospace" the system's
@@ -156,6 +157,7 @@ func Default() Settings {
 		WindowBlur:      true,
 		Pet:             true,
 		PetOffset:       0.5,
+		PetSet:          PetSetKero,
 		DimUnfocused:    true,
 		FontSize:        13,
 		LineHeight:      1.22,
@@ -337,6 +339,9 @@ func (s *Settings) normalize() {
 	oneOf(&s.WorktreeBase, d.WorktreeBase, "default", "current")
 	if s.PetOffset < 0 || s.PetOffset > 1 {
 		s.PetOffset = d.PetOffset
+	}
+	if !validPetName(s.PetSet) {
+		s.PetSet = d.PetSet
 	}
 	if s.WindowOpacity < 0 || s.WindowOpacity > 1 {
 		s.WindowOpacity = d.WindowOpacity

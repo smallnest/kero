@@ -62,6 +62,7 @@ kero config check             # report unknown keys and bad values
 | `window-blur`        | `true`   | Blur the desktop behind the translucent background; off is plain transparency |
 | `pet`                | `true`   | Kero the frog, who follows your sessions from the window's top edge |
 | `pet-offset`         | `0.5`    | Where Kero stands, 0 to 1 across the window; drag it there       |
+| `pet-set`            | `kero`   | The pet on the window's edge: `kero` the frog, `codex` for the Codex app's active pet, or a pet's directory name in `~/.codex/pets`
 
 ## Terminal
 

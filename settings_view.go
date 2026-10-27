@@ -653,6 +653,9 @@ func (a *App) appearancePage(c *ui.Context, pal *palette) {
 		settingRow(c, pal, locales.SetPet(), locales.SetPetDetail(), func() {
 			toggle(c.Key("pet"), &s.Pet, pal)
 		})
+		settingRow(c, pal, locales.SetPetWhich(), a.petGallery(), func() {
+			a.petChooser(c, pal)
+		})
 	})
 	ui.Column(c).Gap(8).Children(func() {
 		groupTitle(c, pal, locales.SetBackground())

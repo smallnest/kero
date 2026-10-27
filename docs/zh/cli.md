@@ -202,6 +202,10 @@ kero daemon status|stop|restart  # 管理 kerod
 kero daemon install-service      # 让 kerod 随系统启动（systemd、launchd）
 kero daemon serve                # 在前台运行 kerod，供服务管理器使用
 kero clients                     # 查看谁连接着 kerod
+kero pets                        # 窗口上沿的宠物，当前显示的排第一
+kero pets use <名字|kero|codex>  # 显示某个宠物：~/.codex/pets 中的，或 Kero 安装的
+kero pets install <包.zip>       # 安装 Codex 宠物包，即 .codex-pet.zip
+kero pets rm <名字>              # 删除 Kero 安装的宠物
 ```
 
 ## 其他机器

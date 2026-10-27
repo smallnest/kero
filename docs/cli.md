@@ -208,6 +208,10 @@ kero daemon status|stop|restart  # manage kerod
 kero daemon install-service      # run kerod with the machine (systemd, launchd)
 kero daemon serve                # run kerod in the foreground, for a service manager
 kero clients                     # who is connected to kerod
+kero pets                        # the pets on the window's edge, the one shown first
+kero pets use <name|kero|codex>  # show a pet: one in ~/.codex/pets, or kero's
+kero pets install <pack.zip>     # install a Codex pet pack, a .codex-pet.zip
+kero pets rm <name>              # remove a pet kero installed
 ```
 
 ## Other machines

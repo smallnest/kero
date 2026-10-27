@@ -144,6 +144,14 @@ Usage:
   kero hosts remove|check <name>
   kero hosts install <name|address> [--version v]
                                 install Kero there, over SSH
+  kero pets [ls]                the pets Kero shows (kero pets install --list)
+  kero pets install <pack>      install a Codex pet pack: a .codex-pet.zip,
+                                or a pet's directory, as ~/.codex/pets has
+                                them; --builtin installs kero's pets
+  kero pets use <name|kero|codex>
+                                show it on the window's edge; codex shows
+                                the pet the Codex app has active
+  kero pets rm <name>           remove an installed pet
   kero daemon status|stop|restart|update [version]
   kero daemon stop --force         kill a kerod that does not stop
   kero daemon serve [--listen tailnet://:7373]…
@@ -169,7 +177,7 @@ ambiguous one), 4 kerod unreachable.
 // Commands lists the subcommands, which main sends here.
 var Commands = []string{"ls", "list", "new", "split", "send", "key", "prompt", "read", "capture", "wait", "events", "status", "diff",
 	"history", "resume", "rename", "focus", "close", "kill", "restart", "notify", "report", "projects", "skill", "hook", "daemon", "do", "actions", "config",
-	"browser", "hosts", "clients", "__bridge", "-H", "--host", "help", "--help", "-h", "version", "--version"}
+	"browser", "hosts", "clients", "pets", "__bridge", "-H", "--host", "help", "--help", "-h", "version", "--version"}
 
 // IsCommand reports whether an argument starts a command of the CLI, as
 // main tells them from the app's.
@@ -307,6 +315,8 @@ func run(args []string, host string) error {
 		return hookCmd(args)
 	case "config":
 		return configCmd(args)
+	case "pets":
+		return petsCmd(args)
 	}
 	c, done, err := connect(host)
 	if err != nil {

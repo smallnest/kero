@@ -62,6 +62,7 @@ kero config check             # 报告未知的配置项和无效的值
 | `window-blur`        | `true`   | 模糊半透明背景后的桌面；关闭后是普通透明                      |
 | `pet`                | `true`   | 小青蛙 Kero：趴在窗口上沿，跟着你的会话                          |
 | `pet-offset`         | `0.5`    | Kero 站在窗口宽度的哪里，0 到 1；直接拖动即可                    |
+| `pet-set`            | `kero`   | 窗口上沿显示的宠物：`kero` 小青蛙、`codex` 表示 Codex 应用当前启用的宠物，或 `~/.codex/pets` 中某个宠物目录的名字
 
 ## 终端
 

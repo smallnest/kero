@@ -124,6 +124,7 @@ type App struct {
 	focused  bool
 	statuses map[string]proto.Status // as last seen, for notifications
 	pet      petState                // Kero the frog, on the window's top edge
+	petSet   *petSet                 // the Codex pet it shows where it is no frog
 	// idleTime tells how long the user has not used the machine's keyboard
 	// or mouse (mygo.Power.IdleTime), 0 when the system does not tell; nil
 	// in tests.
@@ -136,10 +137,10 @@ type App struct {
 	renameFrames int
 	chrome       chrome // where the sidebar's animation puts things
 
-	pal     paletteState
-	find    findState
-	confirm *confirmation
-	wtAsk   *worktreeAsk
+	pal          paletteState
+	find         findState
+	confirm      *confirmation
+	wtAsk        *worktreeAsk
 	sideDrag     float32 // the width as a drag of the sidebar's edge began
 	pendingToast string
 	// later are actions that change what the view is building, run once
@@ -1148,6 +1149,9 @@ func (a *App) apply(s settings.Settings, save bool) {
 	}
 	if old.PetOffset != s.PetOffset && a.pet.win != nil {
 		a.update(a.petPlace)
+	}
+	if old.PetSet != s.PetSet && a.pet.win != nil {
+		a.update(a.petSetReload)
 	}
 	if old.AppIcon != s.AppIcon && a.win != nil {
 		a.changeAppIcon()

@@ -366,7 +366,7 @@
   "findNoMatches": "一致なし",
   "findClose": "検索バーを閉じる",
   "petName": "カエルの Kero",
-  "setPetDetail": "ウィンドウの上端にいる小さなカエルです。セッションがあなたを必要とすると跳ね、エージェントが作業している間は一緒に眺め、静かなときは居眠りします。",
+  "setPetDetail": "codex-pets.net や codexpet.top などのサイトが Codex ペットとそのインストール方法を提供しています。Kero は ~/.codex/pets のペットを一覧に表示します。",
   "setPet": "カエルの Kero",
   "setWindowBlurDetail": "半透明の背景の後ろのデスクトップをぼかします。オフでは単なる透明になり、不透明度 0% ではデスクトップだけが見えます。",
   "setWindowBlur": "背景のぼかし",
@@ -563,5 +563,17 @@
   "sideFiles": "ファイル",
   "actionQuickTerminal": "クイックターミナル",
   "toastGlobalShortcutFailed": "{keys} をクイックターミナルに使えませんでした: {error}",
-  "setShortcutGlobal": "どのアプリでも使えます"
+  "setShortcutGlobal": "どのアプリでも使えます",
+  "setPetInstall": "ペットパックをインストール…",
+  "setPetInstallDetail": "Codex アプリの ~/.codex/pets と同じく、pet.json とスプライトシートを含む .codex-pet.zip または zip。codex-pets.net と codexpet.top のパックが使えます。",
+  "setPetInstalled": "{name} をインストールしました。",
+  "setPetMissing": "Kero はカエルを表示しています：ペット {name} が見つかりません（{error}）。",
+  "setPetBuiltin": "ほかのペット",
+  "setPetBuiltinDetail": "これらの Codex ペットをインストールすると、カエルの Kero と一緒に表示されます。Kero は Kero 自身のリポジトリからダウンロードします。",
+  "setPetInstalling": "インストール中…",
+  "setPetBuiltinInstalled": "表示中",
+  "commonUse": "使う",
+  "setPetInstallFailed": "ペットをインストールできませんでした：{error}",
+  "setPetWhich": "ペット",
+  "setPetKeroCopy": "Kero のコピー"
 }

@@ -203,6 +203,10 @@ kero daemon status|stop|restart  # kerod を管理
 kero daemon install-service      # マシンの起動とともに kerod を実行（systemd、launchd）
 kero daemon serve                # サービスマネージャ向けに kerod をフォアグラウンドで実行
 kero clients                     # kerod に接続しているもの
+kero pets                        # ウィンドウ上端のペット、表示中のものが先頭
+kero pets use <名前|kero|codex>  # ペットを表示する：~/.codex/pets のもの、または Kero のもの
+kero pets install <pack.zip>     # Codex ペットパック（.codex-pet.zip）をインストールする
+kero pets rm <名前>              # Kero がインストールしたペットを削除する
 ```
 
 ## ほかのマシン

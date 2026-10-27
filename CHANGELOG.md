@@ -4,6 +4,20 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.24 (smallnest/kero)
+
+- **Codex pets** show on the window's edge: the **Pet** setting in
+  Settings › Appearance picks Kero the frog, the Codex app's active pet,
+  or any pet in `~/.codex/pets`, such as those from codex-pets.net,
+  codexpet.top and petdex.dev, installed as those sites say. A pet
+  follows the sessions: it works while an agent works, waves when a
+  session needs you, jumps when one finishes, and fails with a failure.
+- Switching the pet, in Settings or in the `pet-set` setting, changes
+  the pet at once.
+- `kero pets` lists the pets, installs a `.codex-pet.zip` (`kero pets
+  install <pack>`), picks one (`kero pets use <name>`), and removes one
+  (`kero pets rm <name>`).
+
 ## 2.1.23 (smallnest/kero)
 
 - **Session history** is gone, with the sidebar's **Ended** and
