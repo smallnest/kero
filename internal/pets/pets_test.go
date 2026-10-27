@@ -237,3 +237,19 @@ func TestInstallRefusesBadPacks(t *testing.T) {
 		})
 	}
 }
+
+// A list reads a pet's name without its spritesheet.
+func TestNames(t *testing.T) {
+	dir := t.TempDir()
+	manifest := `{"displayName": "Doge", "description": "a dog"}`
+	if err := os.WriteFile(filepath.Join(dir, "pet.json"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p, err := Names(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Name != "Doge" || p.Description != "a dog" || p.Sheet != nil {
+		t.Errorf("Names = %+v", p)
+	}
+}

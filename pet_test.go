@@ -105,21 +105,15 @@ func TestPetSpot(t *testing.T) {
 	}{
 		{"little room", edge + 1, false, work.Y, petH},
 		{"enough", edge, false, work.Y, petH},
-		// No room for a Codex pet: it hangs inside at the window's top
-		// edge, what it says down to its feet on the edge, as many below
-		// it as it would be above it.
-		{"no room", edge - 1, true, edge - petPerch + 1, int(setH) - 1},
-		// The window's top barely on the screen: it hangs inside, its
-		// hands at the edge, as many below it as it would be above it.
-		{"half on", 13, true, 13, petPerch},
+		// No room for a Codex pet, or the window's top off the screen: it
+		// stands inside the window at its bottom edge.
+		{"no room", edge - 1, true, edge - 1 + 700 - petH, petH},
+		{"half on", 13, true, 595, petH},
 	} {
 		main.Y = c.mainY
 		got, bottom := petSpot(main, work, 0.5, setH)
 		if bottom != c.bottom || got.Height != c.height || got.Y != c.y {
 			t.Errorf("%s at %d: %+v bottom %v, want y %d height %d bottom %v", c.name, c.mainY, got, bottom, c.y, c.height, c.bottom)
-		}
-		if bottom && got.Y+got.Height != main.Y+petPerch {
-			t.Errorf("%s at %d: its feet are not on the edge: %+v", c.name, c.mainY, got)
 		}
 	}
 }

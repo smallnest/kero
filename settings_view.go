@@ -65,6 +65,7 @@ type settingsState struct {
 	shellDraft   string
 	shellEditing bool
 	loginOpen    bool // open at login, as the system says
+	petKnob      bool // the pet's size slider was held, last frame
 	updates      updatePrefs
 	cliPath      string
 	service      string // kerod, as last asked
@@ -660,9 +661,18 @@ func (a *App) appearancePage(c *ui.Context, pal *palette) {
 		})
 		settingRow(c, pal, locales.SetPetSize(), locales.SetPetSizeDetail(), func() {
 			v := float64(s.PetSize)
-			slider(c, "pet-size", &v, 0.5, 3, 160, pal).OnChange(func() {
+			var held bool // whether the knob is held, as the frame goes
+			sl := slider(c, "pet-size", &v, 0.5, 3, 160, pal).OnChange(func() {
+				// The pet grows as the knob drags; the settings keep its
+				// size when the knob goes, or a keyboard step, one at a
+				// time.
 				s.PetSize = float32(int(v*10+0.5)) / 10
+				a.petGrow()
+				if !held {
+					a.applySettings(a.set)
+				}
 			})
+			a.petSizeKnob(sl, &held)
 			ui.Textf(c, "%.1f×", s.PetSize).FontSize(12.5).TextColor(pal.textMuted).Width(40).FontFeatures("tnum")
 		})
 	})

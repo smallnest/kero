@@ -14,13 +14,28 @@ import (
 
 // listPets lists the pets the settings may show, as the pop-up picks
 // them: Kero the frog, the Codex app's active pet, and each pet the Codex
-// app has, then those kero installed.
+// app has, then those kero installed. It reads them once, and again when
+// a pet is installed, or another chosen.
 func (a *App) listPets() []pets.Builtin {
+	if a.petList != nil && a.petListFor == a.set.PetSet && a.petListGen == petsGen {
+		return a.petList
+	}
+	a.petList, a.petListFor, a.petListGen = a.readPets(), a.set.PetSet, petsGen
+	return a.petList
+}
+
+// petsGen counts the pets installed or removed, so that a list reads
+// again.
+var petsGen int
+
+// readPets reads the pets listPets lists, their names from their
+// pet.json, not their spritesheets.
+func (a *App) readPets() []pets.Builtin {
 	ps := []pets.Builtin{{Name: settings.PetSetKero, Title: locales.PetName()}}
 	codex := pets.CodexIDs()
 	if active := pets.CodexActive(); active != "" {
 		title := active
-		if p, err := pets.LoadID(active); err == nil {
+		if p, err := pets.NameID(active); err == nil {
 			title = p.Name
 		}
 		ps = append(ps, pets.Builtin{Name: settings.PetSetCodex, Title: title})
@@ -35,7 +50,7 @@ func (a *App) listPets() []pets.Builtin {
 				continue // kero's comes first
 			}
 			title := id
-			if p, err := pets.LoadID(id); err == nil {
+			if p, err := pets.NameID(id); err == nil {
 				title = p.Name
 			}
 			ps = append(ps, pets.Builtin{Name: id, Title: title, ID: id})
@@ -80,7 +95,7 @@ func (a *App) petGallery() string {
 	if a.set.PetSet == settings.PetSetKero {
 		return ""
 	}
-	p, err := pets.LoadID(a.set.PetSet)
+	p, err := pets.NameID(a.set.PetSet)
 	if err != nil {
 		return locales.SetPetMissing(a.set.PetSet, err.Error())
 	}

@@ -169,6 +169,47 @@ func parse(id, name, desc string, version int, sheet []byte) (*Pet, error) {
 	return &Pet{ID: id, Name: name, Description: desc, Version: got, Sheet: bm.Pixelated()}, nil
 }
 
+// Names reads a pet's name and description from its pet.json alone,
+// without its spritesheet, for a list that does not draw it.
+func Names(dir string) (*Pet, error) {
+	id := filepath.Base(filepath.Clean(dir))
+	b, err := os.ReadFile(filepath.Join(dir, "pet.json"))
+	if err != nil {
+		return nil, fmt.Errorf("%s has no pet.json", id)
+	}
+	var m manifest
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, fmt.Errorf("%s: pet.json is not valid JSON: %w", id, err)
+	}
+	name := m.DisplayName
+	if name == "" {
+		name = m.Name
+	}
+	if name == "" {
+		name = id
+	}
+	return &Pet{ID: id, Name: name, Description: m.Description}, nil
+}
+
+// NameID is what Names reads for the pet that id names, from kero's pets
+// first, then the Codex app's, as LoadID reads it.
+func NameID(id string) (*Pet, error) {
+	if id == settings.PetSetCodex {
+		if id = CodexActive(); id == "" {
+			return nil, errors.New("the Codex app has no active pet to show")
+		}
+	}
+	var errs []error
+	for _, dir := range []string{Dir(), codexDir()} {
+		p, err := Names(filepath.Join(dir, id))
+		if err == nil {
+			return p, nil
+		}
+		errs = append(errs, err)
+	}
+	return nil, errors.Join(errs...)
+}
+
 // Dir is where kero installs its pets, and the packs the user installs:
 // one directory a pet.
 func Dir() string { return filepath.Join(proto.Dir(), "pets") }

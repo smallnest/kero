@@ -58,8 +58,12 @@ func (a *App) petSetLoad() *petSet {
 }
 
 // petSetReload reads the pet again, as settings changed, or a pack
-// installed.
+// installed, and so the pets the settings may show.
 func (a *App) petSetReload() {
+	// A pet installed from the CLI, without settings changed: read the
+	// list again rather than on every frame.
+	time.AfterFunc(1500*time.Millisecond, func() { a.update(func() { petsGen++ }) })
+	petsGen++
 	a.petSet = a.petSetLoad()
 	if a.pet.win != nil {
 		a.pet.win.Invalidate()

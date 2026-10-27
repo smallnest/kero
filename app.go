@@ -24,6 +24,7 @@ import (
 
 	"kero/internal/actions"
 	"kero/internal/client"
+	"kero/internal/pets"
 	"kero/internal/proto"
 	"kero/internal/settings"
 
@@ -125,6 +126,11 @@ type App struct {
 	statuses map[string]proto.Status // as last seen, for notifications
 	pet      petState                // Kero the frog, on the window's top edge
 	petSet   *petSet                 // the Codex pet it shows where it is no frog
+	// petList is the pets the settings may show, read for the pet chosen
+	// in petListFor, as petsGen counted installations.
+	petList    []pets.Builtin
+	petListFor string
+	petListGen int
 	// idleTime tells how long the user has not used the machine's keyboard
 	// or mouse (mygo.Power.IdleTime), 0 when the system does not tell; nil
 	// in tests.

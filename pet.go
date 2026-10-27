@@ -114,6 +114,7 @@ func (a *App) petShow() {
 		DisableFullScreen: true,
 		SkipTaskbar:       true,
 		Hidden:            true,
+		AlwaysOnTop:       true,
 		Parent:            a.win,
 		Content:           ui.View(a.petView),
 	})
@@ -180,6 +181,27 @@ func (a *App) petPlace() {
 	if !p.win.IsVisible() {
 		p.win.ShowInactive()
 	}
+}
+
+// petSizeKnob follows the pet's size slider, from one frame to the next:
+// held, a drag grows the pet but keeps its size out of the settings, and
+// when it goes, or a keyboard step moved it, the settings keep it.
+func (a *App) petSizeKnob(sl ui.Element, held *bool) {
+	if now := sl.Pressed(); *held && !now {
+		a.applySettings(a.set)
+	} else {
+		*held = now
+	}
+}
+
+// petGrow puts the pet at its size, and where it stands now, on the next
+// frame: a slider dragged asks for this, rather than the settings
+// applied, and saved, on each frame of the drag.
+func (a *App) petGrow() {
+	if a.petSet != nil {
+		a.petSetReload()
+	}
+	a.petPlace()
 }
 
 // petCurrent tells what the pet should feel now: the most urgent thing
