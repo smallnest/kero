@@ -29,23 +29,6 @@ func petSetGround(a *App) float32 {
 	return float32(math.Round(n))
 }
 
-// petLiftCloak pads the window's floor, off the window's edge, under which
-// a Codex pet's window is as small as its frame.
-const petLiftCloak = 8
-
-// petLift tells how far a Codex pet's frame stands above the window's
-// floor, where a window too short for the frog would cut it at its feet,
-// and it has nothing to say: 0 where it has room.
-func petLift(a *App, set *petSet, roomy, showing bool) float32 {
-	if set == nil || roomy || showing {
-		return 0
-	}
-	if lift := petSetBodyH(a) + petLiftCloak - petH; lift > 0 {
-		return lift
-	}
-	return 0
-}
-
 // petSetWide is how wide a Codex pet's frame shows, in DIPs.
 func petSetWide(a *App) float32 {
 	n := float64(petSetGround(a)) * pets.FrameW / pets.FrameH

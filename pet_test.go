@@ -88,7 +88,9 @@ func TestPetSpot(t *testing.T) {
 		x      int
 	}{{0.5, 540}, {0.25, 290}, {0, 40}} {
 		r, bottom := petSpot(main, work, c.offset, setH)
-		if bottom || r.Y != 194 || r.Height != petH || r.X != c.x { // its speech's top, petH above its hands
+		// Its window runs from its feet's line on the edge down to the
+		// speech's top at 181.
+		if bottom || r.Y != 181 || r.Height != 143 || r.X != c.x {
 			t.Errorf("offset %v: %+v bottom %v, want x %d", c.offset, r, bottom, c.x)
 		}
 	}
@@ -103,8 +105,10 @@ func TestPetSpot(t *testing.T) {
 		y      int
 		height int
 	}{
-		{"little room", edge + 1, false, 39, petH}, // at the edge's left, where it shows above the window
-		{"enough", edge, false, 38, petH},
+		// Its window shows all of the pet, as tall as it stands above the
+		// edge.
+		{"little room", edge + 1, false, 26, 143},
+		{"enough", edge, false, 25, 143},
 		// No room for a Codex pet, or the window's top off the screen: it
 		// stands inside the window at its bottom edge, as tall as it stands
 		// above the edge, so that the whole of it shows.

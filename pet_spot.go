@@ -64,6 +64,11 @@ func petSpot(win, work mygo.Rectangle, offset float32, setH float32) (mygo.Recta
 	}
 	perch := top + petPerch
 	y, height := spotRoom(perch, room, setH)
+	// A Codex pet taller than the frog takes the whole of its window, so
+	// that all of it shows above the edge.
+	if setH+petPerch >= petH {
+		y, height = perch-setH, setH+petPerch
+	}
 	// No room above the edge: it stands inside the window at its bottom
 	// edge, within the window.
 	inside := perch-setH < room

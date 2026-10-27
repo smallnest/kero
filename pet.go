@@ -330,19 +330,6 @@ func (a *App) petView(c *ui.Context) {
 		a.petPetted(now, mood)
 	}
 
-	// A Codex pet that stands with nothing to say in a window too short
-	// for the frog: its window is its own, and its head shows.
-	if lift := petLift(a, set, roomy, showing); lift > 0 {
-		x, y := float32(-lift), float32(-lift)
-		r := body.Bounds()
-		if r.W > 0 {
-			x, y = -r.X, -r.Y
-		}
-		c.Root().Children(func() {
-			ui.Box(c.Key("lift")).Absolute().Left(x + petLiftCloak).Top(y + petLiftCloak).Clip()
-		})
-	}
-
 	// Rebuild when what the pet says, or how awake it is, turns over;
 	// its motion repaints without a build, in petDraw.
 	if mood == petIdle {
