@@ -650,6 +650,8 @@ func (a *App) appearancePage(c *ui.Context, pal *palette) {
 		settingRow(c, pal, locales.SetWindowBlur(), locales.SetWindowBlurDetail(), func() {
 			toggle(c.Key("window-blur"), &s.WindowBlur, pal)
 		})
+	})
+	settingsGroup(c, pal, locales.SetPetGroup(), "", func() {
 		settingRow(c, pal, locales.SetPet(), locales.SetPetDetail(), func() {
 			toggle(c.Key("pet"), &s.Pet, pal)
 		})

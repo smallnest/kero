@@ -1117,5 +1117,6 @@
   "setPetWhich": "Pet",
   "setPetKeroCopy": "Kero’s copy",
   "setPetSize": "Codex pet size",
-  "setPetSizeDetail": "How tall a Codex pet shows, against the Codex app’s: 1 is the same, and 1.5 is the default."
+  "setPetSizeDetail": "How tall a Codex pet shows, against the Codex app’s: 1 is the same, and 1.5 is the default.",
+  "setPetGroup": "Pet"
 }

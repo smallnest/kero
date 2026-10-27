@@ -5885,3 +5885,13 @@ func SetPetSizeDetail() string { return In(i18n.Locale()).SetPetSizeDetail() }
 func (msgs Messages) SetPetSizeDetail() string {
 	return Catalog.Format(msgs.locale, "setPetSizeDetail", nil)
 }
+
+// SetPetGroup says "Pet"
+// in the language the app shows.
+func SetPetGroup() string { return In(i18n.Locale()).SetPetGroup() }
+
+// SetPetGroup says "Pet"
+// in the language of msgs.
+func (msgs Messages) SetPetGroup() string {
+	return Catalog.Format(msgs.locale, "setPetGroup", nil)
+}
