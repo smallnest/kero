@@ -66,6 +66,14 @@ Upstream's notes for 2.1.22 to 2.1.24, which this fork has.
   does. Thanks @jamdaniels for the request
 
 
+## 2.1.29 (smallnest/kero)
+
+- The Tailcat settings in **Settings › Hosts** say what they do: **Use
+  Tailcat to Reach Other Hosts**, **Remote Tailcat Port**, **Provide
+  Tailcat Service** and **This Computer's Tailcat Listener Port**. The
+  pair code has a **This Computer's Pair Code** label above it.
+- This release has everything 2.1.28 has, whose notes follow.
+
 ## 2.1.28 (smallnest/kero)
 
 - Reaching hosts over **Tailcat** again: this release has the feature. A
