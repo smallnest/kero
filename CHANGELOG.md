@@ -66,6 +66,15 @@ Upstream's notes for 2.1.22 to 2.1.24, which this fork has.
   does. Thanks @jamdaniels for the request
 
 
+## 2.1.28 (smallnest/kero)
+
+- Reaching hosts over **Tailcat** again: this release has the feature. A
+  host that listened on Tailcat stopped when its configuration file
+  wrote **Listen** before the Tailcat setting; hosts get the fix with
+  their next update.
+- `kero daemon status` no longer crashes when kerod runs on this
+  machine alone.
+
 ## Unreleased (smallnest/kero)
 
 - While the window is translucent, the sidebar's rows and the cards let
