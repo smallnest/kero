@@ -143,6 +143,9 @@ type State struct {
 	// anew (the conversations method) rather than have them in every
 	// state.
 	Conversations uint64 `json:"conversations,omitempty"`
+	// Ended are the agent sessions that ended, for the sidebar to offer
+	// to resume (kero fork).
+	Ended []EndedSession `json:"ended,omitempty"`
 }
 
 // Project groups sessions, usually those of one repository.
@@ -292,6 +295,17 @@ func (c *Conversation) Label() string {
 		return DirName(c.Dir)
 	}
 	return c.Agent
+}
+
+// EndedSession is a coding agent's session that ran in one of kerod's
+// panes, as kerod remembers it after the pane is gone.
+type EndedSession struct {
+	AgentSession
+	Dir      string `json:"dir"`
+	Name     string `json:"name,omitempty"`
+	Titled   bool   `json:"titled,omitempty"`
+	EndedAt  int64  `json:"endedAt"`
+	Archived bool   `json:"archived,omitempty"`
 }
 
 // AgentNames are the coding agents' names as they show them.

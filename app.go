@@ -64,6 +64,10 @@ type prefs struct {
 	// does: "preview" or "" shows it under the tree, "pane" opens it in a
 	// file pane, and "editor" in the host's editor.
 	FileOpen string `json:"fileOpen,omitempty"`
+	// EndedOpen and ArchivedOpen tell the sidebar's sections of the
+	// agents' ended conversations unfolded (session-history).
+	EndedOpen    bool `json:"endedOpen,omitempty"`
+	ArchivedOpen bool `json:"archivedOpen,omitempty"`
 	// QuickSession is the session the quick terminal shows (quick.go).
 	QuickSession string `json:"quickSession,omitempty"`
 }
@@ -143,10 +147,17 @@ type App struct {
 	renameFrames int
 	chrome       chrome // where the sidebar's animation puts things
 
-	pal          paletteState
-	find         findState
-	confirm      *confirmation
-	wtAsk        *worktreeAsk
+	pal     paletteState
+	find    findState
+	confirm *confirmation
+	wtAsk   *worktreeAsk
+	// endedAll shows all of the sidebar's Ended; skillMissing tells, as
+	// of skillsAt, that no kind of agent has Kero's skill (ended.go).
+	// This fork has no Ended (session history): the fields stay for
+	// ended.go's view, which nothing shows.
+	endedAll     bool
+	skillMissing bool
+	skillsAt     time.Time
 	sideDrag     float32 // the width as a drag of the sidebar's edge began
 	pendingToast string
 	// later are actions that change what the view is building, run once
@@ -350,6 +361,13 @@ func (a *App) setState(h *host, st proto.State) {
 	for id := range a.files {
 		if !live[id] {
 			delete(a.files, id)
+		}
+	}
+	if a.set.SessionHistory {
+		a.syncEnded()
+	} else {
+		for _, h := range a.hosts {
+			h.convs, h.convKnown, h.convAsked = nil, false, false
 		}
 	}
 	a.quickChanged()
@@ -1190,24 +1208,53 @@ func (a *App) apply(s settings.Settings, save bool) {
 // replaces the file, shows too: a hint is all it takes, as Load reads the
 // file again only when its modification time changed, so the watch keeps
 // no snapshot and stats nothing. The app's own saves come back as changes
-// already applied, which change nothing.
+// already applied, which change nothing. A configuration that is a
+// symlink, as one kept in a dotfiles repository, is watched in the
+// directory of the file it points to as well, where the user edits it.
 func (a *App) watchConfig() {
 	dir := filepath.Dir(settings.Path())
 	for {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return
 		}
-		w, err := mygo.WatchFiles(context.Background(), dir, mygo.FileWatchOptions{HintsOnly: true})
+		ctx, stop := context.WithCancel(context.Background())
+		w, err := mygo.WatchFiles(ctx, dir, mygo.FileWatchOptions{HintsOnly: true})
 		if err != nil {
+			stop()
 			return
+		}
+		linked := filepath.Dir(settings.Target())
+		if linked != dir {
+			go a.watchLinkedConfig(ctx, linked)
 		}
 		for {
 			if _, err := w.Next(context.Background()); err != nil {
 				break // the directory went: watch it again, made anew
 			}
 			a.reloadConfig()
+			if filepath.Dir(settings.Target()) != linked {
+				break // the symlink points elsewhere now: watch there
+			}
 		}
+		stop()
 		w.Close()
+	}
+}
+
+// watchLinkedConfig applies the configuration as the user saves the file
+// a symlinked configuration points to, watching its directory till ctx
+// ends or the directory goes.
+func (a *App) watchLinkedConfig(ctx context.Context, dir string) {
+	w, err := mygo.WatchFiles(ctx, dir, mygo.FileWatchOptions{HintsOnly: true})
+	if err != nil {
+		return
+	}
+	defer w.Close()
+	for {
+		if _, err := w.Next(ctx); err != nil {
+			return
+		}
+		a.reloadConfig()
 	}
 }
 

@@ -8,7 +8,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/coder/websocket v1.8.14
 	github.com/ebitengine/purego v0.11.1
-	github.com/egoist/mygo v0.6.5-0.20261026090713-558e498142b0
+	github.com/egoist/mygo v0.7.1-0.20261027023711-da3657e7f86a
 	github.com/hashicorp/yamux v0.1.2
 	github.com/tailscale/tailcat v0.7.0
 	golang.org/x/image v0.46.0

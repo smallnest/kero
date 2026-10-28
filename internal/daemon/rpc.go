@@ -371,6 +371,8 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		pn.mu.Unlock()
 		d.mu.Lock()
 		sid := pn.sid
+		// It runs again: no longer ended, nor archived.
+		d.ended = slices.DeleteFunc(d.ended, func(e proto.EndedSession) bool { return e.AgentSession == *as })
 		d.mu.Unlock()
 		if old != nil && *old != *as {
 			// The pane runs another conversation now: the old one ended.
@@ -423,6 +425,18 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		}
 		d.changed()
 		return true, nil
+
+	case "ended":
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		return slices.Clone(d.ended), nil
+
+	case "ended.resume", "ended.archive", "ended.unarchive", "ended.delete":
+		var p proto.IDParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return d.endedCall(method, p.ID)
 
 	case "project.create":
 		var p proto.ProjectParams

@@ -4,82 +4,70 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
-## 2.1.27 (smallnest/kero)
+## Upstream releases
 
-- **Tailcat** is a third way to reach a host, beside Tailscale and SSH:
-  a pair code through a relay, with no Tailscale account needed. **Use
-  Tailcat** in Settings › Hosts turns it on. The group under it adds
-  hosts with their pair code, and with **Connect through Tailcat** makes
-  this computer a host that shows its own pair code. The pair code works
-  as a password: anyone who has it can connect. **Change the pair code**
-  makes a new one. Off, Kero does nothing with Tailcat.
-- **Relay** sets the DERP map all machines use to find their relay; the
-  default is Tailscale's public relays.
-- `kero hosts tailcat enable|disable|port|rotate|code` does the same
-  from the command line, and `kero daemon status` shows the pair code of
-  this computer. Hosts need 2.1.27 or later to be reached over Tailcat.
-- `kero daemon serve` without `--listen` now starts the listeners of the
-  configuration, which it ignored before.
+Upstream's notes for 2.1.22 to 2.1.24, which this fork has.
 
-## 2.1.26 (smallnest/kero)
+## 2.1.24
 
-- The pet's settings — the switch, the pet, and its size — share a
-  group of their own in Settings › Appearance.
+- On macOS, dragging Kero's window by its top no longer makes it
+  shake.
 
-## 2.1.25 (smallnest/kero)
+## 2.1.23
 
-- **Codex pet size** is a setting: the slider in Settings › Appearance,
-  or `pet-size`, sets how tall a Codex pet shows, against the Codex
-  app's size. The default is 1.5.
-- kerod is found by `ps`, which macOS has too, as `kero daemon stop`
-  needs it.
+- On macOS, Kero keeps its place in the Dock after it updates itself.
 
-## 2.1.24 (smallnest/kero)
+## 2.1.22
 
-- **Codex pets** show on the window's edge: the **Pet** setting in
-  Settings › Appearance picks Kero the frog, the Codex app's active pet,
-  or any pet in `~/.codex/pets`, such as those from codex-pets.net,
-  codexpet.top and petdex.dev, installed as those sites say. A pet
-  follows the sessions: it works while an agent works, waves when a
-  session needs you, jumps when one finishes, and fails with a failure.
-- Switching the pet, in Settings or in the `pet-set` setting, changes
-  the pet at once.
-- `kero pets` lists the pets, installs a `.codex-pet.zip` (`kero pets
-  install <pack>`), picks one (`kero pets use <name>`), and removes one
-  (`kero pets rm <name>`).
+- With no session open, Split Right (⌘D) starts one. Thanks @iamvicliu
+- Images a program like Pi showed no longer stay over the screen once
+  it clears it, as with Pi's `/new`. Thanks @jorben for the report
+- After Kero relaunches to use a newer kerod, quitting it quits it
+  instead of leaving it stuck open.
 
-## 2.1.23 (smallnest/kero)
+## 2.1.21
 
-- **Session history** is gone, with the sidebar's **Ended** and
-  **Archived** lists and the `session-history` setting: a session you
-  closed was never one of the ones it listed, which the palette lists.
-- A deadlock in kerod is fixed: when an agent's own program ended in a
-  pane, the daemon stopped answering, and Kero with it, until it was
-  restarted; now Kero carries on.
-- **View › Toggle Developer Tools** shows only in development builds,
-  where the inspector is: a release build left it out.
-- While the window is translucent, the sidebar's rows and the cards let
-  the desktop through as much as the background does, so that it shows
-  through the window rather than only at its edges.
-- A kerod that does not answer no longer leaves the app connecting: the
-  client waits 2 seconds for its greeting, and `kero daemon stop` kills a
-  kerod that does not stop in 2 seconds, and removes its socket. kerod
-  writes its pid in `kerod.lock` as it starts, for the stop to find it.
-- `kero daemon stop --force` kills kerod at once, by the pid in its lock.
+- In a narrow sidebar, a session's time, and its ⌘ number while you
+  hold ⌘, show whole beside a long name, which ends in an ellipsis
+  instead. Thanks @jamdaniels for the report
 
-## 2.1.22 (smallnest/kero)
+## 2.1.20
 
-- The **sidebar** sorts and groups sessions: **Sort and Group** at its
-  top groups them by project, by date, or not at all, and orders them by
-  when they were created or last updated. Each project shows a colored
-  initial, its sessions step in beneath it, and dragging a project's
-  name moves it among the others. A project folded away keeps the
-  session you are in, its badge showing a red dot while it does.
-- **View › Toggle Files** (⌥⌘F) opens the side panel on the **Files**
-  view, and closes it again. It was named Toggle Side Panel, and opened
-  Changes.
-- A session's time and its ⌘ number show whole in a narrow sidebar,
-  rather than being squeezed by a long name.
+- A quick terminal drops down from the top of the screen over any app
+  and goes back up when you press its shortcut again. Give it a
+  shortcut in Settings › Keyboard (**Quick Terminal**); **View › Quick
+  Terminal** and the menu bar icon open it too. Its session keeps
+  running while it's hidden.
+- On Windows, an agent finishing in the session you have selected
+  shows its notification while another app is in front. Thanks @Maasea
+  for the report
+- Return presses a confirmation's action, such as Close Pane, as its
+  ↩ says. Thanks @iamvicliu
+- On a Mac, after Kero updates itself, quitting an app you started in
+  a pane no longer ends every pane's shell.
+
+## 2.1.19
+
+- **Session › New Session in Worktree…** (⌘⌥T) starts a session on a
+  new branch in a git worktree of its own, so agents working side by
+  side don't trip over each other's changes. Closing the session offers
+  to remove the worktree. `kero new --worktree <branch>` does the same
+  from the command line.
+- Kero remembers the conversations of Claude Code, Codex, Pi and
+  OpenCode that ran in its panes, so you can resume one after its
+  session is closed: ⌘P lists recent ones, and **Session › Resume
+  Conversation…** (⌘⇧O) lists them all. Turn on Settings › General ›
+  **Session history** to list them at the bottom of the sidebar too,
+  under **Ended** and **Archived**. `kero history` and `kero resume` do
+  the same from the command line. Thanks @ak4duy
+- Drop folders onto the sidebar to open them as projects. Thanks
+  @p1xelll
+- Dragging the sidebar's empty space moves the window, as the top bar
+  does. Thanks @jamdaniels for the request
+
+
+## Unreleased (smallnest/kero)
+
 - While the window is translucent, the sidebar's rows and the cards let
   the desktop through as much as the background does, so that it shows
   through the window rather than only at its edges.
