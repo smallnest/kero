@@ -188,6 +188,10 @@ func (a *App) tailcatListen(c *ui.Context, pal *palette, d *tailcatDraft) {
 			}
 		})
 		tailcatFieldErr(c, pal, d, "tailcat-listen-port")
+		ui.Column(c).Gap(3).Children(func() {
+			ui.Text(c, locales.SetTailcatCode()).FontSize(13.5).TextColor(pal.text)
+			ui.Text(c, locales.SetTailcatCodeDetail()).FontSize(12).TextColor(pal.textMuted).LineHeight(1.35)
+		})
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			code, col := d.code, pal.text
 			switch {

@@ -125,12 +125,12 @@ Tailcat reaches a host with a pair code instead of Tailscale. It needs no Tailsc
 
 The pair code is the host's address. It contains the host's key, a secret pre-shared key and the relay's region, as a long `tc…` string. **Treat it as a password: anyone who has it can connect to the host.**
 
-**Settings › Hosts › Tailcat** holds all Tailcat settings, in one group. The switch **Use Tailcat** turns them all on. With it on, the group has two parts:
+**Settings › Hosts › Tailcat** holds all Tailcat settings, in one group. The switch **Use Tailcat to Reach Other Hosts** turns them all on. With it on, the group has two parts:
 
-- **Add a Host** adds a host that this machine reaches. Copy the pair code from the host's Tailcat group, or from `kero hosts tailcat code` on the host. **Port** is the port of the tailcat listener of the hosts that you add: 7373 unless one of them names another.
-- **Connect through Tailcat** makes this machine a host. Kero then shows its pair code, with a button to copy it, and **Listener port** is the port that kerod listens on here. **Change the pair code** makes a new code.
+- **Add a Host** adds a host that this machine reaches. Copy the pair code from the host's Tailcat group, or from `kero hosts tailcat code` on the host. **Remote Tailcat Port** is the port of the tailcat listener of the hosts that you add: 7373 unless one of them names another.
+- **Provide Tailcat Service** makes this machine a host. Kero then shows its pair code, with a button to copy it, and **This Computer's Tailcat Listener Port** is the port that kerod listens on here. **Change the pair code** makes a new code.
 
-The pair code does not have the port of the listener in it. The **Port** of the other machines must be the **Listener port** of the host.
+The pair code does not have the port of the listener in it. The **Remote Tailcat Port** of the other machines must be the **This Computer's Tailcat Listener Port** of the host.
 
 **Relay** is the DERP map that all machines use to find their relay. It applies to both parts.
 

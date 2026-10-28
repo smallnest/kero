@@ -85,7 +85,8 @@ func settingsIndex() []searchEntry {
 		{"hosts", locales.SetHostRemoteControl(), "remote-control host kero do focus"},
 		// The group's title, above its switch.
 		{"hosts", locales.SetTailcatTitle(), "tailcat pair code relay derp paircode no-tailscale tailcat-relay tailcat-port"},
-		{"hosts", locales.SetTailcatListen(), "tailcat listener host relay tailnet port tailcat:// kero hosts tailcat enable"},
+		{"hosts", locales.SetTailcatListen(), "tailcat listener provide service host relay tailnet port tailcat:// kero hosts tailcat enable"},
+		{"hosts", locales.SetTailcatCode(), "tailcat pair code paircode copy secret share other machines"},
 		{"hosts", locales.SetListen(), "listen tailnet tailscale share this computer host port 7373 listen-allow"},
 
 		{"advanced", locales.SetConfigFile(), "configuration ghostty edit file dotfiles"},

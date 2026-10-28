@@ -127,12 +127,12 @@ Tailcat 用配对码代替 Tailscale 连接主机，两边都不需要 Tailscale
 
 配对码就是主机的地址。它包含主机的公钥、一个预共享密钥和中继所在区域，是一长串 `tc…`。**把它当作密码：谁有它，谁就能连接到主机。**
 
-**Settings › Hosts › Tailcat** 集中了所有 Tailcat 设置，都在一个分组里。分组顶部的开关 **Use Tailcat** 一次打开它们。打开后，分组分为两部分：
+**Settings › Hosts › Tailcat** 集中了所有 Tailcat 设置，都在一个分组里。分组顶部的开关 **使用 Tailcat 连接其它主机** 一次打开它们。打开后，分组分为两部分：
 
-- **Add a Host**（添加主机）：添加这台电脑要连接的机器。从对方机器 Tailcat 分组里，或在对方机器上运行 `kero hosts tailcat code`，复制它的配对码。**Port** 是要添加的机器上 tailcat 监听所用的端口：没有另写时是 7373。
-- **Connect through Tailcat**（经 Tailcat 连接）：把这台电脑变成主机。Kero 随即显示它的配对码，并带复制按钮；**Listener port** 是 kerod 在这里监听的端口。**Change the pair code** 会换一个新配对码。
+- **Add a Host**（添加主机）：添加这台电脑要连接的机器。从对方机器 Tailcat 分组里，或在对方机器上运行 `kero hosts tailcat code`，复制它的配对码。**远程 Tailcat 服务端口** 是要添加的机器上 tailcat 监听所用的端口：没有另写时是 7373。
+- **提供 Tailcat 服务**：把这台电脑变成主机。Kero 随即显示它的配对码，并带复制按钮；**本机 Tailcat 服务监听端口** 是 kerod 在这里监听的端口。**Change the pair code** 会换一个新配对码。
 
-配对码里没有监听端口。其他机器的 **Port** 要填主机的 **Listener port**。
+配对码里没有监听端口。其他机器的 **远程 Tailcat 服务端口** 要填主机的 **本机 Tailcat 服务监听端口**。
 
 **Relay**（中继）是所有机器查找中继所用的 DERP 映射表，两部分都用它。
 

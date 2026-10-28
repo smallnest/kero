@@ -6046,11 +6046,11 @@ func (msgs Messages) SetTailcatTitle() string {
 	return Catalog.Format(msgs.locale, "setTailcatTitle", nil)
 }
 
-// SetTailcat says "Use Tailcat"
+// SetTailcat says "Use Tailcat to Reach Other Hosts"
 // in the language the app shows.
 func SetTailcat() string { return In(i18n.Locale()).SetTailcat() }
 
-// SetTailcat says "Use Tailcat"
+// SetTailcat says "Use Tailcat to Reach Other Hosts"
 // in the language of msgs.
 func (msgs Messages) SetTailcat() string {
 	return Catalog.Format(msgs.locale, "setTailcat", nil)
@@ -6106,11 +6106,11 @@ func (msgs Messages) SetTailcatNamePlaceholder() string {
 	return Catalog.Format(msgs.locale, "setTailcatNamePlaceholder", nil)
 }
 
-// SetTailcatPort says "Port"
+// SetTailcatPort says "Remote Tailcat Port"
 // in the language the app shows.
 func SetTailcatPort() string { return In(i18n.Locale()).SetTailcatPort() }
 
-// SetTailcatPort says "Port"
+// SetTailcatPort says "Remote Tailcat Port"
 // in the language of msgs.
 func (msgs Messages) SetTailcatPort() string {
 	return Catalog.Format(msgs.locale, "setTailcatPort", nil)
@@ -6186,11 +6186,11 @@ func (msgs Messages) SetTailcatOffNote() string {
 	return Catalog.Format(msgs.locale, "setTailcatOffNote", nil)
 }
 
-// SetTailcatListen says "Connect through Tailcat"
+// SetTailcatListen says "Provide Tailcat Service"
 // in the language the app shows.
 func SetTailcatListen() string { return In(i18n.Locale()).SetTailcatListen() }
 
-// SetTailcatListen says "Connect through Tailcat"
+// SetTailcatListen says "Provide Tailcat Service"
 // in the language of msgs.
 func (msgs Messages) SetTailcatListen() string {
 	return Catalog.Format(msgs.locale, "setTailcatListen", nil)
@@ -6206,24 +6206,44 @@ func (msgs Messages) SetTailcatListenDetail() string {
 	return Catalog.Format(msgs.locale, "setTailcatListenDetail", nil)
 }
 
-// SetTailcatListenPort says "Listener port"
+// SetTailcatListenPort says "This Computer's Tailcat Listener Port"
 // in the language the app shows.
 func SetTailcatListenPort() string { return In(i18n.Locale()).SetTailcatListenPort() }
 
-// SetTailcatListenPort says "Listener port"
+// SetTailcatListenPort says "This Computer's Tailcat Listener Port"
 // in the language of msgs.
 func (msgs Messages) SetTailcatListenPort() string {
 	return Catalog.Format(msgs.locale, "setTailcatListenPort", nil)
 }
 
-// SetTailcatListenPortDetail says "The port kerod's tailcat listener takes here. The other machines' Port setting connects to it."
+// SetTailcatListenPortDetail says "The port kerod's tailcat listener takes here. The other machines' Remote Tailcat Port connects to it."
 // in the language the app shows.
 func SetTailcatListenPortDetail() string { return In(i18n.Locale()).SetTailcatListenPortDetail() }
 
-// SetTailcatListenPortDetail says "The port kerod's tailcat listener takes here. The other machines' Port setting connects to it."
+// SetTailcatListenPortDetail says "The port kerod's tailcat listener takes here. The other machines' Remote Tailcat Port connects to it."
 // in the language of msgs.
 func (msgs Messages) SetTailcatListenPortDetail() string {
 	return Catalog.Format(msgs.locale, "setTailcatListenPortDetail", nil)
+}
+
+// SetTailcatCode says "This computer's pair code"
+// in the language the app shows.
+func SetTailcatCode() string { return In(i18n.Locale()).SetTailcatCode() }
+
+// SetTailcatCode says "This computer's pair code"
+// in the language of msgs.
+func (msgs Messages) SetTailcatCode() string {
+	return Catalog.Format(msgs.locale, "setTailcatCode", nil)
+}
+
+// SetTailcatCodeDetail says "The pair code of this computer: copy it to your other machines, which add this one as a host with it."
+// in the language the app shows.
+func SetTailcatCodeDetail() string { return In(i18n.Locale()).SetTailcatCodeDetail() }
+
+// SetTailcatCodeDetail says "The pair code of this computer: copy it to your other machines, which add this one as a host with it."
+// in the language of msgs.
+func (msgs Messages) SetTailcatCodeDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatCodeDetail", nil)
 }
 
 // SetTailcatChange says "Change the pair code"

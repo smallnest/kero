@@ -160,7 +160,7 @@ func TestTailcatSettingRows(t *testing.T) {
 	s.SetTailcatListen("7373")
 	a.set, a.ss.tailcat = s, tailcatDraft{code: "tailcat://" + testCode}
 	tt.Frame()
-	for _, want := range []string{locales.SetTailcatListenPort(), locales.SetTailcatChange()} {
+	for _, want := range []string{locales.SetTailcatListenPort(), locales.SetTailcatCode(), locales.SetTailcatCodeDetail(), locales.SetTailcatChange()} {
 		if !tt.HasText(want) {
 			t.Errorf("no %q; texts %q", want, tt.Texts())
 		}
