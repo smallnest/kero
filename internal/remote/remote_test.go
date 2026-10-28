@@ -230,6 +230,8 @@ func TestParseListen(t *testing.T) {
 		"tailnet://:7400":                {Kind: "tailnet", Port: "7400"},
 		"tailnet-serve://":               {Kind: "tailnet-serve"},
 		"tailnet-serve:///run/kero.sock": {Kind: "tailnet-serve", Path: "/run/kero.sock"},
+		"tailcat://":                     {Kind: "tailcat", Port: ListenPort()},
+		"tailcat://:7400":                {Kind: "tailcat", Port: "7400"},
 	} {
 		got, err := ParseListen(in)
 		if err != nil || got != want {
@@ -241,7 +243,7 @@ func TestParseListen(t *testing.T) {
 	if ListenPort() == DefaultPort {
 		t.Errorf("a development build listens on %s, as the installed Kero", DefaultPort)
 	}
-	for _, bad := range []string{"tcp://:80", "tailnet://0.0.0.0:7373", "tailnet-serve://host/x", ":7373", "tailnet://:0", "tailnet://:99999"} {
+	for _, bad := range []string{"tcp://:80", "tailnet://0.0.0.0:7373", "tailnet-serve://host/x", ":7373", "tailnet://:0", "tailnet://:99999", "tailcat://host:7373", "tailcat://:0"} {
 		if l, err := ParseListen(bad); err == nil {
 			t.Errorf("%q read as %+v", bad, l)
 		}

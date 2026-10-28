@@ -29,13 +29,16 @@ const DefaultPort = "7373"
 
 // Addr is how to reach a host.
 type Addr struct {
-	Scheme string // "ssh", "wsl", "http" or "https"
+	Scheme string // "ssh", "wsl", "http", "https" or "tailcat"
 	User   string // ssh's
 	Host   string // the host, or for wsl the distribution, "" its default
 	Port   string
 	// Kero is the kero executable on the host, for ssh and wsl, when it is
 	// not where the bridge looks (BridgeLocations).
 	Kero string
+	// Code is a tailcat address's pair code: the host's key, its
+	// pre-shared key, and the relay to reach it by.
+	Code string
 }
 
 // ParseAddr reads an address: a URL of a scheme above, or an SSH
@@ -45,6 +48,9 @@ func ParseAddr(s string) (Addr, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return Addr{}, errors.New("no address")
+	}
+	if strings.HasPrefix(s, "tailcat://") {
+		return parseTailcat(s)
 	}
 	if strings.ContainsFunc(s, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
 		return Addr{}, fmt.Errorf("%q: an address has no spaces", s)
@@ -111,6 +117,9 @@ func ParseAddr(s string) (Addr, error) {
 // without its scheme.
 func (a Addr) String() string {
 	var b strings.Builder
+	if a.Scheme == "tailcat" {
+		return tailcatURL(a)
+	}
 	if a.Scheme != "ssh" {
 		b.WriteString(a.Scheme + "://")
 	}

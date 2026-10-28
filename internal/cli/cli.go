@@ -22,6 +22,7 @@ import (
 	"kero/internal/build"
 	"kero/internal/client"
 	"kero/internal/proto"
+	"kero/internal/remote"
 	"kero/internal/service"
 	"kero/internal/settings"
 	"kero/internal/update"
@@ -144,6 +145,9 @@ Usage:
   kero hosts remove|check <name>
   kero hosts install <name|address> [--version v]
                                 install Kero there, over SSH
+  kero hosts tailcat enable|disable|port|rotate|code
+                                this machine as a host over Tailcat, with
+                                a pair code instead of Tailscale (secret)
   kero pets [ls]                the pets Kero shows (kero pets install --list)
   kero pets install <pack>      install a Codex pet pack: a .codex-pet.zip,
                                 or a pet's directory, as ~/.codex/pets has
@@ -980,6 +984,28 @@ func daemonCmd(args []string, host string) error {
 		}
 		if l := settings.Load().Listen; len(l) > 0 {
 			fmt.Println("listening:", strings.Join(l, ", "))
+		}
+		// A tailcat listener's address, as kerod's key makes it: a pair
+		// code only it knows, here or on another machine's kerod.
+		if c.Remote != nil && c.Remote.Addr.Scheme == "tailcat" || slices.ContainsFunc(settings.Load().Listen, func(l string) bool {
+			spec, err := remote.ParseListen(l)
+			return err == nil && spec.Kind == "tailcat"
+		}) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			var code string
+			var err error
+			if c.Remote != nil {
+				code, err = c.PairCode(ctx)
+			} else {
+				// Over the socket: the key makes it, as kerod's does.
+				code, err = remote.LocalTailcatAddress(ctx)
+			}
+			cancel()
+			if err != nil {
+				fmt.Println("tailcat:", err)
+			} else {
+				fmt.Println("tailcat:", code)
+			}
 		}
 		return nil
 	case "stop", "restart":

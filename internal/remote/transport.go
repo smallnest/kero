@@ -241,34 +241,46 @@ func transport(ctx context.Context, a Addr, client string) (io.ReadWriteCloser, 
 		// --exec runs sh itself, not through the distribution's shell.
 		args = append(args, "--exec", "sh", "-c", bridgeScript(a, "wsl"))
 		return startBridge(exec.Command("wsl.exe", args...), false)
+	case "tailcat":
+		port, ok := ctx.Value(tailcatPortKey{}).(string)
+		if !ok {
+			port = ListenPort()
+		}
+		return openTailcat(ctx, a.Code, port)
 	case "http", "https":
-		scheme := "ws"
-		if a.Scheme == "https" {
-			scheme = "wss"
-		}
-		if client == "" {
-			client = "Kero"
-		}
-		h := http.Header{}
-		h.Set(ClientHeader, client)
-		opts := &websocket.DialOptions{
-			HTTPHeader:      h,
-			CompressionMode: websocket.CompressionDisabled, // ours is across the mux
-		}
-		if a.Scheme == "http" {
-			opts.HTTPClient = &http.Client{Transport: &http.Transport{DialContext: dialTailnet}}
-		}
-		ws, resp, err := websocket.Dial(ctx, scheme+"://"+a.hostPort()+MuxPath, opts)
-		if err != nil {
-			if resp != nil && (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized) {
-				return nil, fmt.Errorf("%w: %s", ErrAuth, httpError(resp, err))
-			}
-			return nil, err
-		}
-		ws.SetReadLimit(64 << 20)
-		return websocket.NetConn(context.Background(), ws, websocket.MessageBinary), nil
+		return dialHTTP(ctx, a, a.hostPort(), client)
 	}
 	return nil, fmt.Errorf("no way to reach %s", a)
+}
+
+// dialHTTP opens a connection to a host's network listener as a
+// WebSocket, at addr ("host:port").
+func dialHTTP(ctx context.Context, a Addr, addr, client string) (io.ReadWriteCloser, error) {
+	scheme := "ws"
+	if a.Scheme == "https" {
+		scheme = "wss"
+	}
+	if client == "" {
+		client = "Kero"
+	}
+	h := http.Header{}
+	h.Set(ClientHeader, client)
+	opts := &websocket.DialOptions{
+		HTTPHeader:      h,
+		CompressionMode: websocket.CompressionDisabled, // ours is across the mux
+	}
+	if a.Scheme == "http" {
+		opts.HTTPClient = &http.Client{Transport: &http.Transport{DialContext: dialTailnet}}
+	}
+	ws, resp, err := websocket.Dial(ctx, scheme+"://"+addr+MuxPath, opts)
+	if err != nil {
+		if resp != nil && (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized) {
+			return nil, fmt.Errorf("%w: %s", ErrAuth, httpError(resp, err))
+		}
+		return nil, err
+	}
+	ws.SetReadLimit(64 << 20)
+	return websocket.NetConn(context.Background(), ws, websocket.MessageBinary), nil
 }
 
 func httpError(resp *http.Response, err error) string {

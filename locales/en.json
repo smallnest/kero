@@ -1001,7 +1001,7 @@
       }
     }
   },
-  "setListenTitle": "This Computer as a Host",
+  "setListenTitle": "Tailscale",
   "setListen": "Let other machines connect",
   "setListenDetail": "kerod listens at this computer's Tailscale addresses, for Kero on your other machines. Only your Tailscale account may connect.",
   "setListenOn": "Add this computer as a host on your other machines at this address. Only your Tailscale account may connect.",
@@ -1118,5 +1118,26 @@
   "setPetKeroCopy": "Kero’s copy",
   "setPetSize": "Codex pet size",
   "setPetSizeDetail": "How tall a Codex pet shows, against the Codex app’s: 1 is the same, and 1.5 is the default.",
-  "setPetGroup": "Pet"
+  "setPetGroup": "Pet",
+  "setTailcatTitle": "Tailcat",
+  "setTailcat": "Use Tailcat",
+  "setTailcatDetail": "Reach hosts with a pair code through a relay, instead of Tailscale. Off, Kero lists none of these hosts and connects to none of them, and kerod starts no tailcat listener.",
+  "setTailcatAdd": "Add a Host",
+  "setTailcatAddDetail": "Copy the pair code of the host's tailcat listener, in Settings › Hosts on that machine. The pair code is the host's secret: anyone with it can connect.",
+  "setTailcatPlaceholder": "tailcat://tc… or the pair code",
+  "setTailcatNamePlaceholder": "devbox",
+  "setTailcatPort": "Port",
+  "setTailcatPortDetail": "The port of the tailcat listener of the hosts you add: 7373 unless one names another.",
+  "setTailcatRelay": "Relay",
+  "setTailcatRelayDetail": "The DERP map where the machines find their relay, https://tailcat.dev/derpmap.json unless you run your own, as derper does. This computer's listener takes its relay from it too.",
+  "setTailcatOn": "Kero on your other machines adds this computer as a host with this pair code. Anyone who has it can connect.",
+  "setTailcatStarting": "The pair code comes in a moment.",
+  "setTailcatOff": "Tailcat is off.",
+  "setTailcatOffNote": "Skip Tailcat if you don't trust a relay: it stays off, and Kero starts nothing for it.",
+  "setTailcatListen": "Connect through Tailcat",
+  "setTailcatListenDetail": "kerod listens through a tailcat relay, so your other machines add this one as a host with its pair code. It needs no Tailscale, and opens nothing but its own listener.",
+  "setTailcatListenPort": "Listener port",
+  "setTailcatListenPortDetail": "The port kerod's tailcat listener takes here. The other machines' Port setting connects to it.",
+  "setTailcatChange": "Change the pair code",
+  "setTailcatChanged": "New pair code. Add this computer again on your other machines."
 }

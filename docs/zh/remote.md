@@ -59,6 +59,7 @@ kero -H devbox new -n review -- claude
 | `wsl://Ubuntu`、`wsl://` | 本台 Windows 电脑上的 WSL 发行版，通过 `wsl.exe` 连接 |
 | `http://devbox:7373` | kerod 在 tailnet 地址上的监听（见 [Tailscale](#tailscale)） |
 | `https://devbox.tail1234.ts.net` | 位于 Tailscale Serve 之后的 kerod |
+| `tailcat://tc…` | 配对码，经中继连接：不需要 Tailscale（见 [Tailcat](#tailcat)） |
 
 Kero 为每台主机只建立一条连接，所有内容都经由它传输：边栏状态、你查看的每个窗格，以及命令行发出的命令。连接经过压缩，并通过心跳在几秒内发现断线。连接中断时（例如笔记本休眠），该主机的会话会以淡化样式留在边栏中，Kero 会自动重连，重试间隔逐渐拉长，最长一分钟。
 
@@ -119,6 +120,54 @@ listen-allow = tag:ci
 ```
 
 `listen` 和 `listen-allow` 变化时，kerod 会随之调整；关闭某个监听时，经由它建立的连接也会断开。kerod 运行期间新增的 `tailnet-serve://` 监听要等到 `kero daemon restart` 后才生效。只有配置要求时 kerod 才会监听，而且只在 Tailscale 上监听。它会拒绝来自网页浏览器的请求，因此你访问的网页无法连到它。来自互联网的 Funnel 请求也永远无法进入。要让它随机器一起持续监听，请将其作为服务运行（见下文）。
+
+### Tailcat
+
+Tailcat 用配对码代替 Tailscale 连接主机，两边都不需要 Tailscale 账号，也不需要安装 Tailscale。它使用 [Tailcat](https://github.com/tailscale/tailcat)，一个由 Tailscale 的组件构成的库：它在两台机器之间建立 WireGuard 隧道，先通过公共 DERP 中继让双方互相找到，找到后如果网络允许就直接连接。
+
+配对码就是主机的地址。它包含主机的公钥、一个预共享密钥和中继所在区域，是一长串 `tc…`。**把它当作密码：谁有它，谁就能连接到主机。**
+
+**Settings › Hosts › Tailcat** 集中了所有 Tailcat 设置，都在一个分组里。分组顶部的开关 **Use Tailcat** 一次打开它们。打开后，分组分为两部分：
+
+- **Add a Host**（添加主机）：添加这台电脑要连接的机器。从对方机器 Tailcat 分组里，或在对方机器上运行 `kero hosts tailcat code`，复制它的配对码。**Port** 是要添加的机器上 tailcat 监听所用的端口：没有另写时是 7373。
+- **Connect through Tailcat**（经 Tailcat 连接）：把这台电脑变成主机。Kero 随即显示它的配对码，并带复制按钮；**Listener port** 是 kerod 在这里监听的端口。**Change the pair code** 会换一个新配对码。
+
+配对码里没有监听端口。其他机器的 **Port** 要填主机的 **Listener port**。
+
+**Relay**（中继）是所有机器查找中继所用的 DERP 映射表，两部分都用它。
+
+客户端需要这个版本的 Kero，或更新的版本。
+
+同样的设置也可以在命令行上完成：
+
+```sh
+# 在主机上：先打开 Tailcat，再监听。
+# tailcat = true 要先写进配置。
+kero hosts tailcat enable  # 或 kero hosts tailcat enable 7400
+kero hosts tailcat code    # 配对码，这是秘密
+kero hosts tailcat rotate  # 换新配对码：旧的随即失效
+
+# 在另一台机器上：
+kero hosts add box tailcat://tc…
+```
+
+配对码在 kerod 重启后不变。kerod 启动时也会把它写进日志：
+
+```sh
+grep 'listening on tailcat' ~/.config/kero/kerod.log
+```
+
+macOS 上的日志在 `~/Library/Application Support/kero`，Windows 上在 `%LOCALAPPDATA%\kero`。
+
+**开关。** Tailcat 默认关闭。关闭时，应用不列出、也不连接任何 Tailcat 主机，kerod 不启动 `tailcat://` 监听。如果不信任中继，就别打开 Tailcat：关闭时 Kero 不会为 Tailcat 启动任何东西。
+
+**中继。** 默认使用 Tailscale 在 `https://tailcat.dev/derpmap.json` 提供的公共中继。Tailscale 对它限流，也不保证一直可用。如果两台机器能在网络上直接互通，会话数据就不经过中继：中继只传递双方找到对方所需的信息。要使用自己的中继（例如 Tailscale 的 [derper](https://github.com/tailscale/tailscale/tree/main/cmd/derper)），把 `tailcat-relay` 设为你 DERP 映射表的 URL，或在应用的 **Relay** 中设置。主机和另一端要设置同一份映射表：配对码里只有中继的编号，两边各自在自己的映射表中查找它。
+
+**换配对码。** 应用中的 **Change the pair code** 或 `kero hosts tailcat rotate` 会生成新密钥。kerod 用新密钥重新启动监听，旧配对码随即失效。请在你其他机器上重新添加这台电脑。要从一台机器上移除配对码，删除它数据文件夹里的密钥文件 `tailcat.json`。
+
+**开关不能改变的事。** 客户端无法区分中继和主机。控制中继、又拿到配对码的机器，可以冒充主机。使用 Tailscale 的公共中继时，这需要攻破 Tailscale 的服务器；使用自己的中继时，运行中继的人就能做到。
+
+**密钥。** kerod 把 Tailcat 密钥保存在 Kero 数据文件夹里的 `tailcat.json`，只有你的用户能读。只要这个文件不变，配对码在重启后就不变。删除它并重启 kerod 会得到新密钥，效果与 **Change the pair code** 相同：所有持有旧配对码的机器都会连不上这台主机。
 
 ## 将 kerod 作为服务运行
 

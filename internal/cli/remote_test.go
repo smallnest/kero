@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
+
+	"kero/internal/remote"
+	"kero/internal/settings"
 )
 
 func TestSplitHost(t *testing.T) {
@@ -86,5 +91,48 @@ func TestKeroHostScope(t *testing.T) {
 	t.Setenv("KERO_PANE", "p1")
 	if current() != "" {
 		t.Error("a pane of this machine named on another")
+	}
+}
+
+// `kero hosts tailcat` turns this machine's tailcat listener on and off,
+// and rotates its pair code, in the settings file it reads.
+func TestHostsTailcat(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("KERO_HOME", home)
+	t.Setenv("KERO_CONFIG", filepath.Join(home, "config"))
+	if err := tailcatCmd([]string{"enable"}); err == nil {
+		t.Error("a listener with Tailcat off")
+	}
+	set := settings.Load()
+	set.Tailcat = true
+	if err := settings.Save(set); err != nil {
+		t.Fatal(err)
+	}
+	if err := tailcatCmd([]string{"enable", "7400"}); err != nil {
+		t.Fatal(err)
+	}
+	set = settings.Load()
+	if l, port, ok := set.TailcatListen(); !ok || l != "tailcat://:7400" || port != "7400" {
+		t.Fatalf("listen %q", settings.Load().Listen)
+	}
+	if err := tailcatCmd([]string{"port", "http"}); err == nil {
+		t.Error("a bad port")
+	}
+	if err := tailcatCmd([]string{"disable"}); err != nil {
+		t.Fatal(err)
+	}
+	set = settings.Load()
+	if _, _, ok := set.TailcatListen(); ok {
+		t.Errorf("listen %q", settings.Load().Listen)
+	}
+	rot := settings.Load().TailcatRotate
+	if err := tailcatCmd([]string{"rotate"}); err != nil {
+		t.Fatal(err)
+	}
+	if settings.Load().TailcatRotate == rot {
+		t.Error("kerod told not to start its listener again")
+	}
+	if st, err := os.Stat(remote.TailcatKeyPath()); err != nil || st.Mode().Perm() != 0o600 {
+		t.Fatalf("key file %v, %v", st, err)
 	}
 }

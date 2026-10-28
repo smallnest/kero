@@ -3,6 +3,7 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 
 	"kero/internal/detach"
 	"kero/internal/proto"
+	"kero/internal/remote"
 	"kero/internal/service"
 )
 
@@ -287,6 +289,9 @@ func ClearDaemon() {
 type Client struct {
 	conn    net.Conn
 	Welcome proto.Welcome
+	// Remote is the remote connection the client runs over, if it is of
+	// a host, whose streams ask the host what it is.
+	Remote *remote.Conn
 
 	wmu     sync.Mutex
 	enc     *json.Encoder
@@ -319,8 +324,21 @@ func ConnectVia(d Dialer) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{conn: conn, Welcome: w, enc: json.NewEncoder(conn), pending: map[int64]chan response{}, closed: make(chan struct{})}
+	if rc, ok := d.(*remote.Conn); ok {
+		c.Remote = rc
+	}
 	go c.read(r)
 	return c, nil
+}
+
+// PairCode asks the host for the address of its tailcat listener
+// (remote.Conn.PairCode), for a host Kero reaches over a remote
+// connection.
+func (c *Client) PairCode(ctx context.Context) (string, error) {
+	if c.Remote == nil {
+		return "", errors.New("this host answers over its socket, not a remote connection")
+	}
+	return c.Remote.PairCode(ctx)
 }
 
 // OnEvent sets the function events go to, on the client's goroutine.

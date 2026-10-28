@@ -83,6 +83,9 @@ func settingsIndex() []searchEntry {
 		{"hosts", locales.SetHosts(), "host hosts remote server ssh tailscale tailnet wsl machine linux devbox -H kero hosts"},
 		{"hosts", locales.SetHostAdd(), "add host address ssh wsl https"},
 		{"hosts", locales.SetHostRemoteControl(), "remote-control host kero do focus"},
+		// The group's title, above its switch.
+		{"hosts", locales.SetTailcatTitle(), "tailcat pair code relay derp paircode no-tailscale tailcat-relay tailcat-port"},
+		{"hosts", locales.SetTailcatListen(), "tailcat listener host relay tailnet port tailcat:// kero hosts tailcat enable"},
 		{"hosts", locales.SetListen(), "listen tailnet tailscale share this computer host port 7373 listen-allow"},
 
 		{"advanced", locales.SetConfigFile(), "configuration ghostty edit file dotfiles"},

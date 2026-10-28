@@ -59,6 +59,7 @@ An address says how to reach a host. Kero takes the same address in Settings, in
 | `wsl://Ubuntu`, `wsl://` | A WSL distribution of this Windows PC, through `wsl.exe` |
 | `http://devbox:7373` | kerod's listener on a tailnet address (see [Tailscale](#tailscale)) |
 | `https://devbox.tail1234.ts.net` | kerod behind Tailscale Serve |
+| `tailcat://tc…` | A pair code, through a relay: no Tailscale needed (see [Tailcat](#tailcat)) |
 
 Kero opens one connection per host and carries everything over it: the sidebar's state, every pane you look at, and the CLI's commands. The connection is compressed, and a heartbeat notices a dead link within seconds. When a link drops, as when a laptop sleeps, the host's sessions stay in the sidebar, faded, and Kero reconnects on its own, waiting longer between tries up to a minute.
 
@@ -116,7 +117,54 @@ listen-allow = alice@example.com
 listen-allow = tag:ci
 ```
 
-kerod follows `listen` and `listen-allow` as they change, and a listener turned off drops the connections it took. A `tailnet-serve://` listener added while kerod runs waits for `kero daemon restart`. kerod listens only when the configuration asks, and only on Tailscale. It refuses requests from web browsers, so a web page you visit can't reach it. Funnel's requests from the internet never get in. To keep it listening with the machine, run it as a service (below).
+kerod follows `listen` and `listen-allow` as they change, and a listener turned off drops the connections it took. A `tailnet-serve://` listener added while kerod runs waits for `kero daemon restart`. kerod listens only when the configuration asks, and only on Tailscale or through a Tailcat relay. It refuses requests from web browsers, so a web page you visit can't reach it. Funnel's requests from the internet never get in. To keep it listening with the machine, run it as a service (below).
+
+### Tailcat
+
+Tailcat reaches a host with a pair code instead of Tailscale. It needs no Tailscale account, and no Tailscale installation on either machine. It uses [Tailcat](https://github.com/tailscale/tailcat), a library made from Tailscale's parts: it makes a WireGuard tunnel between the two machines, through a public DERP relay that lets them find each other, and directly once they do.
+
+The pair code is the host's address. It contains the host's key, a secret pre-shared key and the relay's region, as a long `tc…` string. **Treat it as a password: anyone who has it can connect to the host.**
+
+**Settings › Hosts › Tailcat** holds all Tailcat settings, in one group. The switch **Use Tailcat** turns them all on. With it on, the group has two parts:
+
+- **Add a Host** adds a host that this machine reaches. Copy the pair code from the host's Tailcat group, or from `kero hosts tailcat code` on the host. **Port** is the port of the tailcat listener of the hosts that you add: 7373 unless one of them names another.
+- **Connect through Tailcat** makes this machine a host. Kero then shows its pair code, with a button to copy it, and **Listener port** is the port that kerod listens on here. **Change the pair code** makes a new code.
+
+The pair code does not have the port of the listener in it. The **Port** of the other machines must be the **Listener port** of the host.
+
+**Relay** is the DERP map that all machines use to find their relay. It applies to both parts.
+
+The client needs this version of Kero, or a later one.
+
+The same settings from the command line:
+
+```sh
+# On the host: turn on Tailcat, then listen.
+# tailcat = true goes in the configuration first.
+kero hosts tailcat enable  # or kero hosts tailcat enable 7400
+kero hosts tailcat code      # the pair code, its secret
+kero hosts tailcat rotate    # a new pair code: the old one stops working
+
+# On the other machine:
+kero hosts add box tailcat://tc…
+```
+
+The pair code stays the same across restarts. kerod also logs it at start:
+
+```sh
+grep 'listening on tailcat' ~/.config/kero/kerod.log
+```
+
+The log is in `~/Library/Application Support/kero` on macOS, and in `%LOCALAPPDATA%\kero` on Windows.
+
+**The switch.** Tailcat is off until you turn it on. With it off, the app lists no Tailcat host and connects to none of them, and kerod starts no `tailcat://` listener. Leave it off if you do not trust a relay: Kero then starts nothing for Tailcat.
+
+**The relay.** By default, Tailcat uses Tailscale's public relays at `https://tailcat.dev/derpmap.json`. Tailscale limits their rate, and does not promise they stay available. The sessions themselves do not go through the relay if the machines can reach each other directly over the network: the relay only carries what the machines use to find each other. To use a relay of your own, as Tailscale's [derper](https://github.com/tailscale/tailscale/tree/main/cmd/derper) provides, set `tailcat-relay` to the URL of your DERP map, or set **Relay** in the app. Set the same map on the host and on the other machines: the pair code keeps the relay's number, and each side looks it up in its own map.
+
+**Changing the pair code.** **Change the pair code** in the app, or `kero hosts tailcat rotate`, makes a new key. kerod starts its listener again with the new key, and the old code no longer connects. Add this machine again on your other machines. To remove the code from a machine, delete its key file, `tailcat.json` in Kero's data folder.
+
+
+**The keys.** kerod keeps its Tailcat key in `tailcat.json` in Kero's data folder, which only your user can read. The pair code stays the same across restarts, while the file stays. Delete the file and restart kerod to get a new key, as **Change the pair code** does: every machine that has the old code loses the host.
 
 ## Running kerod as a service
 

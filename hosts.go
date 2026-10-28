@@ -30,6 +30,7 @@ import (
 type host struct {
 	name string        // "" for this machine
 	cfg  settings.Host // a remote host's, as configured
+	tc   bool          // reached over tailcat, whose list it is of
 	addr remote.Addr
 
 	rc        *remote.Conn // a remote host's connection, nil while there is none
@@ -233,6 +234,24 @@ func (a *App) syncHosts() {
 		h.cfg, h.name = cfg, cfg.Name
 		keep = append(keep, h)
 	}
+	if a.set.Tailcat {
+		for _, cfg := range a.set.TailcatHosts {
+			addr, err := remote.ParseAddr(cfg.Addr)
+			h := a.hostNamed(cfg.Name)
+			if h != nil && (err != nil || addr != h.addr || !h.tc) {
+				a.closeHost(h)
+				h = nil
+			}
+			if h == nil {
+				h = &host{name: cfg.Name, addr: addr, conn: connConnecting, tc: true}
+				if err != nil {
+					h.conn, h.err = connFailed, err.Error()
+				}
+			}
+			h.name = cfg.Name
+			keep = append(keep, h)
+		}
+	}
 	for _, h := range a.hosts[1:] {
 		if !slices.Contains(keep, h) {
 			a.closeHost(h)
@@ -301,7 +320,11 @@ func (a *App) connectHost(h *host) {
 		} else {
 			if rc == nil {
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				rc, err = remote.Dial(ctx, h.addr, remote.Options{App: mygo.App.Version(), Client: appClientName()})
+				port := ""
+				if h.addr.Scheme == "tailcat" {
+					port = h.tailcatPort()
+				}
+				rc, err = remote.Dial(ctx, h.addr, remote.Options{App: mygo.App.Version(), Client: appClientName(), Port: port})
 				cancel()
 			}
 			if err == nil {
@@ -310,6 +333,15 @@ func (a *App) connectHost(h *host) {
 		}
 		a.update(func() { a.connected(h, gen, rc, cl, err) })
 	}()
+}
+
+// tailcatPort is the port of a tailcat host's listener, as the settings
+// say, which arrive with the app's settings.
+func (h *host) tailcatPort() string {
+	if p := settings.Load().TailcatPort; p != "" {
+		return p
+	}
+	return settings.TailcatPortDefault()
 }
 
 // appClientName says what the app is, for kero clients on a host.

@@ -95,9 +95,17 @@ func hostAddr(host string) (string, remote.Addr, error) {
 		a, err := remote.ParseAddr(h.Addr)
 		return h.Name, a, err
 	}
+	if i := set.TailcatHostByName(host); i >= 0 && set.Tailcat {
+		h := set.TailcatHosts[i]
+		a, err := remote.ParseAddr(h.Addr)
+		return h.Name, a, err
+	}
 	a, err := remote.ParseAddr(host)
 	if err != nil {
 		return "", a, fmt.Errorf("%w: %q is no host of kero hosts, nor an address: %v", errNotFound, host, err)
+	}
+	if a.Scheme == "tailcat" && !set.Tailcat {
+		return "", a, fmt.Errorf("Tailcat is off: turn it on with tailcat = true")
 	}
 	return a.Label(), a, nil
 }
@@ -110,7 +118,7 @@ func dialHost(host string) (*remote.Conn, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	c, err := remote.Dial(ctx, a, remote.Options{App: build.Version(), Client: clientName("kero CLI")})
+	c, err := remote.Dial(ctx, a, remote.Options{App: build.Version(), Client: clientName("kero CLI"), Port: settings.Load().TailcatPort})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", errUnreachable, host, err)
 	}
@@ -167,9 +175,17 @@ func hostsCmd(args []string) error {
 	if len(f.pos) > 0 {
 		sub = f.pos[0]
 	}
+	if sub == "tailcat" {
+		return tailcatCmd(f.pos[1:])
+	}
 	set := settings.Load()
 	switch sub {
 	case "ls", "list":
+		if set.Tailcat {
+			for _, h := range set.TailcatHosts {
+				fmt.Printf("%s\ttailcat://%s…\ttailcat\n", h.Name, shortCode(h.Addr))
+			}
+		}
 		if f.set["json"] {
 			if set.Hosts == nil {
 				set.Hosts = []settings.Host{}
@@ -281,7 +297,89 @@ func hostsCmd(args []string) error {
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		return cmd.Run()
 	}
-	return usageErr("kero hosts ls|add|remove|check|install")
+	return usageErr("kero hosts ls|add|remove|check|install|tailcat")
+}
+
+// tailcatCmd is `kero hosts tailcat enable|disable|rotate|code`: this
+// machine as a host over Tailcat, and its pair code. The code is a
+// secret, so only the command that means to show it prints it.
+func tailcatCmd(args []string) error {
+	set := settings.Load()
+	_, port, on := set.TailcatListen()
+	sub := "code"
+	if len(args) > 0 {
+		sub = args[0]
+	}
+	switch sub {
+	case "code":
+		if !set.Tailcat {
+			return errors.New("Tailcat is off: kero hosts tailcat enable")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		code, err := remote.LocalTailcatAddress(ctx)
+		cancel()
+		if err != nil {
+			return err
+		}
+		fmt.Println(code)
+		fmt.Fprintln(os.Stderr, "the pair code is the secret: anyone with it can connect; kero hosts tailcat rotate makes a new one")
+		if !on {
+			fmt.Fprintln(os.Stderr, "kerod does not listen through Tailcat here: kero hosts tailcat enable")
+		} else {
+			fmt.Fprintf(os.Stderr, "kerod listens on port %s: the Port setting of the other machines is this one (kero hosts tailcat port sets it)\n", port)
+		}
+		return nil
+	case "enable":
+		if !set.Tailcat {
+			return errors.New("Tailcat is off: turn it on first, with tailcat = true in the configuration")
+		}
+		if !on {
+			set.SetTailcatListen(settings.TailcatListenPortDefault())
+		}
+		if len(args) > 1 {
+			if !settings.ValidTailcatPort(args[1]) {
+				return usageErr("%q is not a port", args[1])
+			}
+			set.SetTailcatListen(args[1])
+		}
+		if err := settings.Save(set); err != nil {
+			return err
+		}
+		fmt.Println("kerod listens through Tailcat: kero hosts tailcat code")
+		return nil
+	case "disable":
+		set.SetTailcatListen("")
+		return settings.Save(set)
+	case "port":
+		if len(args) != 2 || !settings.ValidTailcatPort(args[1]) {
+			return usageErr("kero hosts tailcat port <port>")
+		}
+		if !on {
+			return errors.New("kerod does not listen through Tailcat here: kero hosts tailcat enable")
+		}
+		set.SetTailcatListen(args[1])
+		return settings.Save(set)
+	case "rotate":
+		k, err := remote.RotateTailcatKey(remote.TailcatKeyPath())
+		if err != nil {
+			return err
+		}
+		// kerod starts its listener with the key again, which follow finds.
+		set.TailcatRotate = !set.TailcatRotate
+		if err := settings.Save(set); err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		code, err := remote.TailcatAddress(ctx, k)
+		cancel()
+		if err != nil {
+			return err
+		}
+		fmt.Println("tailcat://" + code)
+		fmt.Fprintln(os.Stderr, "the old pair code no longer connects: add this computer again on your other machines")
+		return nil
+	}
+	return usageErr("kero hosts tailcat enable [port]|disable|port <port>|rotate|code")
 }
 
 // releasedVersion is this Kero's version, to install the same on a host,
@@ -470,4 +568,14 @@ func serveCmd(args []string) error {
 		}
 	}
 	return daemon.Run(daemon.Options{Serve: true, Listen: listen})
+}
+
+// shortCode is an address's pair code, as far as it can show it: it is
+// the host's secret.
+func shortCode(addr string) string {
+	a, err := remote.ParseAddr(addr)
+	if err != nil || a.Scheme != "tailcat" {
+		return addr
+	}
+	return a.Code[:min(8, len(a.Code))]
 }

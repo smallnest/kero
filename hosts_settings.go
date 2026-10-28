@@ -40,19 +40,24 @@ func (a *App) hostsPage(c *ui.Context, pal *palette) {
 		}
 	})
 	docLink(c, pal, "hosts-docs", locales.SetHostsDocs(), "https://kero.sh/docs/remote")
+	a.tailcatGroup(c, pal)
 	settingsGroup(c, pal, locales.SetHostAdd(), locales.SetHostAddDetail(), func() {
 		d := &a.ss.host
-		ui.Row(c).Padding(10, 0).Gap(8).AlignItems(ui.Center).Children(func() {
-			add := func() { a.addHost() }
-			textField(c, "host-addr", &d.addr, locales.SetHostAddressPlaceholder(), 0, pal).Font("monospace").OnSubmit(add)
-			textField(c, "host-name", &d.name, locales.SetHostNamePlaceholder(defaultHostName(d.addr)), 130, pal).OnSubmit(add)
-			if fieldButton(c, "host-add", locales.CommonAdd(), true, pal) {
-				add()
-			}
+		ui.Row(c).Padding(0, 0, 10, 0).Children(func() {
+			ui.Column(c).Gap(8).Children(func() {
+				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+					add := func() { a.addHost() }
+					textField(c, "host-addr", &d.addr, locales.SetHostAddressPlaceholder(), 0, pal).Font("monospace").OnSubmit(add)
+					textField(c, "host-name", &d.name, locales.SetHostNamePlaceholder(defaultHostName(d.addr)), 130, pal).OnSubmit(add)
+					if fieldButton(c, "host-add", locales.CommonAdd(), true, pal) {
+						add()
+					}
+				})
+				if d.err != "" {
+					ui.Text(c, d.err).FontSize(12).TextColor(pal.danger)
+				}
+			})
 		})
-		if d.err != "" {
-			ui.Text(c, d.err).FontSize(12).TextColor(pal.danger).Padding(0, 0, 10, 0)
-		}
 	})
 	a.listenGroup(c, pal)
 	settingsGroup(c, pal, locales.SetHostSettingsSplit(), locales.SetHostSettingsSplitDetail(), nil)

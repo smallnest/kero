@@ -103,6 +103,21 @@ type Settings struct {
 	// besides the machine's owner: tailnet logins, tag:name, or *.
 	Listen      []string `json:"listen,omitempty"`
 	ListenAllow []string `json:"listenAllow,omitempty"`
+	// TailcatHosts are hosts Kero reaches over tailcat, and TailcatPort
+	// the port of their listeners. Tailcat, false, stops the app from
+	// connecting to them, and from listing them, for whom its relay is
+	// not one to trust, and kerod from listening through tailcat (a
+	// tailcat:// listen). TailcatRelay is the DERP map where tailcat
+	// finds relays: "" for remote.DefaultDERPMapURL, Tailscale's public
+	// ones.
+	TailcatHosts []TailcatHost `json:"tailcatHosts,omitempty"`
+	TailcatPort  string        `json:"tailcatPort,omitempty"`
+	Tailcat      bool          `json:"tailcat"`
+	TailcatRelay string        `json:"tailcatRelay,omitempty"`
+	// TailcatRotate makes kerod start its tailcat listener with the key
+	// again, whose pair code changed: this machine's, as `kero tailcat
+	// rotate` sets it.
+	TailcatRotate bool `json:"tailcatRotate,omitempty"`
 	// RemoteUpdates lets Kero on another machine that connects update the
 	// app here to its version, and restart kerod into it, as it can a
 	// server build: off unless the user turns it on here.
@@ -310,6 +325,7 @@ func clone(s Settings) Settings {
 	s.Hosts = slices.Clone(s.Hosts)
 	s.Listen = slices.Clone(s.Listen)
 	s.ListenAllow = slices.Clone(s.ListenAllow)
+	s.TailcatHosts = slices.Clone(s.TailcatHosts)
 	if s.Shortcuts != nil {
 		m := make(map[string]string, len(s.Shortcuts))
 		for k, v := range s.Shortcuts {
@@ -371,6 +387,18 @@ func (s *Settings) normalize() {
 	if s.Scrollback < 0 || s.Scrollback > 256 {
 		s.Scrollback = d.Scrollback
 	}
+	if !ValidTailcatPort(s.TailcatPort) {
+		s.TailcatPort = d.TailcatPort
+	}
+	if s.TailcatRelay != "" && !ValidDERPMapURL(s.TailcatRelay) {
+		s.TailcatRelay = d.TailcatRelay
+	}
+	// The settings that named a tailcat host asked for Tailcat, as one
+	// this version knew no switch for.
+	for _, h := range s.TailcatHosts {
+		s.Tailcat = s.Tailcat || (validTailcatAddr(h.Addr) && !h.Added)
+	}
+	s.TailcatHosts = slices.DeleteFunc(s.TailcatHosts, func(h TailcatHost) bool { return !validTailcatAddr(h.Addr) })
 	if s.LightTheme == "" {
 		s.LightTheme = d.LightTheme
 	}

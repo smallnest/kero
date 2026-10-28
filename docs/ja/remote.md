@@ -59,6 +59,7 @@ kero -H devbox new -n review -- claude
 | `wsl://Ubuntu`、`wsl://` | この Windows PC の WSL ディストリビューション（`wsl.exe` 経由） |
 | `http://devbox:7373` | tailnet アドレス上の kerod のリスナー（[Tailscale](#tailscale) を参照） |
 | `https://devbox.tail1234.ts.net` | Tailscale Serve の背後にある kerod |
+| `tailcat://tc…` | ペアコード。リレー経由で接続し、Tailscale は不要です（[Tailcat](#tailcat) を参照） |
 
 Kero はホストごとに 1 本の接続を開き、すべてをそこに載せます: サイドバーの状態、表示しているすべてのペイン、CLI のコマンド。接続は圧縮され、ハートビートが切れた接続を数秒で検知します。ノートパソコンのスリープなどで接続が切れると、ホストのセッションは薄く表示されたままサイドバーに残り、Kero は自動で再接続します。再試行の間隔は最大 1 分まで延びていきます。
 
@@ -117,6 +118,54 @@ listen-allow = tag:ci
 ```
 
 kerod は `listen` と `listen-allow` の変更に追従し、オフにしたリスナーはそれが受け付けた接続を切ります。kerod の動作中に追加した `tailnet-serve://` リスナーは、`kero daemon restart` まで待機します。kerod が待ち受けるのは設定で求められたときだけで、Tailscale 上だけです。Web ブラウザからのリクエストは拒否するので、訪れた Web ページから接続されることはありません。インターネットからの Funnel のリクエストは決して入れません。マシンの起動とともに待ち受け続けるには、サービスとして実行してください（下記）。
+
+### Tailcat
+
+Tailcat は Tailscale の代わりに、ペアコードでホストに接続します。どちらのマシンにも Tailscale のアカウントも Tailscale 本体も要りません。[Tailcat](https://github.com/tailscale/tailcat) を使います。これは Tailscale の部品から作られたライブラリで、2 台のマシンの間に WireGuard のトンネルを作ります。まず公開 DERP リレーを通して互いを見つけ、見つかった後は、ネットワークが許せば直接接続します。
+
+ペアコードがホストのアドレスです。ホストの公開鍵、事前共有鍵、リレーのリージョンを含む長い `tc…` の文字列です。**パスワードとして扱ってください: 持っている人は誰でもホストに接続できます。**
+
+**Settings › Hosts › Tailcat** に、Tailcat の設定がすべて 1 つのグループに入っています。上部のスイッチ **Use Tailcat** でまとめてオンになります。オンのとき、グループは 2 つの部分に分かれます:
+
+- **Add a Host**: このマシンが接続するホストを追加します。相手のマシンの Tailcat グループ、またはそのマシンで `kero hosts tailcat code` を実行して、ペアコードをコピーします。**Port** は追加するホストの tailcat リスナーのポートです。別のものを指定しなければ 7373 です。
+- **Connect through Tailcat**: このマシンをホストにします。Kero はそのペアコードをコピーのボタン付きで表示します。**Listener port** はここで kerod が待ち受けるポートです。**Change the pair code** は新しいペアコードにします。
+
+ペアコードにリスナーのポートは入っていません。ほかのマシンの **Port** には、ホストの **Listener port** を設定してください。
+
+**Relay** は、すべてのマシンがリレーを見つける DERP マップです。両方の部分で使います。
+
+クライアントには、このバージョン以降の Kero が必要です。
+
+同じ設定はコマンドラインでもできます:
+
+```sh
+# ホストで: 先に Tailcat をオンにし、待ち受けます。
+# 設定に tailcat = true を先に書きます。
+kero hosts tailcat enable  # または kero hosts tailcat enable 7400
+kero hosts tailcat code    # ペアコード（秘密）
+kero hosts tailcat rotate  # 新しいペアコード。古いコードは使えなくなります
+
+# もう一方のマシンで:
+kero hosts add box tailcat://tc…
+```
+
+ペアコードは kerod を再起動しても変わりません。kerod は起動時にログにも記録します:
+
+```sh
+grep 'listening on tailcat' ~/.config/kero/kerod.log
+```
+
+ログは macOS では `~/Library/Application Support/kero`、Windows では `%LOCALAPPDATA%\kero` にあります。
+
+**スイッチ。** Tailcat は初期状態ではオフです。オフのとき、アプリは Tailcat のホストを一覧に出さず、接続もしません。kerod は `tailcat://` のリスナーを開始しません。リレーを信頼しない場合は Tailcat をオンにしないでください。オフのままなら、Kero は Tailcat のために何も起動しません。
+
+**リレー。** 既定では、Tailscale が `https://tailcat.dev/derpmap.json` で提供する公開リレーを使います。Tailscale はその速度を制限し、常に使えることを保証していません。2 台のマシンがネットワーク上で直接届き合える場合、セッションのデータはリレーを通りません。リレーは互いを見つけるための情報だけを運びます。自分のリレー（Tailscale の [derper](https://github.com/tailscale/tailscale/tree/main/cmd/derper) など）を使うには、`tailcat-relay` に DERP マップの URL を設定します。アプリの **Relay** でも同じです。ホストと相手側の両方で同じマップを設定します。ペアコードにはリレーの番号だけが入り、それぞれの側が自分のマップでそれを見つけます。
+
+**ペアコードの変更。** アプリの **Change the pair code** または `kero hosts tailcat rotate` で新しい鍵を作ります。kerod は新しい鍵でリスナーを開始し直し、古いコードでは接続できなくなります。ほかのマシンでこのコンピュータを追加し直してください。マシンからコードを削除するには、そのデータフォルダーの鍵ファイル `tailcat.json` を削除します。
+
+**スイッチでは変えられないこと。** クライアントはリレーとホストを区別できません。リレーを管理し、ペアコードも持っているマシンは、ホストになりすませます。Tailscale の公開リレーなら、これには Tailscale のサーバーへの攻撃が必要です。自分のリレーなら、それを動かしている人ができます。
+
+**鍵。** kerod は Tailcat の鍵を Kero のデータフォルダーの `tailcat.json` に保存し、あなたのユーザーだけが読めます。このファイルが変わらなければ、ペアコードは再起動後も同じです。削除して kerod を再起動すると新しい鍵になり、**Change the pair code** と同じ結果になります。古いペアコードを持つマシンはホストに接続できなくなります。
 
 ## kerod をサービスとして実行する
 

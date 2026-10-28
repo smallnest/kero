@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,12 +57,14 @@ type listener struct {
 	cancel  context.CancelFunc
 	servers []*http.Server // listeners.mu's
 	socket  string
+	tailcat *remote.TailcatRelay // tailcat's
 }
 
 // listen starts the network listeners.
 func (d *Daemon) listen() *listeners {
 	l := &listeners{d: d, on: map[string]*listener{}}
 	set := settings.Load()
+	remote.SetRelay(set.TailcatRelay)
 	specs := d.opts.Listen
 	if specs != nil {
 		l.set(specs, set.ListenAllow, true)
@@ -89,10 +92,17 @@ func (l *listeners) follow(last settings.Settings) {
 		case <-t.C:
 		}
 		set := settings.Load()
-		if slices.Equal(set.Listen, last.Listen) && slices.Equal(set.ListenAllow, last.ListenAllow) {
+		if slices.Equal(set.Listen, last.Listen) && slices.Equal(set.ListenAllow, last.ListenAllow) && set.TailcatRelay == last.TailcatRelay && set.TailcatRotate == last.TailcatRotate {
 			continue
 		}
+		remote.SetRelay(set.TailcatRelay)
 		last = set
+		// A new key's listener, for its new pair code.
+		for _, s := range set.Listen {
+			if spec, err := remote.ParseListen(s); err == nil && spec.Kind == "tailcat" {
+				l.drop(spec.String())
+			}
+		}
 		l.set(set.Listen, set.ListenAllow, false)
 	}
 }
@@ -142,11 +152,24 @@ func (l *listeners) set(specs, allow []string, boot bool) {
 		switch {
 		case spec.Kind == "tailnet":
 			go l.tailnet(ln)
+		case spec.Kind == "tailcat":
+			go l.tailcatListener(ln)
 		case boot:
 			serve = append(serve, ln)
 		default:
 			l.d.log.Printf("listen %s: restart kerod to listen there (kero daemon restart)", name)
 		}
+	}
+}
+
+// drop stops the listener named name, which set starts again as it
+// starts one a configuration adds.
+func (l *listeners) drop(name string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if ln := l.on[name]; ln != nil {
+		ln.stop()
+		delete(l.on, name)
 	}
 }
 
@@ -176,6 +199,9 @@ func (ln *listener) stop() {
 	ln.cancel()
 	for _, s := range ln.servers {
 		s.Close()
+	}
+	if ln.tailcat != nil {
+		ln.tailcat.Close()
 	}
 	if ln.socket != "" {
 		os.Remove(ln.socket)
@@ -252,6 +278,35 @@ func (l *listeners) serve(lis *listener) {
 	if !l.start(lis, ln, "tailnet-serve") {
 		os.Remove(path)
 	}
+}
+
+// tailcatListener listens through a tailcat relay, whose pair code is the
+// listener's address: the key that makes it stays in kero's directory, as
+// the code is.
+func (l *listeners) tailcatListener(lis *listener) {
+	key, err := remote.LoadTailcatKey(filepath.Join(proto.Dir(), "tailcat.json"))
+	if err != nil {
+		l.d.log.Printf("listen %s: %v", lis.spec, err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(lis.ctx, time.Minute)
+	srv := l.d.remoteServer(identity{via: "tailcat"})
+	r, err := remote.ListenTailcat(ctx, key, lis.spec.Port, srv)
+	cancel()
+	if err != nil {
+		l.d.log.Printf("listen %s: %v", lis.spec, err)
+		return
+	}
+	l.mu.Lock()
+	if lis.ctx.Err() != nil {
+		l.mu.Unlock()
+		r.Close()
+		return
+	}
+	lis.tailcat = r
+	lis.spec.Tailcat = strings.TrimPrefix(r.PairCode, "tailcat://")
+	l.mu.Unlock()
+	l.d.log.Printf("listening on %s (tailcat)", r.PairCode)
 }
 
 // selfStatus is this machine on the tailnet, as tailscaled last said, at
@@ -405,10 +460,25 @@ func (d *Daemon) remoteServer(id identity) *remote.Server {
 			if sid.client == "" {
 				sid.client = mux.Client
 			}
+			if mux.Peer != "" {
+				sid.peer = mux.Peer
+			}
 			d.serveHello(conn, bufio.NewReaderSize(conn, 64<<10), hello, sid)
 		},
 		Restart: d.restart,
 		Log:     d.log,
+	}
+	// A tailcat listener's address, for Kero elsewhere: the pair code of
+	// its key.
+	s.PairCode = func() (string, error) {
+		key, err := remote.LoadTailcatKey(filepath.Join(proto.Dir(), "tailcat.json"))
+		if err != nil {
+			return "", err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		code, err := remote.TailcatAddress(ctx, key)
+		return "tailcat://" + code, err
 	}
 	if build.Server && update.Managed(filepath.Dir(d.exe)) {
 		s.Update = func(app string) error {

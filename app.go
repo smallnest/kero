@@ -1167,7 +1167,7 @@ func (a *App) apply(s settings.Settings, save bool) {
 	if (old.BlockAds != s.BlockAds || !slices.Equal(old.AdLists, s.AdLists)) && (a.ads.started || len(a.webs) > 0) {
 		a.applyAdBlock()
 	}
-	if !slices.Equal(old.Hosts, s.Hosts) && a.win != nil {
+	if (!slices.Equal(old.Hosts, s.Hosts) || !slices.Equal(old.TailcatHosts, s.TailcatHosts) || old.Tailcat != s.Tailcat) && a.win != nil {
 		a.syncHosts()
 	}
 	if a.win != nil {

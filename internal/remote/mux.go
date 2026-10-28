@@ -80,6 +80,10 @@ type buffered struct {
 type Options struct {
 	App    string // the version of Kero
 	Client string // "Kero 2.1.0 on laptop"
+	// Port is the port of a tailcat host's listener, which its pair code
+	// does not have: DefaultPort's, which kerod's listener takes without
+	// a port of its own.
+	Port string
 }
 
 // Conn is a remote connection: streams to kerod on a host.
@@ -88,6 +92,9 @@ type Conn struct {
 	Welcome proto.MuxWelcome
 	sess    *yamux.Session
 	tr      io.Closer
+	// tc is the client a tailcat connection runs over, which counts
+	// its streams.
+	tc *tailcatTransport
 }
 
 // Dial connects to a host, within ctx.
@@ -104,6 +111,9 @@ func Dial(ctx context.Context, a Addr, o Options) (*Conn, error) {
 }
 
 func dial(ctx context.Context, a Addr, o Options) (*Conn, error) {
+	if a.Scheme == "tailcat" && o.Port != "" {
+		ctx = WithTailcatPort(ctx, o.Port)
+	}
 	tr, err := transport(ctx, a, o.Client)
 	if err != nil {
 		return nil, err
@@ -174,7 +184,9 @@ func handshake(ctx context.Context, tr io.ReadWriteCloser, a Addr, o Options) (*
 		tr.Close()
 		return nil, err
 	}
-	return &Conn{Addr: a, Welcome: w, sess: sess, tr: tr}, nil
+	out := &Conn{Addr: a, Welcome: w, sess: sess, tr: tr}
+	out.tc, _ = tr.(*tailcatTransport)
+	return out, nil
 }
 
 // readWelcome reads the host's MuxWelcome. Lines before it, which a
@@ -208,7 +220,24 @@ func (c *Conn) Open() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	if c.tc != nil {
+		c.tc.client.Streams.Add(1)
+		return countedStream{stream{st}, c.tc}, nil
+	}
 	return stream{st}, nil
+}
+
+// countedStream is a stream of a tailcat connection, whose closing
+// releases the tailcat client's count of it.
+type countedStream struct {
+	stream
+	tc *tailcatTransport
+}
+
+func (s countedStream) Close() error {
+	err := s.stream.Close()
+	s.tc.release()
+	return err
 }
 
 // Dial opens a stream, as client.Dialer does.
@@ -231,32 +260,45 @@ func (c *Conn) Ping() (time.Duration, error) { return c.sess.Ping() }
 // Host asks the host to restart kerod or update Kero (proto.KindRestart,
 // proto.KindUpdate), waiting as long as ctx lets it.
 func (c *Conn) Host(ctx context.Context, req proto.HostRequest) error {
+	_, err := c.ask(ctx, req)
+	return err
+}
+
+// PairCode asks the host for the address of its tailcat listener
+// (proto.KindPairCode): "tailcat://…".
+func (c *Conn) PairCode(ctx context.Context) (string, error) {
+	return c.ask(ctx, proto.HostRequest{Kind: proto.KindPairCode})
+}
+
+// ask asks the host a question of a host stream, and returns its answer's
+// pair code.
+func (c *Conn) ask(ctx context.Context, req proto.HostRequest) (string, error) {
 	st, err := c.Open()
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer st.Close()
 	stop := context.AfterFunc(ctx, func() { st.Close() })
 	defer stop()
 	b, _ := json.Marshal(req)
 	if _, err := st.Write(append(b, '\n')); err != nil {
-		return err
+		return "", err
 	}
 	line, err := readLine(bufio.NewReader(st))
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return "", ctx.Err()
 		}
-		return err
+		return "", err
 	}
 	var r proto.HostReply
 	if err := json.Unmarshal(line, &r); err != nil {
-		return err
+		return "", err
 	}
 	if !r.OK {
-		return errors.New(r.Error)
+		return "", errors.New(r.Error)
 	}
-	return nil
+	return r.PairCode, nil
 }
 
 // stream is a stream of a remote connection, whose Close wakes its own
@@ -283,14 +325,22 @@ type Server struct {
 	// written: a kerod that restarts itself ends with it.
 	Restart func() (then func(), err error)
 	Update  func(app string) error
+	// PairCode answers proto.KindPairCode: the address of kerod's tailcat
+	// listener.
+	PairCode func() (string, error)
 	// Closed, when set, runs as the connection ends.
 	Closed func()
-	Log    *log.Logger
+	// Peer tells who connects, for kerod's tailcat listener, from the
+	// client's first line: "tailcat [vzc7…]", as the key it says. The
+	// http(s):// listeners say whom they take elsewhere.
+	Peer func(c net.Conn, hello []byte) string
+	Log  *log.Logger
 }
 
 // Serve answers a remote connection until it ends.
 func (s *Server) Serve(rwc io.ReadWriteCloser) error {
 	defer rwc.Close()
+	hello := proto.MuxHello{}
 	if c, ok := rwc.(net.Conn); ok {
 		c.SetReadDeadline(time.Now().Add(15 * time.Second))
 	}
@@ -302,7 +352,11 @@ func (s *Server) Serve(rwc io.ReadWriteCloser) error {
 	if c, ok := rwc.(net.Conn); ok {
 		c.SetReadDeadline(time.Time{})
 	}
-	var hello proto.MuxHello
+	if s.Peer != nil {
+		if n, ok := rwc.(net.Conn); ok {
+			hello.Peer = s.Peer(n, line)
+		}
+	}
 	w := proto.MuxWelcome{Mux: proto.MuxVersion, Host: s.Info()}
 	switch {
 	case json.Unmarshal(line, &hello) != nil || hello.Kind != proto.KindMux:
@@ -361,15 +415,12 @@ func (s *Server) stream(st *yamux.Stream, mux proto.MuxHello) {
 	}
 	var req proto.HostRequest
 	json.Unmarshal(line, &req)
-	reply := func(err error) {
-		r := proto.HostReply{OK: err == nil, App: req.App}
-		if err != nil {
-			r.Error = err.Error()
-		}
+	replyAsync := func(r proto.HostReply) {
 		b, _ := json.Marshal(r)
 		st.Write(append(b, '\n'))
 		stream{st}.Close()
 	}
+	reply := func(err error) { replyAsync(proto.HostReply{OK: err == nil, App: req.App, Error: errString(err)}) }
 	switch req.Kind {
 	case proto.KindRestart:
 		if s.Restart == nil {
@@ -381,6 +432,14 @@ func (s *Server) stream(st *yamux.Stream, mux proto.MuxHello) {
 		if then != nil {
 			then()
 		}
+	case proto.KindPairCode:
+		if s.PairCode == nil {
+			reply(errors.New("this host has no tailcat listener"))
+			return
+		}
+		code, err := s.PairCode()
+		replyAsync(proto.HostReply{OK: err == nil, PairCode: code, Error: errString(err)})
+		return
 	case proto.KindUpdate:
 		if s.Update == nil {
 			reply(errors.New("Kero on this host updates as it was installed: update it there"))
@@ -399,3 +458,11 @@ type streamConn struct {
 }
 
 func (c *streamConn) Read(p []byte) (int, error) { return c.r.Read(p) }
+
+// errString says an error as a reply does, and "" for none.
+func errString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}

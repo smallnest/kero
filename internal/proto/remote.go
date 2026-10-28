@@ -30,6 +30,10 @@ const (
 	// to App's version (Hello.App), signed as the app's own updates are. A
 	// HostReply answers it; a restart then runs the new version.
 	KindUpdate = "host.update"
+	// KindPairCode asks kerod for the pair code of its tailcat listener,
+	// which is how Kero elsewhere reaches it without Tailscale: its
+	// address there. A HostReply's PairCode answers it.
+	KindPairCode = "host.tailcat"
 )
 
 // MuxHello opens a remote connection.
@@ -43,6 +47,10 @@ type MuxHello struct {
 	// Client names the client, as `kero clients` shows it: "Kero 2.1.0 on
 	// laptop".
 	Client string `json:"client,omitempty"`
+	// Peer is whom the host's listener saw connect, as kerod fills in for
+	// kerod on a tailcat listener, which the client cannot say: "tailcat
+	// [vzc7…]". The app adds it.
+	Peer string `json:"peer,omitempty"`
 }
 
 // MuxWelcome answers a MuxHello. Both sides then compress what they write
@@ -88,6 +96,9 @@ type HostReply struct {
 	OK    bool   `json:"ok"`
 	App   string `json:"app,omitempty"` // the version installed
 	Error string `json:"error,omitempty"`
+	// PairCode is the host's tailcat address, tailcat:// and its pair
+	// code.
+	PairCode string `json:"pairCode,omitempty"`
 }
 
 // ClientInfo is a client connected to kerod, as `kero clients` lists it.

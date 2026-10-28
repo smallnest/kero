@@ -255,13 +255,17 @@ var keys = []key{
 			}
 			return nil
 		}},
-	{name: "listen", doc: "let Kero on other machines reach this one's sessions: tailnet://:7373 on its Tailscale addresses, tailnet-serve:// for Tailscale Serve; repeat it", list: true,
+	{name: "listen", doc: "let Kero on other machines reach this one's sessions: tailnet://:7373 on its Tailscale addresses, tailnet-serve:// for Tailscale Serve, tailcat://:7373 through a relay with a pair code instead of Tailscale (tailcat = true), or kero hosts tailcat enable; repeat it", list: true,
 		get: func(s *Settings) []string { return slices.Clone(s.Listen) },
 		set: func(s *Settings, v []string) error {
 			s.Listen = nil
 			var bad []string
 			for _, l := range v {
-				if _, err := remote.ParseListen(l); err != nil {
+				spec, err := remote.ParseListen(l)
+				if err == nil && spec.Kind == "tailcat" && !s.Tailcat {
+					err = fmt.Errorf("%s: Tailcat is off: turn it on with tailcat = true", l)
+				}
+				if err != nil {
 					bad = append(bad, err.Error())
 					continue
 				}
@@ -283,6 +287,63 @@ var keys = []key{
 			}
 			return nil
 		}},
+	boolKey("tailcat", "give Kero other ways to reach its hosts: a relay with a pair code, which needs no Tailscale. Off, Kero lists none of those hosts and connects to none, and kerod starts no tailcat listener", func(s *Settings) *bool { return &s.Tailcat }),
+	{name: "tailcat-host", doc: "a host Kero reaches over tailcat, as name=tailcat:// plus the pair code of its tailcat listener (tailcat = true); repeat it", list: true,
+		get: func(s *Settings) []string {
+			out := make([]string, len(s.TailcatHosts))
+			for i, h := range s.TailcatHosts {
+				out[i] = h.Name + "=" + h.Addr
+			}
+			return out
+		},
+		set: func(s *Settings, v []string) error {
+			s.TailcatHosts = nil
+			var bad []string
+			for _, line := range v {
+				name, addr, ok := strings.Cut(strings.TrimSpace(line), "=")
+				name, addr = strings.TrimSpace(name), strings.TrimSpace(addr)
+				var err error
+				switch {
+				case !ok:
+					err = fmt.Errorf("%q: write name=tailcat://paircode", line)
+				case !hostName(name):
+					err = fmt.Errorf("%q: a name is letters, digits, dots, dashes and underscores", name)
+				case !validTailcatAddr(addr):
+					err = fmt.Errorf("%q: %q is not a tailcat address", line, addr)
+				case s.TailcatNameTaken(name, s.TailcatHostByName(name)):
+					err = fmt.Errorf("%q is named twice", name)
+				}
+				if err != nil {
+					bad = append(bad, err.Error())
+					continue
+				}
+				s.TailcatHosts = append(s.TailcatHosts, TailcatHost{Name: name, Addr: addr})
+				s.Tailcat = true
+			}
+			if bad != nil {
+				return fmt.Errorf("%s", strings.Join(bad, "; "))
+			}
+			return nil
+		}},
+	{name: "tailcat-port", doc: "the port of the tailcat listeners of the hosts Kero adds, which their pair codes do not have: the default, 7373; set it to the Listener port of a host that names another",
+		get: func(s *Settings) []string { return []string{s.TailcatPort} },
+		set: func(s *Settings, v []string) error {
+			if p := strings.TrimSpace(v[len(v)-1]); p != "" && !ValidTailcatPort(p) {
+				return fmt.Errorf("%q is not a port", p)
+			}
+			s.TailcatPort = strings.TrimSpace(v[len(v)-1])
+			return nil
+		}},
+	{name: "tailcat-relay", doc: "where tailcat finds its relays, a DERP map as https://tailcat.dev/derpmap.json: Tailscale's public, rate-limited relays unless you run your own, as derper does; the host and the other machines set the same map",
+		get: func(s *Settings) []string { return []string{s.TailcatRelay} },
+		set: func(s *Settings, v []string) error {
+			if u := strings.TrimSpace(v[len(v)-1]); u != "" && !ValidDERPMapURL(u) {
+				return fmt.Errorf("%q is not an https URL of a DERP map", u)
+			}
+			s.TailcatRelay = strings.TrimSpace(v[len(v)-1])
+			return nil
+		}},
+	boolKey("tailcat-rotate", "start kerod's tailcat listener with the key again, whose pair code changed: kero tailcat rotate sets it", func(s *Settings) *bool { return &s.TailcatRotate }),
 	boolKey("remote-updates", "let Kero on another machine that connects update the Kero app here to its version, which restarts it", func(s *Settings) *bool { return &s.RemoteUpdates }),
 	boolKey("git-status", "show the git branch and changes of each session", func(s *Settings) *bool { return &s.GitStatus }),
 	choiceKey("worktree-base", "what a session's own git worktree branches from: the repository's default branch, or the branch of the session you're in", func(s *Settings) *string { return &s.WorktreeBase }, "default", "current"),

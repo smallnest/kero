@@ -5340,11 +5340,11 @@ func (msgs Messages) SetHostRemoteControlDetail(host string) string {
 	return Catalog.Format(msgs.locale, "setHostRemoteControlDetail", map[string]any{"host": host})
 }
 
-// SetListenTitle says "This Computer as a Host"
+// SetListenTitle says "Tailscale"
 // in the language the app shows.
 func SetListenTitle() string { return In(i18n.Locale()).SetListenTitle() }
 
-// SetListenTitle says "This Computer as a Host"
+// SetListenTitle says "Tailscale"
 // in the language of msgs.
 func (msgs Messages) SetListenTitle() string {
 	return Catalog.Format(msgs.locale, "setListenTitle", nil)
@@ -5894,4 +5894,214 @@ func SetPetGroup() string { return In(i18n.Locale()).SetPetGroup() }
 // in the language of msgs.
 func (msgs Messages) SetPetGroup() string {
 	return Catalog.Format(msgs.locale, "setPetGroup", nil)
+}
+
+// SetTailcatTitle says "Tailcat"
+// in the language the app shows.
+func SetTailcatTitle() string { return In(i18n.Locale()).SetTailcatTitle() }
+
+// SetTailcatTitle says "Tailcat"
+// in the language of msgs.
+func (msgs Messages) SetTailcatTitle() string {
+	return Catalog.Format(msgs.locale, "setTailcatTitle", nil)
+}
+
+// SetTailcat says "Use Tailcat"
+// in the language the app shows.
+func SetTailcat() string { return In(i18n.Locale()).SetTailcat() }
+
+// SetTailcat says "Use Tailcat"
+// in the language of msgs.
+func (msgs Messages) SetTailcat() string {
+	return Catalog.Format(msgs.locale, "setTailcat", nil)
+}
+
+// SetTailcatDetail says "Reach hosts with a pair code through a relay, instead of Tailscale. Off, Kero lists none of these hosts and connects …"
+// in the language the app shows.
+func SetTailcatDetail() string { return In(i18n.Locale()).SetTailcatDetail() }
+
+// SetTailcatDetail says "Reach hosts with a pair code through a relay, instead of Tailscale. Off, Kero lists none of these hosts and connects …"
+// in the language of msgs.
+func (msgs Messages) SetTailcatDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatDetail", nil)
+}
+
+// SetTailcatAdd says "Add a Host"
+// in the language the app shows.
+func SetTailcatAdd() string { return In(i18n.Locale()).SetTailcatAdd() }
+
+// SetTailcatAdd says "Add a Host"
+// in the language of msgs.
+func (msgs Messages) SetTailcatAdd() string {
+	return Catalog.Format(msgs.locale, "setTailcatAdd", nil)
+}
+
+// SetTailcatAddDetail says "Copy the pair code of the host's tailcat listener, in Settings › Hosts on that machine. The pair code is the host's…"
+// in the language the app shows.
+func SetTailcatAddDetail() string { return In(i18n.Locale()).SetTailcatAddDetail() }
+
+// SetTailcatAddDetail says "Copy the pair code of the host's tailcat listener, in Settings › Hosts on that machine. The pair code is the host's…"
+// in the language of msgs.
+func (msgs Messages) SetTailcatAddDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatAddDetail", nil)
+}
+
+// SetTailcatPlaceholder says "tailcat://tc… or the pair code"
+// in the language the app shows.
+func SetTailcatPlaceholder() string { return In(i18n.Locale()).SetTailcatPlaceholder() }
+
+// SetTailcatPlaceholder says "tailcat://tc… or the pair code"
+// in the language of msgs.
+func (msgs Messages) SetTailcatPlaceholder() string {
+	return Catalog.Format(msgs.locale, "setTailcatPlaceholder", nil)
+}
+
+// SetTailcatNamePlaceholder says "devbox"
+// in the language the app shows.
+func SetTailcatNamePlaceholder() string { return In(i18n.Locale()).SetTailcatNamePlaceholder() }
+
+// SetTailcatNamePlaceholder says "devbox"
+// in the language of msgs.
+func (msgs Messages) SetTailcatNamePlaceholder() string {
+	return Catalog.Format(msgs.locale, "setTailcatNamePlaceholder", nil)
+}
+
+// SetTailcatPort says "Port"
+// in the language the app shows.
+func SetTailcatPort() string { return In(i18n.Locale()).SetTailcatPort() }
+
+// SetTailcatPort says "Port"
+// in the language of msgs.
+func (msgs Messages) SetTailcatPort() string {
+	return Catalog.Format(msgs.locale, "setTailcatPort", nil)
+}
+
+// SetTailcatPortDetail says "The port of the tailcat listener of the hosts you add: 7373 unless one names another."
+// in the language the app shows.
+func SetTailcatPortDetail() string { return In(i18n.Locale()).SetTailcatPortDetail() }
+
+// SetTailcatPortDetail says "The port of the tailcat listener of the hosts you add: 7373 unless one names another."
+// in the language of msgs.
+func (msgs Messages) SetTailcatPortDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatPortDetail", nil)
+}
+
+// SetTailcatRelay says "Relay"
+// in the language the app shows.
+func SetTailcatRelay() string { return In(i18n.Locale()).SetTailcatRelay() }
+
+// SetTailcatRelay says "Relay"
+// in the language of msgs.
+func (msgs Messages) SetTailcatRelay() string {
+	return Catalog.Format(msgs.locale, "setTailcatRelay", nil)
+}
+
+// SetTailcatRelayDetail says "The DERP map where the machines find their relay, https://tailcat.dev/derpmap.json unless you run your own, as derper…"
+// in the language the app shows.
+func SetTailcatRelayDetail() string { return In(i18n.Locale()).SetTailcatRelayDetail() }
+
+// SetTailcatRelayDetail says "The DERP map where the machines find their relay, https://tailcat.dev/derpmap.json unless you run your own, as derper…"
+// in the language of msgs.
+func (msgs Messages) SetTailcatRelayDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatRelayDetail", nil)
+}
+
+// SetTailcatOn says "Kero on your other machines adds this computer as a host with this pair code. Anyone who has it can connect."
+// in the language the app shows.
+func SetTailcatOn() string { return In(i18n.Locale()).SetTailcatOn() }
+
+// SetTailcatOn says "Kero on your other machines adds this computer as a host with this pair code. Anyone who has it can connect."
+// in the language of msgs.
+func (msgs Messages) SetTailcatOn() string {
+	return Catalog.Format(msgs.locale, "setTailcatOn", nil)
+}
+
+// SetTailcatStarting says "The pair code comes in a moment."
+// in the language the app shows.
+func SetTailcatStarting() string { return In(i18n.Locale()).SetTailcatStarting() }
+
+// SetTailcatStarting says "The pair code comes in a moment."
+// in the language of msgs.
+func (msgs Messages) SetTailcatStarting() string {
+	return Catalog.Format(msgs.locale, "setTailcatStarting", nil)
+}
+
+// SetTailcatOff says "Tailcat is off."
+// in the language the app shows.
+func SetTailcatOff() string { return In(i18n.Locale()).SetTailcatOff() }
+
+// SetTailcatOff says "Tailcat is off."
+// in the language of msgs.
+func (msgs Messages) SetTailcatOff() string {
+	return Catalog.Format(msgs.locale, "setTailcatOff", nil)
+}
+
+// SetTailcatOffNote says "Skip Tailcat if you don't trust a relay: it stays off, and Kero starts nothing for it."
+// in the language the app shows.
+func SetTailcatOffNote() string { return In(i18n.Locale()).SetTailcatOffNote() }
+
+// SetTailcatOffNote says "Skip Tailcat if you don't trust a relay: it stays off, and Kero starts nothing for it."
+// in the language of msgs.
+func (msgs Messages) SetTailcatOffNote() string {
+	return Catalog.Format(msgs.locale, "setTailcatOffNote", nil)
+}
+
+// SetTailcatListen says "Connect through Tailcat"
+// in the language the app shows.
+func SetTailcatListen() string { return In(i18n.Locale()).SetTailcatListen() }
+
+// SetTailcatListen says "Connect through Tailcat"
+// in the language of msgs.
+func (msgs Messages) SetTailcatListen() string {
+	return Catalog.Format(msgs.locale, "setTailcatListen", nil)
+}
+
+// SetTailcatListenDetail says "kerod listens through a tailcat relay, so your other machines add this one as a host with its pair code. It needs no …"
+// in the language the app shows.
+func SetTailcatListenDetail() string { return In(i18n.Locale()).SetTailcatListenDetail() }
+
+// SetTailcatListenDetail says "kerod listens through a tailcat relay, so your other machines add this one as a host with its pair code. It needs no …"
+// in the language of msgs.
+func (msgs Messages) SetTailcatListenDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatListenDetail", nil)
+}
+
+// SetTailcatListenPort says "Listener port"
+// in the language the app shows.
+func SetTailcatListenPort() string { return In(i18n.Locale()).SetTailcatListenPort() }
+
+// SetTailcatListenPort says "Listener port"
+// in the language of msgs.
+func (msgs Messages) SetTailcatListenPort() string {
+	return Catalog.Format(msgs.locale, "setTailcatListenPort", nil)
+}
+
+// SetTailcatListenPortDetail says "The port kerod's tailcat listener takes here. The other machines' Port setting connects to it."
+// in the language the app shows.
+func SetTailcatListenPortDetail() string { return In(i18n.Locale()).SetTailcatListenPortDetail() }
+
+// SetTailcatListenPortDetail says "The port kerod's tailcat listener takes here. The other machines' Port setting connects to it."
+// in the language of msgs.
+func (msgs Messages) SetTailcatListenPortDetail() string {
+	return Catalog.Format(msgs.locale, "setTailcatListenPortDetail", nil)
+}
+
+// SetTailcatChange says "Change the pair code"
+// in the language the app shows.
+func SetTailcatChange() string { return In(i18n.Locale()).SetTailcatChange() }
+
+// SetTailcatChange says "Change the pair code"
+// in the language of msgs.
+func (msgs Messages) SetTailcatChange() string {
+	return Catalog.Format(msgs.locale, "setTailcatChange", nil)
+}
+
+// SetTailcatChanged says "New pair code. Add this computer again on your other machines."
+// in the language the app shows.
+func SetTailcatChanged() string { return In(i18n.Locale()).SetTailcatChanged() }
+
+// SetTailcatChanged says "New pair code. Add this computer again on your other machines."
+// in the language of msgs.
+func (msgs Messages) SetTailcatChanged() string {
+	return Catalog.Format(msgs.locale, "setTailcatChanged", nil)
 }
