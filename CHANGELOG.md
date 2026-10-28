@@ -4,6 +4,23 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.27 (smallnest/kero)
+
+- **Tailcat** is a third way to reach a host, beside Tailscale and SSH:
+  a pair code through a relay, with no Tailscale account needed. **Use
+  Tailcat** in Settings › Hosts turns it on. The group under it adds
+  hosts with their pair code, and with **Connect through Tailcat** makes
+  this computer a host that shows its own pair code. The pair code works
+  as a password: anyone who has it can connect. **Change the pair code**
+  makes a new one. Off, Kero does nothing with Tailcat.
+- **Relay** sets the DERP map all machines use to find their relay; the
+  default is Tailscale's public relays.
+- `kero hosts tailcat enable|disable|port|rotate|code` does the same
+  from the command line, and `kero daemon status` shows the pair code of
+  this computer. Hosts need 2.1.27 or later to be reached over Tailcat.
+- `kero daemon serve` without `--listen` now starts the listeners of the
+  configuration, which it ignored before.
+
 ## 2.1.26 (smallnest/kero)
 
 - The pet's settings — the switch, the pet, and its size — share a
