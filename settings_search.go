@@ -143,6 +143,7 @@ var actionWords = map[string]string{
 	"pane.right":          "focus move navigate",
 	"pane.up":             "focus move navigate above",
 	"pane.down":           "focus move navigate below",
+	quickAction:           "quake doom drop down dropdown hotkey global visor guake iterm console",
 	"sidebar.toggle":      "show hide sidebar sessions list",
 	"side.toggle":         "side panel toggle show hide close",
 	"changes.toggle":      "git diff branch panel changes",
@@ -150,7 +151,6 @@ var actionWords = map[string]string{
 	"text.bigger":         "zoom in font size larger increase text",
 	"text.smaller":        "zoom out font size decrease text",
 	"text.reset":          "zoom reset font size default text",
-	quickAction:           "quake doom drop down dropdown hotkey global visor guake iterm console",
 	"pet.toggle":          "frog kero mascot sprite show hide pet companion 小青蛙 精灵 宠物",
 }
 

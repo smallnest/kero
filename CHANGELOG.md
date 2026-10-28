@@ -4,6 +4,67 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## Upstream releases
+
+Upstream's notes for 2.1.22 to 2.1.24, which this fork has.
+
+## 2.1.24
+
+- On macOS, dragging Kero's window by its top no longer makes it
+  shake.
+
+## 2.1.23
+
+- On macOS, Kero keeps its place in the Dock after it updates itself.
+
+## 2.1.22
+
+- With no session open, Split Right (⌘D) starts one. Thanks @iamvicliu
+- Images a program like Pi showed no longer stay over the screen once
+  it clears it, as with Pi's `/new`. Thanks @jorben for the report
+- After Kero relaunches to use a newer kerod, quitting it quits it
+  instead of leaving it stuck open.
+
+## 2.1.21
+
+- In a narrow sidebar, a session's time, and its ⌘ number while you
+  hold ⌘, show whole beside a long name, which ends in an ellipsis
+  instead. Thanks @jamdaniels for the report
+
+## 2.1.20
+
+- A quick terminal drops down from the top of the screen over any app
+  and goes back up when you press its shortcut again. Give it a
+  shortcut in Settings › Keyboard (**Quick Terminal**); **View › Quick
+  Terminal** and the menu bar icon open it too. Its session keeps
+  running while it's hidden.
+- On Windows, an agent finishing in the session you have selected
+  shows its notification while another app is in front. Thanks @Maasea
+  for the report
+- Return presses a confirmation's action, such as Close Pane, as its
+  ↩ says. Thanks @iamvicliu
+- On a Mac, after Kero updates itself, quitting an app you started in
+  a pane no longer ends every pane's shell.
+
+## 2.1.19
+
+- **Session › New Session in Worktree…** (⌘⌥T) starts a session on a
+  new branch in a git worktree of its own, so agents working side by
+  side don't trip over each other's changes. Closing the session offers
+  to remove the worktree. `kero new --worktree <branch>` does the same
+  from the command line.
+- Kero remembers the conversations of Claude Code, Codex, Pi and
+  OpenCode that ran in its panes, so you can resume one after its
+  session is closed: ⌘P lists recent ones, and **Session › Resume
+  Conversation…** (⌘⇧O) lists them all. Turn on Settings › General ›
+  **Session history** to list them at the bottom of the sidebar too,
+  under **Ended** and **Archived**. `kero history` and `kero resume` do
+  the same from the command line. Thanks @ak4duy
+- Drop folders onto the sidebar to open them as projects. Thanks
+  @p1xelll
+- Dragging the sidebar's empty space moves the window, as the top bar
+  does. Thanks @jamdaniels for the request
+
 ## Unreleased (smallnest/kero)
 
 - While the window is translucent, the sidebar's rows and the cards let
