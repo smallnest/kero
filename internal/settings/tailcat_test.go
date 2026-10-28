@@ -37,6 +37,10 @@ func TestTailcatConfig(t *testing.T) {
 	if _, probs := parse("listen = tailcat://:7373\n"); len(probs) == 0 {
 		t.Error("a tailcat listener read with Tailcat off")
 	}
+	// Also when listen comes before tailcat: the listener is then kept.
+	if s, probs := parse("listen = tailcat://:7373\ntailcat = true\n"); len(probs) > 0 || len(s.Listen) != 1 {
+		t.Errorf("listen before tailcat: listeners %q, problems %q", s.Listen, probs)
+	}
 	// A bad host, port or relay keeps none of them.
 	for _, bad := range []string{"tailcat-host = box=devbox\n", "tailcat-port = http\n", "tailcat-relay = ftp://x\n"} {
 		if _, probs := parse(bad); len(probs) == 0 {

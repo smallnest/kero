@@ -42,6 +42,10 @@ type key struct {
 	list bool // repeats, one value a line
 	get  func(*Settings) []string
 	set  func(*Settings, []string) error
+	// check, for a key related to others, tells what is wrong with s once
+	// all of the file's keys are in it: listen needs tailcat before it,
+	// whatever order the file writes them in.
+	check func(*Settings) error
 }
 
 // float32Key is numberKey for a setting kept as a float32, which reads
@@ -262,15 +266,23 @@ var keys = []key{
 			s.Listen = nil
 			var bad []string
 			for _, l := range v {
-				spec, err := remote.ParseListen(l)
-				if err == nil && spec.Kind == "tailcat" && !s.Tailcat {
-					err = fmt.Errorf("%s: Tailcat is off: turn it on with tailcat = true", l)
-				}
-				if err != nil {
+				if _, err := remote.ParseListen(l); err != nil {
 					bad = append(bad, err.Error())
 					continue
 				}
 				s.Listen = append(s.Listen, strings.TrimSpace(l))
+			}
+			if bad != nil {
+				return fmt.Errorf("%s", strings.Join(bad, "; "))
+			}
+			return nil
+		},
+		check: func(s *Settings) error {
+			var bad []string
+			for _, l := range s.Listen {
+				if spec, err := remote.ParseListen(l); err == nil && spec.Kind == "tailcat" && !s.Tailcat {
+					bad = append(bad, fmt.Sprintf("%s: Tailcat is off: turn it on with tailcat = true", l))
+				}
 			}
 			if bad != nil {
 				return fmt.Errorf("%s", strings.Join(bad, "; "))
@@ -555,6 +567,14 @@ func parse(data string) (Settings, []string) {
 		}
 		if err := k.set(&s, v); err != nil {
 			problems = append(problems, name+": "+err.Error())
+		}
+	}
+	// After every key, as a file may write listen before tailcat.
+	for _, name := range order {
+		if k := findKey(name); k.list && k.check != nil {
+			if err := k.check(&s); err != nil {
+				problems = append(problems, name+": "+err.Error())
+			}
 		}
 	}
 	s.normalize()

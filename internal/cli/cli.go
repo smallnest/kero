@@ -987,7 +987,7 @@ func daemonCmd(args []string, host string) error {
 		}
 		// A tailcat listener's address, as kerod's key makes it: a pair
 		// code only it knows, here or on another machine's kerod.
-		if c.Remote != nil && c.Remote.Addr.Scheme == "tailcat" || slices.ContainsFunc(settings.Load().Listen, func(l string) bool {
+		if (c.Remote != nil && c.Remote.Addr.Scheme == "tailcat") || slices.ContainsFunc(settings.Load().Listen, func(l string) bool {
 			spec, err := remote.ParseListen(l)
 			return err == nil && spec.Kind == "tailcat"
 		}) {
