@@ -104,7 +104,7 @@ func petSetState(p *pets.Pet, mood petMood) pets.State {
 	case petWorking:
 		return pets.Working
 	case petWaiting:
-		return pets.Wave
+		return pets.Waiting
 	case petDone:
 		return pets.Jump
 	case petFailed:

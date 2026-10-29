@@ -9,6 +9,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"kero/internal/actions"
+	"kero/internal/pets"
 	"kero/internal/proto"
 	"kero/internal/settings"
 	"kero/locales"
@@ -45,6 +46,29 @@ func TestPetMood(t *testing.T) {
 	a.st.Sessions[1].Status, a.st.Sessions[1].Unread = proto.Waiting, true
 	if got, n := a.petCurrent(time.Now()); got != petWaiting || n != 2 {
 		t.Errorf("two waiting: %v, %d", got, n)
+	}
+}
+
+// Each mood is the Codex app's row for it: at its desk at work, waiting as
+// it waits, a failure failing, a finish jumping, and at rest, or asleep,
+// idle.
+func TestPetSetState(t *testing.T) {
+	p := &pets.Pet{Version: 2}
+	cases := []struct {
+		mood petMood
+		want pets.State
+	}{
+		{petIdle, pets.Idle},
+		{petWorking, pets.Working},
+		{petWaiting, pets.Waiting},
+		{petDone, pets.Jump},
+		{petFailed, pets.Fail},
+		{petAsleep, pets.Idle},
+	}
+	for _, c := range cases {
+		if got := petSetState(p, c.mood); got != c.want {
+			t.Errorf("mood %v: state %v, want %v", c.mood, got, c.want)
+		}
 	}
 }
 
