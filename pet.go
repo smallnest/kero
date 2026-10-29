@@ -130,6 +130,9 @@ func (a *App) petShow() {
 		}),
 		a.win.OnMove(a.petPlace),
 		a.win.OnResize(a.petPlace),
+		// A window ordered in, as the app comes to the front, goes over
+		// its children: the pet comes above it again.
+		a.win.OnFocus(a.petRaise),
 		a.win.OnShow(a.petPlace),
 		a.win.OnHide(win.Hide),
 		a.win.OnMinimize(win.Hide),
@@ -179,7 +182,17 @@ func (a *App) petPlace() {
 			p.win.Invalidate()
 		}
 	}
-	if !p.win.IsVisible() {
+	// Shown, or shown again: a drag of the main window, or its ordering,
+	// leaves the pet behind it, where its bottom part goes under the
+	// window; ShowInactive orders it above its parent as it places it.
+	p.win.ShowInactive()
+}
+
+// petRaise puts the pet above the main window again, whose ordering takes
+// it over its children: as the window takes the keyboard, and as the app
+// comes to the front.
+func (a *App) petRaise() {
+	if p := &a.pet; p.win != nil && p.win.IsVisible() {
 		p.win.ShowInactive()
 	}
 }
@@ -257,13 +270,17 @@ func (a *App) petView(c *ui.Context) {
 	now := c.Now()
 	mood, n := a.petCurrent(now)
 	label, fill, fg := a.petSpeech(pal, mood, n)
-	// The window is shorter than the frog and its speech when the screen
+	// The window is shorter than the pet and its speech when the screen
 	// leaves little room above the main window: the speech gives way, so
-	// that no half a bubble shows.
+	// that no half a bubble shows, and the pet shows whole.
 	_, h := c.Size()
-	roomy := h >= petH-1
-	showing := roomy && a.petSays(now, mood)
 	set := a.petShows()
+	bodyH := float32(petBodyH)
+	if set != nil {
+		bodyH = petSetBodyH(a)
+	}
+	roomy := h >= bodyH+(petH-petBodyH)-1
+	showing := roomy && a.petSays(now, mood)
 	var body ui.Element
 	clicked := false
 	ui.Column(c).Fill().Justify(ui.End).AlignItems(ui.Center).Children(func() {
@@ -293,10 +310,6 @@ func (a *App) petView(c *ui.Context) {
 		name := locales.PetName()
 		if set != nil {
 			name = set.pet.Name
-		}
-		bodyH := float32(petBodyH)
-		if set != nil {
-			bodyH = petSetBodyH(a)
 		}
 		// Its width keeps its frame's proportions, at any size.
 		wide := float32(petW)
