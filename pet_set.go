@@ -96,6 +96,16 @@ func (a *App) petListAgain() {
 	petListTick = time.AfterFunc(1500*time.Millisecond, func() { a.update(func() { petsGen++ }) })
 }
 
+// petSetHead is how much of the room a Codex pet takes above the edge its
+// frame leaves empty above its art: the pet shows whole there while its
+// frame's top is under the screen's.
+func petSetHead(a *App) float32 {
+	if a.petSet == nil || a.petSet.pet.Top == 0 {
+		return 0
+	}
+	return float32(a.petSet.pet.Top) * petSetGround(a) / pets.FrameH
+}
+
 // petSetState is the spritesheet row of each mood: an agent that works is
 // at its desk, one that waits asks for you, a failure fails, and a finish
 // jumps. A pet at rest, or asleep, is idle: it rests as it always does.

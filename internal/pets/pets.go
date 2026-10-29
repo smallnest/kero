@@ -12,6 +12,7 @@ package pets
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -80,6 +81,9 @@ type Pet struct {
 	Version int
 	// Sheet is the spritesheet, its rows read top to bottom.
 	Sheet *ui.Bitmap
+	// Top is how much of a frame the pet leaves empty above its art, in
+	// frame pixels, at its idle row: the row it shows at rest.
+	Top int
 }
 
 // Has tells whether the pet has the state: version 1 has no look rows.
@@ -166,7 +170,38 @@ func parse(id, name, desc string, version int, sheet []byte) (*Pet, error) {
 	if version != 0 && version != got {
 		return nil, fmt.Errorf("%s: pet.json says spritesheet version %d, but the spritesheet is version %d's", id, version, got)
 	}
-	return &Pet{ID: id, Name: name, Description: desc, Version: got, Sheet: bm.Pixelated()}, nil
+	return &Pet{ID: id, Name: name, Description: desc, Version: got, Sheet: bm.Pixelated(), Top: artTop(sheet)}, nil
+}
+
+// artTop is how much of a frame the pet leaves empty above its art, in
+// its first row, its idle: a frame is taller than the pet drawn in it,
+// and the room above its feet is where the pet shows.
+func artTop(sheet []byte) int {
+	img, _, err := image.Decode(bytes.NewReader(sheet))
+	if err != nil {
+		return 0
+	}
+	top := FrameH
+	for f := 0; f < Columns && top > 0; f++ {
+		// Only what is above the best frame so far moves it.
+		for y := 0; y < top; y++ {
+			filled := false
+			for x := 0; x < FrameW; x++ {
+				if _, _, _, a := img.At(f*FrameW+x, y).RGBA(); a > 0x1000 {
+					filled = true
+					break
+				}
+			}
+			if filled {
+				top = y
+				break
+			}
+		}
+	}
+	if top == FrameH {
+		return 0
+	}
+	return top
 }
 
 // Names reads a pet's name and description from its pet.json alone,

@@ -170,7 +170,7 @@ func (a *App) petPlace() {
 	}
 	b := a.win.Bounds()
 	d := mygo.Screen.DisplayNearestPoint(mygo.Point{X: b.X + b.Width, Y: b.Y})
-	r, _ := petSpot(b, d.WorkArea, a.set.PetOffset, petSetBodyH(a))
+	r, _ := petSpot(b, d.WorkArea, a.set.PetOffset, petSetBodyH(a), petSetHead(a))
 	was := p.win.Bounds()
 	if was != r {
 		p.win.SetBounds(r)

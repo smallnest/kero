@@ -38,8 +38,9 @@ func spotRoom(perch, room, setH float32) (y, height float32) {
 // room for it, hands over the edge, else standing inside the window at its
 // bottom edge. offset is where across the window its middle stands, 0 at
 // the left to 1 at the right. setH is the room a Codex pet needs above the
-// edge; inside tells that it stands inside the window.
-func petSpot(win, work mygo.Rectangle, offset float32, setH float32) (mygo.Rectangle, bool) {
+// edge, and head how much of that room its frame leaves empty above its
+// art; inside tells that it stands inside the window.
+func petSpot(win, work mygo.Rectangle, offset float32, setH, head float32) (mygo.Rectangle, bool) {
 	// A Codex pet as wide as a frog's window might be wider.
 	wide := float32(petW)
 	if setH > petBodyH {
@@ -69,9 +70,10 @@ func petSpot(win, work mygo.Rectangle, offset float32, setH float32) (mygo.Recta
 	if setH+petPerch >= petH {
 		y, height = perch-setH, setH+petPerch
 	}
-	// No room above the edge: it stands inside the window at its bottom
-	// edge, within the window.
-	inside := perch-setH < room
+	// No room above the edge for what the pet shows: it stands inside the
+	// window at its bottom edge, within the window. The room the frame
+	// leaves empty above its art goes under the screen with it.
+	inside := perch-setH+head < room
 	if inside {
 		if x < float32(win.X)+8 {
 			x = float32(win.X) + 8
@@ -91,6 +93,13 @@ func petSpot(win, work mygo.Rectangle, offset float32, setH float32) (mygo.Recta
 				x = float32(win.X) + 8
 			}
 		}
+	}
+	// The screen keeps a window's top from going above the menu bar: the
+	// frame's empty room above the art is what gives way, its window
+	// starting there rather than the pet sinking with it.
+	if !inside && y < room {
+		height -= room - y
+		y = room
 	}
 	return mygo.Rectangle{X: int(math.Round(float64(x))), Y: int(math.Round(float64(y))), Width: int(math.Round(float64(wide))), Height: int(math.Round(float64(height)))}, inside
 }

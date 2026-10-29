@@ -131,7 +131,7 @@ func TestPetSpot(t *testing.T) {
 		offset float32
 		x      int
 	}{{0.5, 540}, {0.25, 290}, {0, 40}} {
-		r, bottom := petSpot(main, work, c.offset, setH)
+		r, bottom := petSpot(main, work, c.offset, setH, 0)
 		// Its window runs from its feet's line on the edge down to the
 		// speech's top at 181.
 		if bottom || r.Y != 181 || r.Height != 143 || r.X != c.x {
@@ -160,7 +160,7 @@ func TestPetSpot(t *testing.T) {
 		{"half on", 13, true, 13 + 700 - int(setH) - petPerch, int(setH) + petPerch},
 	} {
 		main.Y = c.mainY
-		got, bottom := petSpot(main, work, 0.5, setH)
+		got, bottom := petSpot(main, work, 0.5, setH, 0)
 		if bottom != c.bottom || got.Height != c.height || got.Y != c.y {
 			t.Errorf("%s at %d: %+v bottom %v, want y %d height %d bottom %v", c.name, c.mainY, got, bottom, c.y, c.height, c.bottom)
 		}
@@ -170,9 +170,22 @@ func TestPetSpot(t *testing.T) {
 	// no room for its hands above it. Its window shows the frog below the
 	// edge: its bottom left there at 607.
 	main.Y = 25
-	got, bottom := petSpot(main, work, 0.5, 87)
+	got, bottom := petSpot(main, work, 0.5, 87, 0)
 	if !bottom || got.Height != petH || got.Y != 607 {
 		t.Errorf("inside: %+v bottom %v, want y 607", got, bottom)
+	}
+	// The room a pet's frame leaves empty above its art goes under the
+	// screen: it stands on the edge where the frame alone no longer fits.
+	// Its window starts at the menu bar, its bottom staying where the pet
+	// stands.
+	main.Y = edge - 24
+	got, bottom = petSpot(main, work, 0.5, setH, 24)
+	if bottom || got.Y != work.Y || got.Height != int(setH)+petPerch-24 {
+		t.Errorf("a pet with room above its art: %+v bottom %v", got, bottom)
+	}
+	main.Y = edge - 25
+	if _, bottom := petSpot(main, work, 0.5, setH, 24); !bottom {
+		t.Error("a pet whose art does not fit still stands above the edge")
 	}
 }
 

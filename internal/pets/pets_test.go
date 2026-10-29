@@ -96,6 +96,43 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// A pet says how much of its frame it leaves empty above its art, as its
+// idle row shows it: a frame draws the pet lower than its top.
+func TestPetTop(t *testing.T) {
+	p, err := parse("dog", "Dog", "", 0, sheet(t, version1Rows))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Top != 0 {
+		t.Errorf("a sheet filled to its top has Top %d", p.Top)
+	}
+	p, err = parse("low", "Low", "", 0, topPaddedSheet(t, version1Rows, 40))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Top != 40 {
+		t.Errorf("a sheet whose art starts 40 pixels down has Top %d", p.Top)
+	}
+}
+
+// topPaddedSheet is a sheet whose art starts top pixels down each frame.
+func topPaddedSheet(t *testing.T, rows, top int) []byte {
+	t.Helper()
+	img := image.NewNRGBA(image.Rect(0, 0, Columns*FrameW, rows*FrameH))
+	for r := 0; r < rows; r++ {
+		for y := r*FrameH + top; y < (r+1)*FrameH; y++ {
+			for x := 0; x < Columns*FrameW; x++ {
+				img.SetNRGBA(x, y, color.NRGBA{R: 30, G: 200, B: 100, A: 255})
+			}
+		}
+	}
+	var b bytes.Buffer
+	if err := png.Encode(&b, img); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
+}
+
 func TestInstall(t *testing.T) {
 	t.Setenv("KERO_HOME", t.TempDir())
 	dir := t.TempDir()
