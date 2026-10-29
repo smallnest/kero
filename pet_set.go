@@ -99,7 +99,7 @@ func (a *App) petListAgain() {
 // petSetState is the spritesheet row of each mood: an agent that works is
 // at its desk, one that waits asks for you, a failure fails, and a finish
 // jumps. A pet at rest, or asleep, is idle: it rests as it always does.
-func petSetState(p *pets.Pet, mood petMood) pets.State {
+func petSetState(mood petMood) pets.State {
 	switch mood {
 	case petWorking:
 		return pets.Working
@@ -111,6 +111,15 @@ func petSetState(p *pets.Pet, mood petMood) pets.State {
 		return pets.Fail
 	}
 	return pets.Idle
+}
+
+// petSetStateAt is the row the pet shows now, and when it began: the wave
+// it answers a pat with, for petPat, then its mood's row.
+func (a *App) petSetStateAt(mood petMood, now time.Time) (pets.State, time.Time) {
+	if now.Sub(a.pet.wave) < petPat {
+		return pets.Wave, a.pet.wave
+	}
+	return petSetState(mood), a.pet.since
 }
 
 // petSetBlinks is how often a pet at rest blinks, its idle row's last

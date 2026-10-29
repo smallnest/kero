@@ -37,8 +37,9 @@ const (
 	petCalm   = 100 * time.Millisecond
 	petDoze   = 45 * time.Second // all calm this long, and it sleeps
 	petWink   = 700 * time.Millisecond
-	petBubble = 5 * time.Second // a working or finished word stays this long
-	petLinger = 9 * time.Second // a failure or a finish says so this long
+	petPat    = 1200 * time.Millisecond // a pat shows its wave this long
+	petBubble = 5 * time.Second         // a working or finished word stays this long
+	petLinger = 9 * time.Second         // a failure or a finish says so this long
 )
 
 // petMood is what the pet shows: the most urgent thing among the sessions.
@@ -64,7 +65,8 @@ type petState struct {
 	since      time.Time
 	lastActive time.Time
 	wink       time.Time
-	calm       bool // the desktop asks for less motion
+	wave       time.Time // the pat a Codex pet waves back to
+	calm       bool      // the desktop asks for less motion
 	// dragging says the pointer is moving the pet along its edge: grab is
 	// where it took the body, and startX the pointer's screen x then, so
 	// that a press without a move stays a click.
@@ -304,13 +306,13 @@ func (a *App) petView(c *ui.Context) {
 		body = ui.Box(c.Key("kero")).Size(wide, bodyH).Shrink(0).Cursor(ui.CursorGrab).
 			Description(petDescription(name, label))
 		hovered := body.Hovered()
-		state := pets.Idle
+		state, since := pets.Idle, a.pet.since
 		if set != nil {
-			state = petSetState(set.pet, mood)
+			state, since = a.petSetStateAt(mood, now)
 		}
 		body.Draw(func(p *ui.Painter, r ui.Rect) {
 			if set != nil {
-				a.petSetDraw(p, r, set, state, a.petSetFrameAt(state, a.pet.since, p.Now()))
+				a.petSetDraw(p, r, set, state, a.petSetFrameAt(state, since, p.Now()))
 			} else {
 				a.petDraw(p, r, mood, hovered)
 			}
@@ -409,10 +411,12 @@ func (a *App) petTick() time.Duration {
 	return petFrame
 }
 
-// petPetted is a click on the pet: it wakes, winks, and takes the user
-// to a session that waits on them, if another one does.
+// petPetted is a click on the pet: it wakes, winks, or waves as a Codex
+// pet, and takes the user to a session that waits on them, if another one
+// does.
 func (a *App) petPetted(now time.Time, mood petMood) {
-	a.pet.lastActive, a.pet.since, a.pet.wink, a.pet.mood = now, now, now, mood
+	a.pet.lastActive, a.pet.since, a.pet.mood = now, now, mood
+	a.pet.wink, a.pet.wave = now, now
 	if mood == petWaiting {
 		if s := a.session(a.selected); s == nil || s.Status != proto.Waiting {
 			a.jumpToAttention()

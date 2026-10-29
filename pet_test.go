@@ -53,7 +53,6 @@ func TestPetMood(t *testing.T) {
 // it waits, a failure failing, a finish jumping, and at rest, or asleep,
 // idle.
 func TestPetSetState(t *testing.T) {
-	p := &pets.Pet{Version: 2}
 	cases := []struct {
 		mood petMood
 		want pets.State
@@ -66,9 +65,30 @@ func TestPetSetState(t *testing.T) {
 		{petAsleep, pets.Idle},
 	}
 	for _, c := range cases {
-		if got := petSetState(p, c.mood); got != c.want {
+		if got := petSetState(c.mood); got != c.want {
 			t.Errorf("mood %v: state %v, want %v", c.mood, got, c.want)
 		}
+	}
+}
+
+// A pat on a Codex pet shows its wave for a while, even while a mood shows
+// itself, and then the mood is back.
+func TestPetClickWaves(t *testing.T) {
+	a := testApp(t)
+	now := time.Now()
+	a.pet.since, a.pet.lastActive = now, now
+	if got, _ := a.petSetStateAt(petIdle, now); got != pets.Idle {
+		t.Fatalf("at rest %v, want idle", got)
+	}
+	a.petPetted(now, petIdle)
+	if got, since := a.petSetStateAt(petIdle, now); got != pets.Wave || !since.Equal(now) {
+		t.Errorf("a pat shows %v since %v, want the wave", got, since)
+	}
+	if got, _ := a.petSetStateAt(petWorking, now); got != pets.Wave {
+		t.Errorf("a pat while working shows %v, want the wave", got)
+	}
+	if got, _ := a.petSetStateAt(petIdle, now.Add(petPat)); got != pets.Idle {
+		t.Errorf("after the wave %v, want idle", got)
 	}
 }
 
