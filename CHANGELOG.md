@@ -66,6 +66,14 @@ Upstream's notes for 2.1.22 to 2.1.24, which this fork has.
   does. Thanks @jamdaniels for the request
 
 
+## 2.1.31 (smallnest/kero)
+
+- A pet stays on the window's edge while Kero is in front: it no longer
+  goes behind the window as the app comes forward, which hid it where it
+  stood at the window's bottom edge. It goes as another app comes
+  forward, and comes back with Kero.
+- This release has everything 2.1.30 has, whose notes follow.
+
 ## 2.1.30 (smallnest/kero)
 
 - A Codex pet no longer loses its lower part under the window: it shows
