@@ -56,8 +56,9 @@ const (
 
 // petState is the pet's window and what it last felt.
 type petState struct {
-	win  *mygo.Window
-	offs []func() // the main window's events, until the pet goes
+	win     *mygo.Window
+	offs    []func() // the main window's events, until the pet goes
+	appOffs []func() // the app's events, until the pet goes
 	// mood, since say what the pet felt and when it began, which its
 	// reactions count from; lastActive is when a session last did
 	// something, which a doze follows.
@@ -115,6 +116,7 @@ func (a *App) petShow() {
 		DisableClose:      true,
 		DisableFullScreen: true,
 		SkipTaskbar:       true,
+		AlwaysOnTop:       true,
 		Hidden:            true,
 		Parent:            a.win,
 		Content:           ui.View(a.petView),
@@ -141,6 +143,17 @@ func (a *App) petShow() {
 		a.win.OnLeaveFullScreen(a.petPlace),
 		mygo.Screen.OnDisplaysChanged(a.petPlace),
 	}
+	// The pet shows while this app is in front, above the window's kind
+	// of window, and goes as another app comes forward, as the window's
+	// edge does: a child window's ordering left it behind the window.
+	p.appOffs = []func(){
+		mygo.App.OnActivate(func(bool) { a.petRaise() }),
+		mygo.App.OnDidResignActive(func() {
+			if a.pet.win != nil {
+				a.pet.win.Hide()
+			}
+		}),
+	}
 	a.petPlace()
 }
 
@@ -152,6 +165,10 @@ func (a *App) petClose() {
 		off()
 	}
 	p.offs = nil
+	for _, off := range p.appOffs {
+		off()
+	}
+	p.appOffs = nil
 	if p.win != nil {
 		w := p.win
 		p.win = nil
@@ -192,9 +209,14 @@ func (a *App) petPlace() {
 // it over its children: as the window takes the keyboard, and as the app
 // comes to the front.
 func (a *App) petRaise() {
-	if p := &a.pet; p.win != nil && p.win.IsVisible() {
-		p.win.ShowInactive()
+	p := &a.pet
+	if p.win == nil || a.win == nil || a.win.IsDestroyed() {
+		return
 	}
+	if !a.win.IsVisible() || a.win.IsMinimized() || a.win.IsFullScreen() {
+		return
+	}
+	p.win.ShowInactive()
 }
 
 // petGrow puts the pet at its size, and where it stands now, on the next
