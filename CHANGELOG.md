@@ -66,6 +66,17 @@ Upstream's notes for 2.1.22 to 2.1.24, which this fork has.
   does. Thanks @jamdaniels for the request
 
 
+## 2.1.30 (smallnest/kero)
+
+- A Codex pet no longer loses its lower part under the window: it shows
+  whole on the window's edge, and stays on the edge as the window is
+  dragged near the top of the screen, where the screen keeps its window
+  below the menu bar. Where the screen leaves no room for it above, it
+  stands at the window's bottom edge.
+- A session that waits shows as the pet's waiting row, and a pat shows
+  the pet's wave.
+- This release has everything 2.1.29 has, whose notes follow.
+
 ## 2.1.29 (smallnest/kero)
 
 - The Tailcat settings in **Settings › Hosts** say what they do: **Use
