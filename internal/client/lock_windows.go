@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"os"
+	"strconv"
 
 	"golang.org/x/sys/windows"
 )
@@ -18,6 +19,17 @@ func lockFile(f *os.File) error {
 func UnlockFile(f *os.File) {
 	var o windows.Overlapped
 	windows.UnlockFileEx(windows.Handle(f.Fd()), 0, 1, 0, &o)
+}
+
+// Terminate asks the process of pid to stop as kerod does when it is
+// restarted, saving its sessions: it fails, as kerod stops on the
+// signals Windows gives none of.
+func Terminate(pid int) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return errors.New("a kerod on Windows does not stop on a signal (pid " + strconv.Itoa(p.Pid) + ")")
 }
 
 // Running reports whether the process of pid exists.

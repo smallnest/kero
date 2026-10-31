@@ -30,6 +30,9 @@ func procCwd(pid int) string {
 
 // procParent returns a process's parent, 0 when it is gone: the field
 // of /proc/pid/stat after its state, past the name in parentheses.
+// procList returns nil: ps lists the processes on Linux.
+func procList() []osProc { return nil }
+
 func procParent(pid int) int {
 	b, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
 	if err != nil {

@@ -11,6 +11,9 @@ import (
 )
 
 // procName returns the name of a process's executable, without .exe.
+// procList returns nil: ps lists the processes, as in an MSYS2 shell.
+func procList() []osProc { return nil }
+
 func procName(pid int) string {
 	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
 	if err != nil {
@@ -115,7 +118,7 @@ var (
 
 // processes returns the processes running, from a snapshot that the
 // panes' ticks share.
-func processes() []procEntry {
+func procEntries() []procEntry {
 	snapMu.Lock()
 	defer snapMu.Unlock()
 	if time.Since(snapAt) < 200*time.Millisecond {
@@ -172,7 +175,7 @@ func newestChild(procs []procEntry, parent uint32) uint32 {
 }
 
 func foreground(shell int) int {
-	procs := processes()
+	procs := procEntries()
 	child := newestChild(procs, uint32(shell))
 	if child == 0 {
 		return 0
@@ -187,7 +190,7 @@ func foreground(shell int) int {
 
 // procParent returns a process's parent, 0 when it is gone.
 func procParent(pid int) int {
-	for _, e := range processes() {
+	for _, e := range procEntries() {
 		if int(e.pid) == pid {
 			return int(e.parent)
 		}

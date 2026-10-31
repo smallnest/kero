@@ -4,7 +4,7 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
-## 2.1.32
+## 2.1.33
 
 - The side panel has an Info tab (⌥⌘I): the focused pane's working
   directory, with buttons to copy it, show it in Finder, or open it in a
