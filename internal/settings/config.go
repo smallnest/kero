@@ -151,6 +151,8 @@ var keys = []key{
 			return nil
 		}},
 	boolKey("window-blur", "blur the desktop behind the translucent background; off, the wash is plain transparency", func(s *Settings) *bool { return &s.WindowBlur }),
+	float32Key("pane-opacity", "how much of the window's background shows in a terminal while the window is translucent, 0 to 1, as window-opacity; 0 shows the desktop alone, and the terminal's text stays opaque", func(s *Settings) *float32 { return &s.PaneOpacity }),
+	boolKey("pane-blur", "blur what shows through the terminals; off, they are plain transparency, and 0% opacity shows the desktop alone", func(s *Settings) *bool { return &s.PaneBlur }),
 	boolKey("pet", "Kero the frog on the window's top edge, who follows your sessions", func(s *Settings) *bool { return &s.Pet }),
 	float32Key("pet-offset", "where Kero stands across the window, 0 to 1; drag it there", func(s *Settings) *float32 { return &s.PetOffset }),
 	float32Key("pet-size", "how tall a Codex pet shows, against the Codex app's 82 DIPs, 0.5 to 3", func(s *Settings) *float32 { return &s.PetSize }),

@@ -2592,6 +2592,56 @@ func (msgs Messages) SetWindowBlur() string {
 	return Catalog.Format(msgs.locale, "setWindowBlur", nil)
 }
 
+// SetPaneGlass says "Terminal transparency"
+// in the language the app shows.
+func SetPaneGlass() string { return In(i18n.Locale()).SetPaneGlass() }
+
+// SetPaneGlass says "Terminal transparency"
+// in the language of msgs.
+func (msgs Messages) SetPaneGlass() string {
+	return Catalog.Format(msgs.locale, "setPaneGlass", nil)
+}
+
+// SetPaneOpacity says "Terminal opacity"
+// in the language the app shows.
+func SetPaneOpacity() string { return In(i18n.Locale()).SetPaneOpacity() }
+
+// SetPaneOpacity says "Terminal opacity"
+// in the language of msgs.
+func (msgs Messages) SetPaneOpacity() string {
+	return Catalog.Format(msgs.locale, "setPaneOpacity", nil)
+}
+
+// SetPaneOpacityDetail says "How much of the window’s background shows in a terminal while the window is translucent, as its background opacity:…"
+// in the language the app shows.
+func SetPaneOpacityDetail() string { return In(i18n.Locale()).SetPaneOpacityDetail() }
+
+// SetPaneOpacityDetail says "How much of the window’s background shows in a terminal while the window is translucent, as its background opacity:…"
+// in the language of msgs.
+func (msgs Messages) SetPaneOpacityDetail() string {
+	return Catalog.Format(msgs.locale, "setPaneOpacityDetail", nil)
+}
+
+// SetPaneBlur says "Terminal blur"
+// in the language the app shows.
+func SetPaneBlur() string { return In(i18n.Locale()).SetPaneBlur() }
+
+// SetPaneBlur says "Terminal blur"
+// in the language of msgs.
+func (msgs Messages) SetPaneBlur() string {
+	return Catalog.Format(msgs.locale, "setPaneBlur", nil)
+}
+
+// SetPaneBlurDetail says "Blur what shows through the terminals. Switch this off to use plain transparency instead."
+// in the language the app shows.
+func SetPaneBlurDetail() string { return In(i18n.Locale()).SetPaneBlurDetail() }
+
+// SetPaneBlurDetail says "Blur what shows through the terminals. Switch this off to use plain transparency instead."
+// in the language of msgs.
+func (msgs Messages) SetPaneBlurDetail() string {
+	return Catalog.Format(msgs.locale, "setPaneBlurDetail", nil)
+}
+
 // SetWindowOpacityDetail says "How much of the window’s background the wash covers while the window is translucent; the panes stay opaque."
 // in the language the app shows.
 func SetWindowOpacityDetail() string { return In(i18n.Locale()).SetWindowOpacityDetail() }

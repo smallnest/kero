@@ -125,6 +125,23 @@ func TestBadValuesKeepDefaults(t *testing.T) {
 	}
 }
 
+// The terminals' translucency reads its switch and number, and keeps the
+// default for the number out of its range.
+func TestPaneTranslucency(t *testing.T) {
+	s, probs := parse("pane-opacity = 0.4\npane-blur = true\n")
+	if len(probs) != 0 || s.PaneOpacity != 0.4 || !s.PaneBlur {
+		t.Errorf("pane-opacity %v, pane-blur %v, problems %q", s.PaneOpacity, s.PaneBlur, probs)
+	}
+	d := Default()
+	if d.PaneOpacity != DefaultPaneOpacity || d.PaneBlur {
+		t.Errorf("defaults %v, %v", d.PaneOpacity, d.PaneBlur)
+	}
+	s, _ = parse("pane-opacity = 2\n")
+	if s.PaneOpacity != d.PaneOpacity {
+		t.Errorf("out of range: pane-opacity %v, pane-blur %v", s.PaneOpacity, s.PaneBlur)
+	}
+}
+
 // Kero elsewhere updates the app here only once the user lets it.
 func TestRemoteUpdatesOptIn(t *testing.T) {
 	if Default().RemoteUpdates {

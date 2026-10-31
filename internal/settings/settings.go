@@ -40,6 +40,8 @@ type Settings struct {
 	Vibrancy      bool    `json:"vibrancy"`      // the window's material under the wash
 	WindowOpacity float32 `json:"windowOpacity"` // how much of the wash covers the window, 0 to 1
 	WindowBlur    bool    `json:"windowBlur"`    // blur the desktop behind the wash
+	PaneOpacity   float32 `json:"paneOpacity"`   // how much of the window's background shows in a terminal, 0 to 1
+	PaneBlur      bool    `json:"paneBlur"`      // blur what shows through the terminals
 	Pet           bool    `json:"pet"`           // the frog on the window's top edge
 	PetOffset     float32 `json:"petOffset"`     // where it stands, 0 to 1 across the window
 	PetSet        string  `json:"petSet"`        // who: "kero", a Codex pet's directory name, or "codex" for the active one
@@ -156,6 +158,15 @@ func (s *Settings) Host(name string) *Host {
 // covers while translucent.
 const DefaultWindowOpacity = 0.82
 
+// DefaultPaneOpacity is how much of the window's background shows in a
+// terminal while the window is translucent.
+const DefaultPaneOpacity = 0.82
+
+// PaneBlurRadius is how much a terminal blurs what shows through it, in
+// DIPs, with terminal blur on: a frost that hides what is under it, where
+// the window's own blur, about 10 DIPs, hardly shows in a card.
+const PaneBlurRadius = 16
+
 // Default returns the settings of a new install.
 func Default() Settings {
 	return Settings{
@@ -172,6 +183,7 @@ func Default() Settings {
 		Vibrancy:        true,
 		WindowOpacity:   DefaultWindowOpacity,
 		WindowBlur:      true,
+		PaneOpacity:     DefaultPaneOpacity,
 		Pet:             true,
 		PetOffset:       0.5,
 		PetSet:          PetSetKero,
@@ -394,6 +406,9 @@ func (s *Settings) normalize() {
 	}
 	if s.WindowOpacity < 0 || s.WindowOpacity > 1 {
 		s.WindowOpacity = d.WindowOpacity
+	}
+	if s.PaneOpacity < 0 || s.PaneOpacity > 1 {
+		s.PaneOpacity = d.PaneOpacity
 	}
 	oneOf(&s.AppIcon, d.AppIcon, AppIcons...)
 	known := false

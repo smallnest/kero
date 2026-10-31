@@ -852,6 +852,19 @@ func (a *App) terminalPage(c *ui.Context, pal *palette) {
 			toggle(c.Key("dim-unfocused"), &s.DimUnfocused, pal)
 		})
 	})
+	// As the window's translucency: an opacity, and a blur or none.
+	settingsGroup(c, pal, locales.SetPaneGlass(), "", func() {
+		settingRow(c, pal, locales.SetPaneOpacity(), locales.SetPaneOpacityDetail(), func() {
+			v := float64(s.PaneOpacity)
+			slider(c, "pane-opacity", &v, 0, 1, 160, pal).OnChange(func() {
+				s.PaneOpacity = float32(int(v*100+0.5)) / 100
+			})
+			ui.Textf(c, "%.0f%%", s.PaneOpacity*100).FontSize(12.5).TextColor(pal.textMuted).Width(40).FontFeatures("tnum")
+		})
+		settingRow(c, pal, locales.SetPaneBlur(), locales.SetPaneBlurDetail(), func() {
+			toggle(c.Key("pane-blur"), &s.PaneBlur, pal)
+		})
+	})
 	settingsGroup(c, pal, locales.SetCursor(), "", func() {
 		settingRow(c, pal, locales.SetShape(), locales.SetShapeDetail(), func() {
 			segmented(c, "cursor", &s.Cursor, []string{"block", "bar", "underline"}, []string{locales.SetCursorBlock(), locales.SetCursorBar(), locales.SetCursorUnderline()})

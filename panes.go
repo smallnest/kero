@@ -203,7 +203,19 @@ func (a *App) paneCard(c *ui.Context, pal *palette, bar ui.TitleBar, shown float
 		bg = pal.cardDim
 	}
 	card := ui.Column(c.Key("pane-" + p.ID)).Grow(1).Basis(0).MinWidth(0).MinHeight(0).Radius(14).Clip().Bind(a.paneRef("card-" + p.ID))
-	raised(card.Background(card.AnimateColor("bg", bg, ui.Animation{Duration: 140 * time.Millisecond})), pal)
+	// A terminal's card is translucent with the window: the others, a
+	// browser's and a file's, are opaque.
+	bgNow := card.AnimateColor("bg", bg, ui.Animation{Duration: 140 * time.Millisecond})
+	if w := paneGlass(pal, a.set); w != nil && !p.Browser() && !p.FilePane() {
+		card.Material(w)
+		if pal.dark {
+			darkShadow(litEdge(card, pal))
+		} else {
+			card.Shadow(0, 1, 2, 0, pal.cardShadow).Shadow(0, 1, 6, 0, pal.cardShadow2)
+		}
+	} else {
+		raised(card.Background(bgNow), pal)
+	}
 	hovered := card.Hovered()
 	if a.set.FocusFollowsMouse && multi {
 		a.followMouse(c, s, p, card, hovered, focused)

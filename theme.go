@@ -222,6 +222,54 @@ func backdrop(c *ui.Context, pal *palette, row ui.Element, s settings.Settings) 
 	row.LinearGradient(glow)
 }
 
+// paneGlass is what a terminal's card shows in place of its background,
+// while the terminals are translucent: the window's background at the
+// terminal opacity, so that 0% shows the desktop alone, as the window's 0%
+// does. The card is not glass, which fogs what it covers and would leave a
+// card opaque whatever its opacity. An opaque card, or one in a window that
+// is not translucent, is the card's background.
+func paneGlass(pal *palette, s settings.Settings) *paneWash {
+	if !s.Vibrancy || s.PaneOpacity >= 1 {
+		return nil
+	}
+	return &paneWash{opacity: s.PaneOpacity, background: s.Background, dark: pal.dark}
+}
+
+// paneWash paints a card as backdrop paints the window: the background's
+// gradient, then its glow from the top right over it, at the terminal
+// opacity. Nothing else covers what shows through it, so that at 0% the
+// desktop alone shows, as the window's 0% shows it.
+type paneWash struct {
+	opacity    float32
+	background string
+	dark       bool
+}
+
+// PaintMaterial paints the wash over box, rounded by radii.
+func (w *paneWash) PaintMaterial(p *ui.Painter, box ui.Rect, radii [4]float32) {
+	if box.W <= 0 || box.H <= 0 {
+		return
+	}
+	base, glow := washes(w.background, w.dark)
+	if a := w.opacity; a > 0 {
+		for i := range base.Stops {
+			base.Stops[i].Color = base.Stops[i].Color.Alpha(a)
+		}
+		for i := range glow.Stops {
+			glow.Stops[i].Color = glow.Stops[i].Color.Alpha(a)
+		}
+	} else {
+		// A wash of none: the gradient's stops at 0.5, and the glow makes
+		// its own from its colors, so a color at 0 alpha of a wash's own
+		// keeps it from showing.
+		base.Stops = []ui.GradientStop{{Color: ui.Color{A: 0}, At: 0.5}}
+		glow.From, glow.To = ui.Color{A: 0}, ui.Color{A: 0}
+	}
+	p.FillGradient(box, base, radii[0])
+	// The glow covers the card and as much again, and fades at 0.5 of that.
+	p.FillGradient(ui.Rect{X: box.X, Y: box.Y, W: box.W, H: box.H * 2}, glow, 0)
+}
+
 // translucentGlass makes surfaces that sit on the wash, the sidebar's rows
 // and the cards, let it through, a tenth of what the wash lets through of
 // the desktop, so that a thin wash still shows a faint surface: with
