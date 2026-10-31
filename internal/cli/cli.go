@@ -35,6 +35,8 @@ const usage = `kero — terminal sessions that keep running, for you and your ag
 Usage:
   kero                          open the app
   kero ls [--json]              list sessions and their panes
+      -a, --all                   on this machine and every host of kero
+                                  hosts, each under the name -H takes
   kero new [options] [-- cmd…]  start a session, printing its id
       -p, --project <name|id>     project to put it in (default: by directory)
       -n, --name <name>           name it
@@ -206,6 +208,7 @@ func (e exitStatus) Error() string { return fmt.Sprintf("exit status %d", int(e)
 
 // Run runs a subcommand, returning the exit code.
 func Run(args []string) int {
+	SyncSkill()
 	host, env, args, err := splitHost(args)
 	if err == nil && host != "" && len(args) > 0 && localOnly[args[0]] {
 		// $KERO_HOST is for what acts on sessions: the rest is of this
@@ -324,6 +327,15 @@ func run(args []string, host string) error {
 	case "pets":
 		return petsCmd(args)
 	}
+	if cmd == "ls" || cmd == "list" {
+		f, err := parse(args, nil, map[string]string{"json": "json", "j": "json", "all": "all", "a": "all"})
+		if err != nil {
+			return err
+		}
+		if f.set["all"] {
+			return listAll(f.set["json"])
+		}
+	}
 	c, done, err := connect(host)
 	if err != nil {
 		if errors.Is(err, client.ErrVersion) {
@@ -345,7 +357,7 @@ func run(args []string, host string) error {
 
 	switch cmd {
 	case "ls", "list":
-		f, err := parse(args, nil, map[string]string{"json": "json", "j": "json"})
+		f, err := parse(args, nil, map[string]string{"json": "json", "j": "json", "all": "all", "a": "all"})
 		if err != nil {
 			return err
 		}
