@@ -246,6 +246,31 @@ func kill(pid int) error {
 	return nil
 }
 
+// Settle reports a kerod of
+// an older version than this client's, as one of an earlier Kero that runs
+// while this one does: the two stop each other, as each sees the other's
+// kerod as one that does not answer, and every session they run comes back
+// as restored. A kerod of this client's version leaves an older one
+// alone.
+func Settle(w proto.Welcome) bool {
+	return w.Version < proto.Version && namedByKerod(w.PID)
+}
+
+// SettleStop stops a kerod that Settle reports: it saves its sessions as
+// it is restarted, and they come back in this version. Its clients of
+// the version wait for it to go.
+func SettleStop(pid int) error {
+	if err := Terminate(pid); err != nil {
+		return err
+	}
+	for end := time.Now().Add(stopTimeout); Running(pid) && time.Now().Before(end); {
+		time.Sleep(20 * time.Millisecond)
+	}
+	// An earlier Kero may start it again as it goes now.
+	time.Sleep(2 * time.Second)
+	return nil
+}
+
 // LockedPID returns the pid of the daemon whose lock kerod.lock is, or 0:
 // the daemon writes it as it starts (daemon.Run). A free lock names none,
 // whoever holds it, as one released writes it empty.

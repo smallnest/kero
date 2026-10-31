@@ -323,7 +323,7 @@ func (a *App) connectHost(h *host) {
 		var cl *client.Client
 		var err error
 		if !h.remote() {
-			cl, err = client.Connect(false)
+			cl, err = connectLocal()
 		} else {
 			if rc == nil {
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -340,6 +340,25 @@ func (a *App) connectHost(h *host) {
 		}
 		a.update(func() { a.connected(h, gen, rc, cl, err) })
 	}()
+}
+
+// connectLocal connects to this machine's kerod, as client.Connect: one of
+// an earlier Kero, which runs too, is first stopped, as restarting kerod
+// stops it, so that the two do not stop each other. The app stops it
+// without asking: another Kero's kerod answers this app's clients none,
+// and its sessions would not show.
+func connectLocal() (*client.Client, error) {
+	for i := 0; i < 3; i++ {
+		cl, err := client.Connect(false)
+		if err != nil || !client.Settle(cl.Welcome) {
+			return cl, err
+		}
+		// The next kerod starts as this connection goes.
+		pid := cl.Welcome.PID
+		cl.Close()
+		client.SettleStop(pid)
+	}
+	return client.Connect(false)
 }
 
 // tailcatPort is the port of a tailcat host's listener, as the settings

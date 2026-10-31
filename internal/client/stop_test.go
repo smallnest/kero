@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -187,5 +188,45 @@ func TestStopForce(t *testing.T) {
 	}
 	if !d.gone() {
 		t.Fatal("the daemon runs")
+	}
+}
+
+// TestSettle checks that a kerod of an earlier version than the client's is
+// one of an earlier Kero, and that one of this version is not, or one that
+// another program runs.
+func TestSettle(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("kerod is named by exec -a")
+	}
+	d := fakeDaemon(t, "sleep 60")
+	defer d.stop()
+	w := proto.Welcome{Version: proto.Version - 1, PID: d.cmd.Process.Pid}
+	if !Settle(w) {
+		t.Error("an earlier kerod is not settled")
+	}
+	w.Version = proto.Version
+	if Settle(w) {
+		t.Error("a kerod of this version is settled")
+	}
+	w = proto.Welcome{Version: proto.Version - 1, PID: os.Getpid()}
+	if Settle(w) {
+		t.Error("a process that is not kerod is settled")
+	}
+}
+
+// TestSettleStop checks that a settle waits for the kerod to go: its
+// sessions are saved as it stops.
+func TestSettleStop(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("kerod is named by exec -a")
+	}
+	d := fakeDaemon(t, "trap 'exit 0' TERM; while :; do sleep 1; done")
+	defer d.stop()
+	pid := d.cmd.Process.Pid
+	if err := SettleStop(pid); err != nil {
+		t.Fatal(err)
+	}
+	if !d.gone() {
+		t.Error("the fake kerod does not go as it is settled")
 	}
 }

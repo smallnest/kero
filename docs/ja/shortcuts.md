@@ -60,6 +60,7 @@ Windows と Linux では、<kbd>Ctrl</kbd> と文字キーの組み合わせは�
 | サイドバーの切り替え   | <kbd>⌘</kbd> <kbd>B</kbd>              | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>B</kbd> | `sidebar.toggle` |
 | サイドパネルの切り替え | <kbd>⇧</kbd> <kbd>⌘</kbd> <kbd>E</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>E</kbd> | `side.toggle` |
 | ファイルの切り替え（このフォークではサイドパネルを開く） | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>F</kbd> | <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F</kbd> | `files.toggle` |
+| 情報を表示/非表示 | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>I</kbd> | <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>I</kbd> | `info.toggle` |
 | 変更の切り替え         | <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>G</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>G</kbd> | `changes.toggle` |
 | 拡大                   | <kbd>⌘</kbd> <kbd>=</kbd>              | <kbd>Ctrl</kbd> <kbd>=</kbd>                  | `text.bigger`    |
 | 縮小                   | <kbd>⌘</kbd> <kbd>-</kbd>              | <kbd>Ctrl</kbd> <kbd>-</kbd>                  | `text.smaller`   |

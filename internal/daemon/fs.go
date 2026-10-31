@@ -208,3 +208,6 @@ func pasteFile(p proto.PasteFileParams) (proto.PasteFile, error) {
 	}
 	return proto.PasteFile{Path: path}, nil
 }
+
+// fsHome returns a home directory, as the host's own.
+func fsHome() proto.FSHomeResult { return proto.FSHomeResult{Path: proto.Home()} }

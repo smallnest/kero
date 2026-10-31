@@ -28,6 +28,7 @@ import (
 const (
 	sideChanges = "changes"
 	sideFiles   = "files"
+	sideInfo    = "info"
 )
 
 const (
@@ -48,6 +49,12 @@ type sideState struct {
 	// appearance or the terminals' themes change.
 	theme    *editor.Theme
 	themeKey string
+	info     infoState
+}
+
+// infoState is the Info view's, which keeps its place as the views change.
+type infoState struct {
+	scroll ui.ScrollState
 }
 
 // changesState is the Changes view's: the files changed since a base,
@@ -189,6 +196,7 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 		ui.Row(c.Key("hdr")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 16).Gap(8).Children(func() {
 			// The views, the one shown marked, as a pane's header shows
 			// its program.
+			a.sideTab(c, pal, sideInfo, locales.SideInfo(), infoIcon, view == sideInfo, "info.toggle", func() { set = sideInfo })
 			a.sideTab(c, pal, sideChanges, locales.SideChanges(), diffIcon, view == sideChanges, "changes.toggle", func() { set = sideChanges })
 			a.sideTab(c, pal, sideFiles, locales.SideFiles(), folderIcon, view == sideFiles, "files.toggle", func() { set = sideFiles })
 			if set != "" {
@@ -204,8 +212,12 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 			}
 		})
 		ui.Column(c.Key("body")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
-			if view == sideFiles {
+			switch view {
+			case sideFiles:
 				a.filesView(c, pal, s)
+				return
+			case sideInfo:
+				a.infoView(c, pal, s)
 				return
 			}
 			a.changesView(c, pal, s, width)
@@ -244,9 +256,15 @@ func (a *App) sideTab(c *ui.Context, pal *palette, id, label string, svg *ui.SVG
 // sideDir is the folder a view names in the header: the worktree the
 // Changes view lists, or the folder the Files view shows.
 func (a *App) sideDir(s *proto.Session, view string) string {
-	if view == sideFiles {
+	switch view {
+	case sideFiles:
 		if _, root := a.filesRoot(s); root != "" {
 			return root
+		}
+		return ""
+	case sideInfo:
+		if p := s.PaneByID(a.focusOf(s)); p != nil {
+			return p.WorkDir()
 		}
 		return ""
 	}

@@ -4,9 +4,12 @@ import (
 	"cmp"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"kero/internal/proto"
@@ -57,7 +60,10 @@ type savedPane struct {
 func (d *Daemon) statePath() string { return filepath.Join(d.dir, "state.json") }
 
 // historyPath is where a pane's history is kept, for a restore.
-func (d *Daemon) historyPath(id string) string { return filepath.Join(d.dir, "sessions", id+".vt") }
+func (d *Daemon) historyPath(id string) string { return filepath.Join(d.dir, dirSessions, id+".vt") }
+
+// dirSessions is where the daemon keeps the panes' histories.
+const dirSessions = "sessions"
 
 func (d *Daemon) saveLoop() {
 	snaps := time.NewTicker(10 * time.Second)
@@ -126,6 +132,12 @@ func writeAtomic(path string, data []byte) error {
 // restore starts again the sessions of the last daemon, which ended
 // without closing them.
 func (d *Daemon) restore() {
+	// Only the latest history change is what a restore notes, whatever
+	// number of them.
+	d.restoredAt = newestChange(d.statePath(), filepath.Join(d.dir, dirSessions))
+	if b, err := os.ReadFile(filepath.Join(d.dir, dirSessions, restoreMark)); err == nil {
+		d.restoreN, _ = strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64)
+	}
 	data, err := os.ReadFile(d.statePath())
 	if err != nil {
 		return
@@ -155,7 +167,7 @@ func (d *Daemon) restore() {
 			if !set.ResumeAgents {
 				sp.Agent = nil
 			}
-			if p := d.restorePane(s.id, sp, when); p != nil {
+			if p := d.restorePane(s.id, sp); p != nil {
 				s.panes = append(s.panes, p)
 				d.panes[p.info.ID] = p
 			}
@@ -163,6 +175,7 @@ func (d *Daemon) restore() {
 		if len(s.panes) == 0 {
 			continue
 		}
+		d.noteRestore(s, when)
 		if sameLeaves(ss.Layout, s.panes) {
 			s.layout = ss.Layout
 		} else {
@@ -182,7 +195,7 @@ func (d *Daemon) restore() {
 // scrollback, in its directory, with the agent it ran resumed; a browser
 // pane comes back on its page, and a file pane on its file, which the app
 // shows.
-func (d *Daemon) restorePane(sid string, sp savedPane, when string) *pane {
+func (d *Daemon) restorePane(sid string, sp savedPane) *pane {
 	now := time.Now().UnixMilli()
 	if sp.URL != "" || sp.File != "" {
 		p, _ := newPane(d, sid, proto.Pane{
@@ -202,10 +215,10 @@ func (d *Daemon) restorePane(sid string, sp savedPane, when string) *pane {
 	// What the session showed, down to where its cursor was, with the
 	// new shell under it: what a program drew below the cursor, as an
 	// agent's status bar, goes, rather than show under the new shell's
-	// prompt. History carries no modes and no cursor to undo.
+	// prompt. History carries no modes and no cursor to undo. The
+	// daemon's end marks the restore once, after every pane (noteRestore).
 	if h, err := os.ReadFile(d.historyPath(sp.ID)); err == nil && len(h) > 0 {
 		p.term.Feed(h)
-		p.term.Feed([]byte("\x1b[2m── restored · session ended " + when + " ──\x1b[0m\r\n"))
 	}
 	// The shell alone: what ran in it may not want to run again unasked.
 	// But an agent's conversation, which only waits for the user.
@@ -216,6 +229,158 @@ func (d *Daemon) restorePane(sid string, sp savedPane, when string) *pane {
 	}
 	p.dirty = true
 	return p
+}
+
+// newestChange returns the latest change of the files under paths, and of
+// the histories there, as Unix milliseconds, 0 for none.
+func newestChange(paths ...string) int64 {
+	var newest time.Time
+	for _, path := range paths {
+		filepath.WalkDir(path, func(_ string, e os.DirEntry, err error) error {
+			if err != nil || e.IsDir() {
+				return nil
+			}
+			if info, err := e.Info(); err == nil && info.ModTime().After(newest) {
+				newest = info.ModTime()
+			}
+			return nil
+		})
+	}
+	return newest.UnixMilli()
+}
+
+// noteRestore notes a restored session to mark once every session is back
+// (saveLoop), as one line for the whole restore: not one for each of the
+// sessions a restart brings back. A stop that no client asked for, as a
+// kill of every process named Kero, keeps its restarts from marking again:
+// settled marks the next one. Under session-history, each session has its
+// own line.
+func (d *Daemon) noteRestore(s *session, when string) {
+	var first *pane
+	for _, p := range s.panes {
+		if p.term != nil && (first == nil || p.info.Created < first.info.Created) {
+			first = p
+		}
+	}
+	if first == nil || d.markPane != nil {
+		return
+	}
+	if d.restoredAt > 0 {
+		when = time.UnixMilli(d.restoredAt).Format("Mon Jan 2 15:04")
+	}
+	if !settings.Load().SessionHistory {
+		d.mu.Lock()
+		mark, since := d.restoreN, d.lastStopped
+		d.mu.Unlock()
+		switch {
+		case since > 0:
+			// The stop that made this restore asked for none: no line,
+			// and the restores after it mark again.
+			d.markSettled()
+			return
+		case mark > 0:
+			// Marked since, and after a stop a client asked for: the
+			// line stays above this restore. One that no mark of any
+			// came after is an old daemon's, which drew it as it
+			// merged the histories, and it goes.
+			if sameTime(mark, since) {
+				break
+			}
+			return
+		}
+	}
+	d.mu.Lock()
+	d.markPane, d.markWhen, d.markAt = first, when, restoredSince(d.dir)
+	d.mu.Unlock()
+}
+
+// sameTime reports whether two times are minutes apart at most: the save
+// of a history and the state that tells it come together.
+func sameTime(a, b int64) bool {
+	return a >= b-60_000
+}
+
+// restoredSince returns when to set the mark that a restore draws: now, or
+// a second after a mark already at now, which a restore right after
+// another, as one an old Kero keeps asking for, does not overgo.
+func restoredSince(dir string) int64 {
+	at := time.Now().UnixMilli()
+	path := filepath.Join(dir, dirSessions, restoreMark)
+	if b, err := os.ReadFile(path); err == nil {
+		if n, _ := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); n >= at {
+			at = n + 1000
+		}
+	}
+	return at
+}
+
+// markDrawn tells whether a restore drew a mark since restore loaded the
+// last one: restoreN is then of before it.
+func (d *Daemon) markDrawn() bool {
+	b, err := os.ReadFile(filepath.Join(d.dir, dirSessions, restoreMark))
+	if err != nil {
+		return false
+	}
+	n, _ := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64)
+	return n > d.restoreN
+}
+
+// markOnce marks the restore once the shells drew their first prompt: a
+// client that comes then shows the line in its first screen.
+func (d *Daemon) markOnce() {
+	d.mu.Lock()
+	ok := d.markPane != nil
+	d.mu.Unlock()
+	if !ok {
+		return
+	}
+	time.Sleep(1500 * time.Millisecond)
+	d.markDone()
+}
+
+// markDone writes the mark, and where a client shows the pane, draws the
+// line: kerod feeds a terminal for itself alone, and a line of the
+// histories it saves would be one more on every restore. What the mark
+// tells decides the next restores.
+func (d *Daemon) markDone() {
+	d.mu.Lock()
+	p, when, at := d.markPane, d.markWhen, d.markAt
+	d.markPane = nil
+	d.mu.Unlock()
+	if p == nil {
+		return
+	}
+	if err := writeAtomic(filepath.Join(d.dir, dirSessions, restoreMark), []byte(strconv.FormatInt(at, 10))); err != nil {
+		d.log.Printf("marking the restore: %v", err)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.term == nil || len(p.clients) == 0 {
+		return
+	}
+	p.term.Feed([]byte("\x1b[2m── restored · session ended " + when + " ──\x1b[0m\r\n"))
+	p.dirty = true
+}
+
+// restoreMark is a file in the histories': when a restore was last marked.
+const restoreMark = ".restored"
+
+// markSettled marks a restore as one to mark no longer, from now.
+func (d *Daemon) markSettled() {
+	dir := filepath.Join(d.dir, dirSessions)
+	os.MkdirAll(dir, 0o700)
+	writeAtomic(filepath.Join(dir, restoreMark), []byte(strconv.FormatInt(time.Now().UnixMilli(), 10)))
+}
+
+// leftover reports whether an older Kero than this one runs: it runs
+// kerod too, and their stopping each other is what a stop that no client
+// asked for may be, if kerod says one was running as it started.
+func leftover(pid int) bool {
+	if pid <= 1 || pid == os.Getpid() {
+		return false
+	}
+	b, err := exec.Command("ps", "-o", "args=", "-p", strconv.Itoa(pid)).Output()
+	return err == nil && strings.Contains(string(b), "Kero")
 }
 
 // resumeCommand is the command that resumes an agent's session, nil for

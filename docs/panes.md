@@ -74,3 +74,24 @@ Choose the lists under **Block ads** in **Settings › Browser**: lists of cooki
 Kero blocks what WebKit's content blockers can: requests to ad and tracker servers, and the elements the lists hide. Filters that need a blocker's own scripts, such as those that hide elements by their text or rewrite what a page loads, are left out. A page on a domain the lists block doesn't open in a browser pane.
 
 To browse without blocking, turn off **Block ads** in **Settings › Browser**, or set `browser-block-ads = false` in the [configuration](./configuration.md#browser). Open pages keep what they loaded until they reload.
+
+## The Info view
+
+The side panel shows an Info view of the session's pane. The view shows three sections:
+
+- **Working directory**: the directory the pane works in. Copy the path, show the folder in the file manager, or open the folder in a file pane or in an editor.
+- **Process**: the processes that run in the pane's terminal, with their PID, their time and their CPU use.
+- **Ports**: the ports that these processes listen on. Click a port to open it in the browser.
+
+When Magpie runs on this machine, the view shows its card last. Magpie is a gateway for coding agents. The card shows:
+
+- Call count, tokens and cost of today.
+- The cache hit rate of the input.
+- The calls of the session in this pane, when the agent told Kero its session.
+- The plan windows with the least quota left, by provider.
+- The latest call: its status, the model that served it and its time.
+
+Kero reads the gateway on `http://127.0.0.1:3425`. Set `MAGPIE_URL` (or `MAGPIE_PORT`) to use another address. Kero shows no card when Magpie does not run.
+
+Click the Info tab in the panel's header, or press <kbd>⌥</kbd> <kbd>⌘</kbd> <kbd>I</kbd> (`info.toggle`) to show the view, and press it again to close the panel.
+

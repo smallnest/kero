@@ -186,6 +186,11 @@ type App struct {
 	from   *host
 	picker folderPicker // the folders of a host, to open a project in
 	side   sideState    // the side panel, beside a session's panes
+	// info is what the Info views read, by pane (info.go).
+	info map[string]*paneInfo
+	// magpie is what Magpie shows of itself (magpie.go), nil until the
+	// Info view shows.
+	magpie *magpieInfo
 
 	// quitting is set while the quit quit-ends-sessions makes ends the
 	// sessions, either while it asks or once its answer does.

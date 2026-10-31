@@ -4,6 +4,19 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## Next release
+
+- The side panel has an Info tab (⌥⌘I), the first of its tabs: the
+  focused pane's working directory with buttons to copy, reveal or open
+  it; the processes of its terminal and the ports they listen on; and,
+  when Magpie, a local coding agents' gateway on port 3425, runs, its usage:
+  today's calls, tokens and cost, the plan windows closest to their
+  limits, and the calls of the pane's conversation.
+- Sessions no longer come back with many "restored" lines. A restore
+  marks one, once, and two kerods no longer stop each other: the app
+  stops a kerod of an older Kero as it connects to it. kerod's log says
+  who asked it to stop.
+
 ## Upstream releases
 
 Upstream's notes for 2.1.22 to 2.1.24, which this fork has.

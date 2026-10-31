@@ -58,6 +58,30 @@ var (
 	procPidinfo func(pid int32, flavor int32, arg uint64, buffer unsafe.Pointer, size int32) int32
 )
 
+// procList returns every process, as ps lists them.
+func procList() []osProc {
+	buf, err := unix.SysctlRaw("kern.proc.all")
+	if err != nil {
+		return nil
+	}
+	// The kernel's struct kinfo_proc, without Go's tail padding.
+	const size = int(unsafe.Offsetof(unix.KinfoProc{}.Eproc)) + int(unsafe.Sizeof(unix.Eproc{})) - 4
+	out := make([]osProc, 0, len(buf)/size)
+	put := func(pid int, kp *unix.KinfoProc) {
+		comm := kp.Proc.P_comm[:]
+		if i := bytes.IndexByte(comm, 0); i >= 0 {
+			comm = comm[:i]
+		}
+		out = append(out, osProc{PID: pid, PPID: int(kp.Eproc.Ppid), CPU: float64(kp.Proc.P_pctcpu) / float64(1<<16) * 100, Rune: string(comm)})
+	}
+	for ; len(buf) >= size; buf = buf[size:] {
+		var kp unix.KinfoProc
+		copy((*[1 << 16]byte)(unsafe.Pointer(&kp))[:size], buf[:size])
+		put(int(kp.Proc.P_pid), &kp)
+	}
+	return out
+}
+
 // procCwd returns the working directory of a process, through
 // proc_pidinfo's PROC_PIDVNODEPATHINFO.
 func procCwd(pid int) string {

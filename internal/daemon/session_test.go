@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -289,6 +290,42 @@ func TestAgentPane(t *testing.T) {
 	}
 	a.shellPID = os.Getpid()
 	check("under the app server a's Codex started", server.Process.Pid, "", "b", true)
+}
+
+// TestAgentSessionAsk checks the question of which session a pane's agent
+// runs: its own, as its hooks told, or none.
+func TestAgentSessionAsk(t *testing.T) {
+	t.Setenv("KERO_CONFIG", filepath.Join(t.TempDir(), "config"))
+	d := &Daemon{changeCh: make(chan struct{}, 1), saveCh: make(chan struct{}, 1), panes: map[string]*pane{}}
+	d.viewed.Store(new(string))
+	ask := func(id string) (proto.AgentSessionResult, error) {
+		raw, _ := json.Marshal(proto.AgentSessionParams{PID: 0, Agent: "codex", Dir: "/repo"})
+		v, err := d.call(nil, "pane.agentSession", raw)
+		if err != nil {
+			return proto.AgentSessionResult{}, err
+		}
+		return v.(proto.AgentSessionResult), nil
+	}
+	info := proto.Pane{ID: "a", Agent: "codex", Dir: "/repo", Status: proto.Idle, Cols: 80, Rows: 24}
+	p, err := newPane(d, "s", info)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { p.term.Close() })
+	d.panes["a"] = p
+	if _, err := ask("a"); err == nil {
+		t.Error("a pane yet to tell its session answered with one")
+	}
+	p.mu.Lock()
+	p.info.AgentSession = &proto.AgentSession{Agent: "codex", ID: "abc"}
+	p.mu.Unlock()
+	r, err := ask("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Pane != "a" || r.Session != "abc" {
+		t.Errorf("ask = %+v", r)
+	}
 }
 
 func TestEnded(t *testing.T) {

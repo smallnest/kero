@@ -103,6 +103,8 @@ func (a *App) run(id string, args map[string]string) {
 		a.toggleSide(sideChanges)
 	case "files.toggle":
 		a.toggleSide(sideFiles)
+	case "info.toggle":
+		a.toggleSide(sideInfo)
 	case "pet.toggle":
 		a.set.Pet = !a.set.Pet
 		a.applySettings(a.set)
@@ -174,6 +176,7 @@ var actionTitles = map[string]func() string{
 	"side.toggle":         locales.ActionTogglePanel,
 	"changes.toggle":      locales.ActionToggleChanges,
 	"files.toggle":        locales.ActionToggleFiles,
+	"info.toggle":         locales.ActionToggleInfo,
 	"text.bigger":         locales.ActionBigger,
 	"text.smaller":        locales.ActionSmaller,
 	"text.reset":          locales.ActionActualSize,
@@ -229,7 +232,7 @@ func (a *App) menu() *mygo.Menu {
 			{Label: locales.MenuQuit(), Accelerator: quitKeys, ToolTip: locales.MenuQuitTip(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
 			a.item("app.quitAll")}}
 	}
-	view := append(a.items("View", []string{"sidebar.toggle", "side.toggle", "changes.toggle", "files.toggle", "pet.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}, []string{quickAction}),
+	view := append(a.items("View", []string{"sidebar.toggle", "side.toggle", "changes.toggle", "files.toggle", "info.toggle", "pet.toggle"}, []string{"text.bigger", "text.smaller", "text.reset"}, []string{quickAction}),
 		mygo.Separator(), &mygo.MenuItem{Role: mygo.RoleToggleFullScreen})
 	// The inspector is a development build's: a production build leaves it
 	// out, and its window's DevTools off, where the item would do nothing.
@@ -319,7 +322,7 @@ func (a *App) fromMay(id string, args map[string]string) bool {
 	case id == "session.new" || id == "session.newHome":
 		p := args["project"]
 		return p == "" || a.hostOf(p) == h
-	case strings.HasPrefix(id, "pane.") || id == "side.toggle" || id == "changes.toggle" || id == "files.toggle":
+	case strings.HasPrefix(id, "pane.") || id == "side.toggle" || id == "changes.toggle" || id == "files.toggle" || id == "info.toggle":
 		return a.session(a.selected) != nil && a.selectedHost() == h
 	case id == quickAction:
 		return false // this machine's screen is no other's to drop on

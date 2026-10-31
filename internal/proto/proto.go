@@ -908,7 +908,8 @@ type (
 	// AgentSessionParams tell a pane's agent's session (kero hook).
 	// The pane is the one whose shell runs PID, the hook's process, else
 	// the one that can only be the agent's: an agent's service that panes
-	// share, as Codex's app server, runs hooks under none.
+	// share, as Codex's app server, runs hooks under none. An empty
+	// Session asks which session the pane is told of.
 	AgentSessionParams struct {
 		PID     int    `json:"pid"`
 		Agent   string `json:"agent"`
@@ -925,6 +926,15 @@ type (
 		Cols     int    `json:"cols,omitempty"`
 		Rows     int    `json:"rows,omitempty"`
 		Archived bool   `json:"archived,omitempty"`
+	}
+	// FSHomeResult is a host's home directory.
+	FSHomeResult struct {
+		Path string `json:"path"`
+	}
+	// ProcessesParams asks for the processes in a pane's terminal, under
+	// the shell of PID.
+	ProcessesParams struct {
+		PID int `json:"pid"`
 	}
 	// AgentSessionResult is the pane told of, and its session; Away: the
 	// agent runs under none of kero's shells, and so do its commands.
@@ -998,3 +1008,17 @@ type (
 		Text string `json:"text"`
 	}
 )
+
+// Process is a program in a pane's terminal, as kerod lists it.
+type Process struct {
+	PID  int `json:"pid"`
+	PPID int `json:"ppid,omitempty"`
+	// Name is the program's, as ps names it, or the coding agent it runs.
+	Name string `json:"name"`
+	// CPU is its share of a core just now, in percent.
+	CPU float64 `json:"cpu,omitempty"`
+	// Age is how long it ran, as ps tells it: "62h17m", or "51s".
+	Age string `json:"age,omitempty"`
+	// Ports are the ports it listens on.
+	Ports []int `json:"ports,omitempty"`
+}

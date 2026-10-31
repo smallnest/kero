@@ -6315,3 +6315,193 @@ func SetTailcatChanged() string { return In(i18n.Locale()).SetTailcatChanged() }
 func (msgs Messages) SetTailcatChanged() string {
 	return Catalog.Format(msgs.locale, "setTailcatChanged", nil)
 }
+
+// SideInfo says "Info"
+// in the language the app shows.
+func SideInfo() string { return In(i18n.Locale()).SideInfo() }
+
+// SideInfo says "Info"
+// in the language of msgs.
+func (msgs Messages) SideInfo() string {
+	return Catalog.Format(msgs.locale, "sideInfo", nil)
+}
+
+// InfoCopyPath says "Copy Path"
+// in the language the app shows.
+func InfoCopyPath() string { return In(i18n.Locale()).InfoCopyPath() }
+
+// InfoCopyPath says "Copy Path"
+// in the language of msgs.
+func (msgs Messages) InfoCopyPath() string {
+	return Catalog.Format(msgs.locale, "infoCopyPath", nil)
+}
+
+// InfoReveal says "Reveal in Finder"
+// in the language the app shows.
+func InfoReveal() string { return In(i18n.Locale()).InfoReveal() }
+
+// InfoReveal says "Reveal in Finder"
+// in the language of msgs.
+func (msgs Messages) InfoReveal() string {
+	return Catalog.Format(msgs.locale, "infoReveal", nil)
+}
+
+// InfoProcess says "Process"
+// in the language the app shows.
+func InfoProcess() string { return In(i18n.Locale()).InfoProcess() }
+
+// InfoProcess says "Process"
+// in the language of msgs.
+func (msgs Messages) InfoProcess() string {
+	return Catalog.Format(msgs.locale, "infoProcess", nil)
+}
+
+// InfoPorts says "Ports"
+// in the language the app shows.
+func InfoPorts() string { return In(i18n.Locale()).InfoPorts() }
+
+// InfoPorts says "Ports"
+// in the language of msgs.
+func (msgs Messages) InfoPorts() string {
+	return Catalog.Format(msgs.locale, "infoPorts", nil)
+}
+
+// InfoNoPorts says "No listening ports"
+// in the language the app shows.
+func InfoNoPorts() string { return In(i18n.Locale()).InfoNoPorts() }
+
+// InfoNoPorts says "No listening ports"
+// in the language of msgs.
+func (msgs Messages) InfoNoPorts() string {
+	return Catalog.Format(msgs.locale, "infoNoPorts", nil)
+}
+
+// InfoNoProcesses says "No processes"
+// in the language the app shows.
+func InfoNoProcesses() string { return In(i18n.Locale()).InfoNoProcesses() }
+
+// InfoNoProcesses says "No processes"
+// in the language of msgs.
+func (msgs Messages) InfoNoProcesses() string {
+	return Catalog.Format(msgs.locale, "infoNoProcesses", nil)
+}
+
+// ActionToggleInfo says "Show/Hide Info"
+// in the language the app shows.
+func ActionToggleInfo() string { return In(i18n.Locale()).ActionToggleInfo() }
+
+// ActionToggleInfo says "Show/Hide Info"
+// in the language of msgs.
+func (msgs Messages) ActionToggleInfo() string {
+	return Catalog.Format(msgs.locale, "actionToggleInfo", nil)
+}
+
+// InfoOpenEditor says "Open in {editor}"
+// in the language the app shows.
+func InfoOpenEditor(editor string) string { return In(i18n.Locale()).InfoOpenEditor(editor) }
+
+// InfoOpenEditor says "Open in {editor}"
+// in the language of msgs.
+func (msgs Messages) InfoOpenEditor(editor string) string {
+	return Catalog.Format(msgs.locale, "infoOpenEditor", map[string]any{"editor": editor})
+}
+
+// InfoNoShell says "No shell to list yet"
+// in the language the app shows.
+func InfoNoShell() string { return In(i18n.Locale()).InfoNoShell() }
+
+// InfoNoShell says "No shell to list yet"
+// in the language of msgs.
+func (msgs Messages) InfoNoShell() string {
+	return Catalog.Format(msgs.locale, "infoNoShell", nil)
+}
+
+// InfoMagpie says "Magpie"
+// in the language the app shows.
+func InfoMagpie() string { return In(i18n.Locale()).InfoMagpie() }
+
+// InfoMagpie says "Magpie"
+// in the language of msgs.
+func (msgs Messages) InfoMagpie() string {
+	return Catalog.Format(msgs.locale, "infoMagpie", nil)
+}
+
+// InfoMagpieCalls says "Calls today"
+// in the language the app shows.
+func InfoMagpieCalls() string { return In(i18n.Locale()).InfoMagpieCalls() }
+
+// InfoMagpieCalls says "Calls today"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieCalls() string {
+	return Catalog.Format(msgs.locale, "infoMagpieCalls", nil)
+}
+
+// InfoMagpieCost says "Cost"
+// in the language the app shows.
+func InfoMagpieCost() string { return In(i18n.Locale()).InfoMagpieCost() }
+
+// InfoMagpieCost says "Cost"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieCost() string {
+	return Catalog.Format(msgs.locale, "infoMagpieCost", nil)
+}
+
+// InfoMagpieTokens says "Tokens"
+// in the language the app shows.
+func InfoMagpieTokens() string { return In(i18n.Locale()).InfoMagpieTokens() }
+
+// InfoMagpieTokens says "Tokens"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieTokens() string {
+	return Catalog.Format(msgs.locale, "infoMagpieTokens", nil)
+}
+
+// InfoMagpieLeft says "Latest call"
+// in the language the app shows.
+func InfoMagpieLeft() string { return In(i18n.Locale()).InfoMagpieLeft() }
+
+// InfoMagpieLeft says "Latest call"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieLeft() string {
+	return Catalog.Format(msgs.locale, "infoMagpieLeft", nil)
+}
+
+// InfoMagpieLatest says "Latest"
+// in the language the app shows.
+func InfoMagpieLatest() string { return In(i18n.Locale()).InfoMagpieLatest() }
+
+// InfoMagpieLatest says "Latest"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieLatest() string {
+	return Catalog.Format(msgs.locale, "infoMagpieLatest", nil)
+}
+
+// InfoMagpieSession says "This conversation"
+// in the language the app shows.
+func InfoMagpieSession() string { return In(i18n.Locale()).InfoMagpieSession() }
+
+// InfoMagpieSession says "This conversation"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieSession() string {
+	return Catalog.Format(msgs.locale, "infoMagpieSession", nil)
+}
+
+// InfoMagpieCache says "cached"
+// in the language the app shows.
+func InfoMagpieCache() string { return In(i18n.Locale()).InfoMagpieCache() }
+
+// InfoMagpieCache says "cached"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieCache() string {
+	return Catalog.Format(msgs.locale, "infoMagpieCache", nil)
+}
+
+// InfoMagpieDown says "Magpie is not running"
+// in the language the app shows.
+func InfoMagpieDown() string { return In(i18n.Locale()).InfoMagpieDown() }
+
+// InfoMagpieDown says "Magpie is not running"
+// in the language of msgs.
+func (msgs Messages) InfoMagpieDown() string {
+	return Catalog.Format(msgs.locale, "infoMagpieDown", nil)
+}

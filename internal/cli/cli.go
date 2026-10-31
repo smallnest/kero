@@ -974,6 +974,9 @@ func daemonCmd(args []string, host string) error {
 			}
 			fmt.Printf("kerod %d running (Kero %s, pid %d) for %s: %d sessions, %d panes\n", c.Welcome.Version, orDash(c.Welcome.App), c.Welcome.PID,
 				time.Since(time.UnixMilli(c.Welcome.Started)).Round(time.Second), len(st.Sessions), panes)
+			if client.Settle(c.Welcome) {
+				fmt.Println("  an older Kero's kerod runs too: the app stops it as it connects, so that the two do not stop each other")
+			}
 		}
 		fmt.Println("socket:", proto.SocketPath())
 		if svc.Installed {
@@ -1013,6 +1016,24 @@ func daemonCmd(args []string, host string) error {
 		if err != nil {
 			return err
 		}
+		// A kerod settles before the next starts: the two stop each other,
+		// and an older Kero too would start the next.
+		settle := func() {
+			c, err := client.Connect(true)
+			if err != nil {
+				return
+			}
+			old, pid := client.Settle(c.Welcome), c.Welcome.PID
+			c.Close()
+			if old {
+				client.SettleStop(pid)
+			} else {
+				// The kerod is this version's: it stays stopped until a
+				// connection starts it.
+				time.Sleep(time.Second)
+			}
+		}
+		settle()
 		// The service's manager stops and restarts it, but Task
 		// Scheduler, whose kerod stops as any, and starts with the task.
 		if service.Installed() && !f.set["force"] {
@@ -1033,11 +1054,7 @@ func daemonCmd(args []string, host string) error {
 			return err
 		}
 		if sub == "restart" {
-			c, err := client.Connect(false)
-			if err != nil {
-				return err
-			}
-			c.Close()
+			settle()
 			fmt.Println("kerod restarted")
 		}
 		return nil

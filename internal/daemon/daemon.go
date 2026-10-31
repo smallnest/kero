@@ -58,6 +58,19 @@ type Daemon struct {
 	clients  map[*proto.ClientInfo]struct{} // the connections, for kero clients
 	conns    int
 	idleAt   time.Time
+	// restoredAt is when what a restore started again last changed, as
+	// Unix milliseconds (store.go).
+	restoredAt int64
+	// restoreN is the time of the restore's last mark, lastStopped that of
+	// kerod's last stop that no client asked for (store.go).
+	restoreN    int64
+	lastStopped int64
+	// markPane, markWhen and markAt are a restore's mark: the pane of it,
+	// the time it names and the time to write for it. markDone draws it
+	// (store.go).
+	markPane *pane
+	markWhen string
+	markAt   int64
 	ending   bool
 	// restarting: kerod stops to start again, as a remote client asked
 	// (proto.KindRestart).
@@ -181,7 +194,15 @@ func Run(opts Options) error {
 	notifyStop(sigs)
 	go func() {
 		s := <-sigs
-		lg.Printf("%v: saving and exiting", s)
+		d.logStop(lg, s)
+		if s == os.Interrupt || s == syscall.SIGTERM {
+			// No client asked: the next restore draws no new mark, but
+			// not one that drew its own, as kerod that started as the
+			// app connected stops.
+			if !d.markDrawn() {
+				d.markSettled()
+			}
+		}
 		d.saveHistories(true)
 		d.saveState()
 		d.saveConversations()
@@ -189,6 +210,7 @@ func Run(opts Options) error {
 	}()
 
 	go d.broadcastLoop()
+	go d.markOnce()
 	go d.saveLoop()
 	go d.tickLoop()
 	go d.git.loop()
@@ -263,6 +285,25 @@ func localPeer(c net.Conn) string {
 		return fmt.Sprintf("uid %d", uid)
 	}
 	return "local"
+}
+
+// logStop logs a signal that ends kerod, and who asked it to: one that
+// did not intend to, as a kill of every process named Kero, is an old
+// kerod's, which the app sees as it runs and stops as kerod is restarted
+// (client.Settle).
+func (d *Daemon) logStop(lg *log.Logger, s os.Signal) {
+	if sig, ok := s.(syscall.Signal); ok && (sig == syscall.SIGINT || sig == syscall.SIGTERM) {
+		who := "no client asked"
+		if leftover(os.Getppid()) {
+			who += ", another Kero runs"
+		}
+		lg.Printf("%v: saving and exiting (%s)", s, who)
+		d.mu.Lock()
+		d.lastStopped = time.Now().UnixMilli()
+		d.mu.Unlock()
+		return
+	}
+	lg.Printf("%v: saving and exiting", s)
 }
 
 func (d *Daemon) stop() { d.quitOnce.Do(func() { close(d.quit) }) }

@@ -356,6 +356,20 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		if err := decode(&p); err != nil {
 			return nil, err
 		}
+		if p.Session == "" {
+			// The agent's session as the pane is told of it.
+			pn, _ := d.agentPane(p.PID, p.Agent, p.Dir)
+			if pn == nil {
+				return nil, fmt.Errorf("no pane runs %s", p.Agent)
+			}
+			pn.mu.Lock()
+			as, _ := pn.agentLocked()
+			pn.mu.Unlock()
+			if as == nil {
+				return nil, fmt.Errorf("no %s session in the pane", p.Agent)
+			}
+			return proto.AgentSessionResult{Pane: pn.info.ID, Session: as.ID}, nil
+		}
 		as := &proto.AgentSession{Agent: p.Agent, ID: p.Session}
 		if resumeCommand(as) == nil {
 			return nil, fmt.Errorf("no agent session %q of %q", p.Session, p.Agent)
@@ -604,6 +618,16 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 			return nil, err
 		}
 		return fsRead(p)
+
+	case "fs.home":
+		return fsHome(), nil
+
+	case "pane.processes":
+		var p proto.ProcessesParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return processes(p)
 
 	case "paste.file":
 		var p proto.PasteFileParams
