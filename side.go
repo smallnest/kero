@@ -43,6 +43,14 @@ type sideState struct {
 	drag    float32 // the width as a drag of the edge began, 0 while none
 	focused bool    // the panel has the keyboard: its Escape, its diff's find
 	view    string  // the view shown last, kept as the panel closes
+	// crowded tells that the window is too narrow for the panel beside
+	// the panes (minCards), which it then leaves to them while it is
+	// open, unless the user opens it anyway, forced, until the window
+	// widens.
+	crowded, forced bool
+	// rowW is the width of the row of the panes and the panel this frame,
+	// of which the panel's comes (sideRowW).
+	rowW    float32
 	changes changesState
 	files   filesState
 	// fileOpeners tells that the left control of the header is pressed,
@@ -117,9 +125,12 @@ func (a *App) toggleSide(view string) {
 			v = sideChanges
 		}
 		a.side.view, a.prefs.Side, a.prefs.SideTab = v, v, v
+		// Shown anyway, though the window crowds it.
+		a.side.forced = a.side.crowded
 	case view == "" || a.sideTab() == view:
 		a.side.view, a.prefs.SideTab = a.sideTab(), a.sideTab()
 		a.prefs.Side = ""
+		a.side.forced = false
 		a.side.focused = false
 		a.focusTerminal()
 	default:
@@ -142,7 +153,14 @@ func (a *App) sideTab() string {
 }
 
 // rightShown tells that the panel shows.
-func (a *App) rightShown() bool { return a.prefs.Side != "" }
+func (a *App) rightShown() bool { return a.prefs.Side != "" && (!a.side.crowded || a.side.forced) }
+
+// minCards is the room the panel leaves the panes: in a window narrower,
+// it gets out of their way (sideState.crowded).
+const minCards = 420
+
+// hiddenSideWidth is the panel's width it adds to a window that hides it.
+const hiddenSideWidth = 24
 
 // sideView is the view the panel shows, or would show when opened: the
 // last it showed, Changes for none.
@@ -164,6 +182,15 @@ func (a *App) showSide(view string) {
 	}
 }
 
+// sideRowW is the width of a row of the panes and the panel in a window
+// winW wide, of which the panel's comes.
+func sideRowW(winW float32, ch chrome) float32 {
+	if winW <= 0 {
+		return 0
+	}
+	return winW - ch.sideW - cardGap - ch.mainPad + hiddenSideWidth
+}
+
 // sideWidth is the panel's width in a row of width w, leaving the panes
 // their room.
 func (a *App) sideWidth(w float32) float32 {
@@ -177,9 +204,12 @@ func (a *App) sideWidth(w float32) float32 {
 	return max(sw, minSide)
 }
 
-// sideEdge is the gap between the panes and the panel, which a drag moves.
+// sideEdge is the gap between the panes and the panel, which a drag moves,
+// and whose edge takes the pointer on either side of it, over the panes
+// and the panel too, which would take it from all but its gap.
 func (a *App) sideEdge(c *ui.Context, pal *palette, row float32) {
-	d := ui.Box(c.Key("side-edge")).Width(paneGap).Shrink(0).Cursor(ui.CursorResizeColumn)
+	d := ui.Box(c.Key("side-edge")).Absolute().Top(0).Bottom(0).Width(paneGap + 8).Right(a.sideWidth(row) + 4 - paneGap/2).
+		Cursor(ui.CursorResizeColumn).KeepFocus()
 	if d.Hovered() || d.Pressed() {
 		d.Draw(func(p *ui.Painter, r ui.Rect) {
 			p.Fill(ui.Rect{X: r.X + r.W/2 - 1.5, Y: r.Y + r.H/2 - 18, W: 3, H: 36}, pal.textFaint.Alpha(0.7), 1.5)

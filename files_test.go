@@ -287,3 +287,47 @@ func TestFilesIconsAndMenu(t *testing.T) {
 	}
 	a.confirm = nil
 }
+
+// A window too narrow for the panel beside the panes leaves it to them,
+// kept open, which toggling opens anyway, until the window widens.
+func TestPanelMakesRoom(t *testing.T) {
+	a := testApp(t)
+	a.prefs.Side = sideFiles
+	tt := ui.NewTester(a.view, 1280, 720)
+	settle := func() {
+		tt.Frame()
+		tt.Advance(time.Second)
+		tt.Frame()
+	}
+	settle()
+	if a.side.crowded {
+		t.Fatal("the window crowds the panel")
+	}
+	// The cards, as the panel shows beside them, come in from the sidebar.
+	for i := 0; i < 20 && !tt.HasText("Split Right (⌘D)"); i++ {
+		tt.Advance(time.Second)
+		tt.Frame()
+	}
+	tt.SetSize(640, 720)
+	settle()
+	if !a.side.crowded || a.prefs.Side != sideFiles || a.rightShown() {
+		t.Fatalf("a narrow window left the panel crowded %v, shown %v, opened %q", a.side.crowded, a.rightShown(), a.prefs.Side)
+	}
+	a.toggleSide("")
+	settle()
+	if !a.rightShown() || !a.side.forced {
+		t.Fatal("toggling didn't show the panel in a narrow window")
+	}
+	// Room again, then narrow again, hides it.
+	tt.SetSize(1280, 720)
+	settle()
+	if !a.rightShown() {
+		t.Fatal("a wide window hid the panel")
+	}
+	a.showSide(sideInfo)
+	tt.SetSize(640, 720)
+	settle()
+	if a.rightShown() {
+		t.Error("narrowing the window again kept the panel")
+	}
+}

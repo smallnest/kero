@@ -105,6 +105,17 @@ func (a *App) view(c *ui.Context) {
 	progress := row.AnimateTo("sidebar", b2f(!a.prefs.SidebarHidden), sidebarMotion)
 	a.chrome = chromeFor(progress, a.prefs.SidebarWidth, bar)
 	shown := a.chrome.shown
+	// The panel is not crowded by a window too narrow for it beside the
+	// panes, which it then leaves to them while it is open, unless the
+	// user opens it anyway (sideState.forced). The row's width is this
+	// frame's, as its bounds have it: the last frame's would lag a frame
+	// as the window resizes.
+	winW, _ := c.Size()
+	a.side.crowded = winW > 0 && sideRowW(winW, a.chrome) < minCards
+	a.side.rowW = sideRowW(winW, a.chrome)
+	if !a.side.crowded {
+		a.side.forced = false
+	}
 	row.Children(func() {
 		w := a.chrome.sideW
 		side := ui.Row(c).Width(w).Shrink(0).AlignItems(ui.Stretch).ClipX()
@@ -985,13 +996,18 @@ func (a *App) card(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32) 
 		// The panes, then the side panel, which takes the window's
 		// right edge.
 		row := ui.Row(c.Key("with-side")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Bind(a.paneRef("with-side"))
-		w := a.paneRef("with-side").Bounds(c).W
+		w := a.side.rowW
+		if a.side.rowW == 0 {
+			w = a.paneRef("with-side").Bounds(c).W
+		}
 		row.Children(func() {
 			ui.Column(c.Key("panes")).Grow(1).Basis(0).MinWidth(0).AlignItems(ui.Stretch).Children(func() {
 				a.panes(c, pal, bar, shown, s, false)
 			})
 			a.sideEdge(c, pal, w)
-			a.sidePanel(c, pal, s, a.sideWidth(w), true)
+			if a.rightShown() {
+				a.sidePanel(c, pal, s, a.sideWidth(w), true)
+			}
 		})
 		return
 	}
