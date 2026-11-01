@@ -4,6 +4,19 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.34
+
+- The Files tab shows each file and folder with the icon of its kind.
+- The Files tab makes, renames and deletes files. A row's menu (right
+  click) makes a file or folder in its folder, or renames or deletes the
+  row; the buttons above the tree make a file or folder at its top, and
+  fold the folders open. A local file deleted goes to the Trash; a file
+  on a remote host is deleted for good, as kerod has no trash there.
+- A file opened as an image shows as an image, and its header opens it
+  in a file pane or in a program. A file's text follows the file as it
+  changes, and a click on it again shows the viewer once its button
+  hides it.
+
 ## 2.1.33
 
 - The side panel has an Info tab (⌥⌘I): the focused pane's working
