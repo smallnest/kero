@@ -139,3 +139,37 @@ func TestPasteDirPrivate(t *testing.T) {
 		t.Error("pasted through a link")
 	}
 }
+
+// The Files tab makes, moves and deletes files, and nothing of the
+// volume's root or the home.
+func TestFSEdit(t *testing.T) {
+	var d Daemon
+	dir := t.TempDir()
+	if err := d.fsCreate(proto.FSCreateParams{Path: filepath.Join(dir, "a", "b.go")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.fsCreate(proto.FSCreateParams{Path: filepath.Join(dir, "a", "b.go")}); err == nil {
+		t.Error("made a file that is there")
+	}
+	if err := d.fsCreate(proto.FSCreateParams{Path: filepath.Join(dir, "c"), Dir: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.fsRename(proto.FSRenameParams{From: filepath.Join(dir, "a", "b.go"), To: filepath.Join(dir, "c", "d.go")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "c", "d.go")); err != nil {
+		t.Error("renamed:", err)
+	}
+	if err := d.fsRename(proto.FSRenameParams{From: filepath.Join(dir, "c"), To: proto.Home()}); err == nil {
+		t.Error("moved a folder over the home")
+	}
+	if err := d.fsDelete(proto.FSDeleteParams{Path: filepath.Join(dir, "c")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "c")); !os.IsNotExist(err) {
+		t.Error("deleted nothing:", err)
+	}
+	if err := d.fsDelete(proto.FSDeleteParams{Path: string(filepath.Separator)}); err == nil {
+		t.Error("deleted the root")
+	}
+}

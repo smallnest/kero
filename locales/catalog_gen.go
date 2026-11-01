@@ -4288,6 +4288,16 @@ func (msgs Messages) FilesGone() string {
 	return Catalog.Format(msgs.locale, "filesGone", nil)
 }
 
+// FilesCollapseFolders says "Collapse Folders"
+// in the language the app shows.
+func FilesCollapseFolders() string { return In(i18n.Locale()).FilesCollapseFolders() }
+
+// FilesCollapseFolders says "Collapse Folders"
+// in the language of msgs.
+func (msgs Messages) FilesCollapseFolders() string {
+	return Catalog.Format(msgs.locale, "filesCollapseFolders", nil)
+}
+
 // FilesCantReadFolder says "Can't read the folder"
 // in the language the app shows.
 func FilesCantReadFolder() string { return In(i18n.Locale()).FilesCantReadFolder() }
@@ -4318,14 +4328,152 @@ func (msgs Messages) FilesEmpty() string {
 	return Catalog.Format(msgs.locale, "filesEmpty", nil)
 }
 
-// FilesCollapseFolders says "Collapse Folders"
+// FilesNewFile says "New File…"
 // in the language the app shows.
-func FilesCollapseFolders() string { return In(i18n.Locale()).FilesCollapseFolders() }
+func FilesNewFile() string { return In(i18n.Locale()).FilesNewFile() }
 
-// FilesCollapseFolders says "Collapse Folders"
+// FilesNewFile says "New File…"
 // in the language of msgs.
-func (msgs Messages) FilesCollapseFolders() string {
-	return Catalog.Format(msgs.locale, "filesCollapseFolders", nil)
+func (msgs Messages) FilesNewFile() string {
+	return Catalog.Format(msgs.locale, "filesNewFile", nil)
+}
+
+// FilesNewFolder says "New Folder…"
+// in the language the app shows.
+func FilesNewFolder() string { return In(i18n.Locale()).FilesNewFolder() }
+
+// FilesNewFolder says "New Folder…"
+// in the language of msgs.
+func (msgs Messages) FilesNewFolder() string {
+	return Catalog.Format(msgs.locale, "filesNewFolder", nil)
+}
+
+// FilesRename says "Rename…"
+// in the language the app shows.
+func FilesRename() string { return In(i18n.Locale()).FilesRename() }
+
+// FilesRename says "Rename…"
+// in the language of msgs.
+func (msgs Messages) FilesRename() string {
+	return Catalog.Format(msgs.locale, "filesRename", nil)
+}
+
+// FilesDeleteItem says "Delete…"
+// in the language the app shows.
+func FilesDeleteItem() string { return In(i18n.Locale()).FilesDeleteItem() }
+
+// FilesDeleteItem says "Delete…"
+// in the language of msgs.
+func (msgs Messages) FilesDeleteItem() string {
+	return Catalog.Format(msgs.locale, "filesDeleteItem", nil)
+}
+
+// FilesDeleteFileTitle says "Delete “{name}”?"
+// in the language the app shows.
+func FilesDeleteFileTitle(name string) string { return In(i18n.Locale()).FilesDeleteFileTitle(name) }
+
+// FilesDeleteFileTitle says "Delete “{name}”?"
+// in the language of msgs.
+func (msgs Messages) FilesDeleteFileTitle(name string) string {
+	return Catalog.Format(msgs.locale, "filesDeleteFileTitle", map[string]any{"name": name})
+}
+
+// FilesDeleteFolderTitle says "Delete the folder “{name}” and everything in it?"
+// in the language the app shows.
+func FilesDeleteFolderTitle(name string) string {
+	return In(i18n.Locale()).FilesDeleteFolderTitle(name)
+}
+
+// FilesDeleteFolderTitle says "Delete the folder “{name}” and everything in it?"
+// in the language of msgs.
+func (msgs Messages) FilesDeleteFolderTitle(name string) string {
+	return Catalog.Format(msgs.locale, "filesDeleteFolderTitle", map[string]any{"name": name})
+}
+
+// FilesDeleteTrashDetail says "You can restore it from the Trash."
+// in the language the app shows.
+func FilesDeleteTrashDetail() string { return In(i18n.Locale()).FilesDeleteTrashDetail() }
+
+// FilesDeleteTrashDetail says "You can restore it from the Trash."
+// in the language of msgs.
+func (msgs Messages) FilesDeleteTrashDetail() string {
+	return Catalog.Format(msgs.locale, "filesDeleteTrashDetail", nil)
+}
+
+// FilesDeleteForGoodDetail says "It's deleted for good: this host has no trash to move it to."
+// in the language the app shows.
+func FilesDeleteForGoodDetail() string { return In(i18n.Locale()).FilesDeleteForGoodDetail() }
+
+// FilesDeleteForGoodDetail says "It's deleted for good: this host has no trash to move it to."
+// in the language of msgs.
+func (msgs Messages) FilesDeleteForGoodDetail() string {
+	return Catalog.Format(msgs.locale, "filesDeleteForGoodDetail", nil)
+}
+
+// FilesMoveToTrash says "Move to Trash"
+// in the language the app shows.
+func FilesMoveToTrash() string { return In(i18n.Locale()).FilesMoveToTrash() }
+
+// FilesMoveToTrash says "Move to Trash"
+// in the language of msgs.
+func (msgs Messages) FilesMoveToTrash() string {
+	return Catalog.Format(msgs.locale, "filesMoveToTrash", nil)
+}
+
+// FilesDelete says "Delete"
+// in the language the app shows.
+func FilesDelete() string { return In(i18n.Locale()).FilesDelete() }
+
+// FilesDelete says "Delete"
+// in the language of msgs.
+func (msgs Messages) FilesDelete() string {
+	return Catalog.Format(msgs.locale, "filesDelete", nil)
+}
+
+// FilesDeleteFailed says "Couldn't delete “{name}”: {error}"
+// in the language the app shows.
+func FilesDeleteFailed(name string, error string) string {
+	return In(i18n.Locale()).FilesDeleteFailed(name, error)
+}
+
+// FilesDeleteFailed says "Couldn't delete “{name}”: {error}"
+// in the language of msgs.
+func (msgs Messages) FilesDeleteFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "filesDeleteFailed", map[string]any{"name": name, "error": error})
+}
+
+// FilesCreateFailed says "Couldn't create “{name}”: {error}"
+// in the language the app shows.
+func FilesCreateFailed(name string, error string) string {
+	return In(i18n.Locale()).FilesCreateFailed(name, error)
+}
+
+// FilesCreateFailed says "Couldn't create “{name}”: {error}"
+// in the language of msgs.
+func (msgs Messages) FilesCreateFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "filesCreateFailed", map[string]any{"name": name, "error": error})
+}
+
+// FilesRenameFailed says "Couldn't rename “{name}”: {error}"
+// in the language the app shows.
+func FilesRenameFailed(name string, error string) string {
+	return In(i18n.Locale()).FilesRenameFailed(name, error)
+}
+
+// FilesRenameFailed says "Couldn't rename “{name}”: {error}"
+// in the language of msgs.
+func (msgs Messages) FilesRenameFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "filesRenameFailed", map[string]any{"name": name, "error": error})
+}
+
+// FilesBadName says "“{name}” can't be a name here"
+// in the language the app shows.
+func FilesBadName(name string) string { return In(i18n.Locale()).FilesBadName(name) }
+
+// FilesBadName says "“{name}” can't be a name here"
+// in the language of msgs.
+func (msgs Messages) FilesBadName(name string) string {
+	return Catalog.Format(msgs.locale, "filesBadName", map[string]any{"name": name})
 }
 
 // FilesNoFolderDetail says "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane."

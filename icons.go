@@ -100,6 +100,5 @@ func programIcon(p *proto.Pane) *ui.SVG {
 
 // The Files tab's icons.
 var (
-	treeIcon     = glyph("f7-list-bullet-indent")
 	collapseIcon = glyph("f7-rectangle-compress-vertical")
 )

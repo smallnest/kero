@@ -140,6 +140,19 @@ type (
 		Path string `json:"path"`
 		Base string `json:"base,omitempty"`
 	}
+	FSCreateParams struct {
+		Path string `json:"path"`
+		Dir  bool   `json:"dir,omitempty"`
+	}
+	// FSRenameParams move a file or folder to a path that is free.
+	FSRenameParams struct {
+		From string `json:"from"`
+		To   string `json:"to"`
+	}
+	// FSDeleteParams delete a file or folder, and what is in it.
+	FSDeleteParams struct {
+		Path string `json:"path"`
+	}
 	FSStat struct {
 		Path   string `json:"path"` // absolute
 		Exists bool   `json:"exists"`

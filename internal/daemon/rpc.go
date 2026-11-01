@@ -605,6 +605,27 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		}
 		return fsList(p)
 
+	case "fs.create":
+		var p proto.FSCreateParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return nil, d.fsCreate(p)
+
+	case "fs.rename":
+		var p proto.FSRenameParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return nil, d.fsRename(p)
+
+	case "fs.delete":
+		var p proto.FSDeleteParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return nil, d.fsDelete(p)
+
 	case "fs.stat":
 		var p proto.FSStatParams
 		if err := decode(&p); err != nil {

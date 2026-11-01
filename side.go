@@ -225,11 +225,13 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 			}
 			ui.Box(c.Key("drag")).Grow(1).AlignSelf(ui.Stretch).DragWindow()
 			if view == sideFiles && a.side.files.views[s.ID] != nil {
-				iconButton(c, "files-toggle-view", docIcon, a.tip(locales.FilesCloseFile(), "files-close"), pal, func() { a.defer_(func() {
-					if fv := a.side.files.views[s.ID]; fv != nil {
-						fv.open = false
-					}
-				}) })
+				iconButton(c, "files-toggle-view", docIcon, a.tip(locales.FilesCloseFile(), "files-close"), pal, func() {
+					a.defer_(func() {
+						if fv := a.side.files.views[s.ID]; fv != nil {
+							fv.open = false
+						}
+					})
+				})
 			}
 			iconButton(c, "close-side", closeIcon, a.tip(locales.SideClose(), "changes.toggle"), pal, func() { a.defer_(func() { a.toggleSide("") }) })
 			if right {
