@@ -102,8 +102,7 @@ func (a *App) view(c *ui.Context) {
 	// A curve, not a spring: a spring's long tail crawls under a pixel a
 	// frame, which whole pixels turn into hops and holds, a shake as it
 	// settles. This one lands in about 13 frames, moving in every one.
-	progress := row.AnimateTo("sidebar", b2f(!a.prefs.SidebarHidden), sidebarMotion)
-	a.chrome = chromeFor(progress, a.prefs.SidebarWidth, bar)
+	var progress float32
 	shown := a.chrome.shown
 	// The panel is not crowded by a window too narrow for it beside the
 	// panes, which it then leaves to them while it is open, unless the
@@ -117,6 +116,8 @@ func (a *App) view(c *ui.Context) {
 		a.side.forced = false
 	}
 	row.Children(func() {
+		progress = ui.Column(c.Key("sidebar")).AnimateTo("shown", b2f(!a.prefs.SidebarHidden), sidebarMotion)
+		a.chrome = chromeFor(progress, a.prefs.SidebarWidth, bar)
 		w := a.chrome.sideW
 		side := ui.Row(c).Width(w).Shrink(0).AlignItems(ui.Stretch).ClipX()
 		if h := a.local(); h.conn == connReady && h.cl != nil && !a.prefs.SidebarHidden && !a.pal.open && !a.picker.open && (a.confirm == nil || !a.confirm.open) {
@@ -221,18 +222,16 @@ var tipsAt = map[string]ui.Point{}
 func pointerTooltip(c *ui.Context, el ui.Element, key, s string) {
 	el.Description(s)
 	const below = 18 // the arrow's height, from its tip
-	px, py, over := el.PointerPosition()
+	px, py, _ := el.PointerPosition()
 	at, showing := tipsAt[key]
 	if !showing {
 		b := el.Bounds()
 		at = ui.Point{X: b.X + px, Y: b.Y + py + below}
 	}
 	var spot ui.Element
-	if over {
-		ui.Overlay(c, func() {
-			spot = ui.Box(c.Key(key+"-at")).Absolute().Left(at.X).Top(at.Y).Size(0, 0).PassThrough()
-		})
-	}
+	ui.Overlay(c, func() {
+		spot = ui.Box(c.Key(key+"-at")).Absolute().Left(at.X).Top(at.Y).Size(0, 0).PassThrough()
+	})
 	shown := false
 	ui.TooltipBase(c, el, func(tip ui.Element) {
 		shown = true
@@ -247,9 +246,11 @@ func pointerTooltip(c *ui.Context, el ui.Element, key, s string) {
 		tip.MaxWidth(th.Space(80)).Padding(th.Space(1.25), th.Space(2)).Radius(th.Space(1.25)).
 			Background(fill).TextColor(text).FontSize(th.FontSize-1).Shadow(0, 2, 8, 0, ui.RGBA(0, 0, 0, 0.2))
 		tip.Children(func() { ui.Text(c, s) })
-		if over {
-			tip.AttachTo(spot, ui.AnchorTopLeft, ui.AnchorTopLeft)
-		}
+		// A box where the pointer came to rest, in the window, for the tip
+		// to attach to: a place in the row would be laid out a frame behind
+		// the row's, and the tip would show under the pointer, on the row
+		// after this one, while it keeps a place of its own.
+		tip.AttachTo(spot, ui.AnchorTopLeft, ui.AnchorTopLeft)
 	})
 	if shown {
 		tipsAt[key] = at

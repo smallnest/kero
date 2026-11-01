@@ -239,6 +239,12 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 		Focusable().Bind(a.paneRef("side-card"))
 	raised(card, pal)
 	a.side.focused = card.FocusWithin()
+	// It slides in from the window's edge, past which it starts, and
+	// fades as it comes, and out the same way as it closes, as the
+	// sidebar does.
+	in := card.AnimateTo("in", b2f(a.rightShown()), sidebarMotion)
+	card.Opacity(in)
+	card.Margin(0, (1-in)*cardGap, 0, 0)
 	view, set := a.sideView(), ""
 	card.Children(func() {
 		ui.Row(c.Key("hdr")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 16).Gap(8).Children(func() {

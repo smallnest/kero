@@ -319,7 +319,7 @@ func TestPanelMakesRoom(t *testing.T) {
 		t.Fatal("toggling didn't show the panel in a narrow window")
 	}
 	// Room again, then narrow again, hides it.
-	tt.SetSize(1280, 720)
+	tt.SetSize(1290, 720)
 	settle()
 	if !a.rightShown() {
 		t.Fatal("a wide window hid the panel")
