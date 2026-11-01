@@ -4278,6 +4278,36 @@ func (msgs Messages) FilesCantList() string {
 	return Catalog.Format(msgs.locale, "filesCantList", nil)
 }
 
+// FilesGone says "The file is gone"
+// in the language the app shows.
+func FilesGone() string { return In(i18n.Locale()).FilesGone() }
+
+// FilesGone says "The file is gone"
+// in the language of msgs.
+func (msgs Messages) FilesGone() string {
+	return Catalog.Format(msgs.locale, "filesGone", nil)
+}
+
+// FilesCantReadFolder says "Can't read the folder"
+// in the language the app shows.
+func FilesCantReadFolder() string { return In(i18n.Locale()).FilesCantReadFolder() }
+
+// FilesCantReadFolder says "Can't read the folder"
+// in the language of msgs.
+func (msgs Messages) FilesCantReadFolder() string {
+	return Catalog.Format(msgs.locale, "filesCantReadFolder", nil)
+}
+
+// FilesCantReadFile says "Can't read the file"
+// in the language the app shows.
+func FilesCantReadFile() string { return In(i18n.Locale()).FilesCantReadFile() }
+
+// FilesCantReadFile says "Can't read the file"
+// in the language of msgs.
+func (msgs Messages) FilesCantReadFile() string {
+	return Catalog.Format(msgs.locale, "filesCantReadFile", nil)
+}
+
 // FilesEmpty says "This folder is empty"
 // in the language the app shows.
 func FilesEmpty() string { return In(i18n.Locale()).FilesEmpty() }
@@ -4286,6 +4316,16 @@ func FilesEmpty() string { return In(i18n.Locale()).FilesEmpty() }
 // in the language of msgs.
 func (msgs Messages) FilesEmpty() string {
 	return Catalog.Format(msgs.locale, "filesEmpty", nil)
+}
+
+// FilesCollapseFolders says "Collapse Folders"
+// in the language the app shows.
+func FilesCollapseFolders() string { return In(i18n.Locale()).FilesCollapseFolders() }
+
+// FilesCollapseFolders says "Collapse Folders"
+// in the language of msgs.
+func (msgs Messages) FilesCollapseFolders() string {
+	return Catalog.Format(msgs.locale, "filesCollapseFolders", nil)
 }
 
 // FilesNoFolderDetail says "The session has no pane with a folder to show. Start one in a project, or cd in a terminal pane."

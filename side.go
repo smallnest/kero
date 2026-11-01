@@ -24,7 +24,7 @@ import (
 // session's agent or the user changed, each opening as its diff; and
 // Files (files.go), the worktree's tree, each file opening as its text.
 
-// The views' ids, as prefs.Side holds one.
+// The views' ids, as prefs.SideTab holds one.
 const (
 	sideChanges = "changes"
 	sideFiles   = "files"
@@ -45,6 +45,9 @@ type sideState struct {
 	view    string  // the view shown last, kept as the panel closes
 	changes changesState
 	files   filesState
+	// fileOpeners tells that the left control of the header is pressed,
+	// which shows the viewer, the file open, over the panel.
+	fileOpeners bool
 	// theme is the diffs' colors, made again only as the window's
 	// appearance or the terminals' themes change.
 	theme    *editor.Theme
@@ -104,7 +107,7 @@ type sideFile struct {
 // opens on view, or on the view the user saw last.
 func (a *App) toggleSide(view string) {
 	switch {
-	case a.prefs.Side == "":
+	case !a.rightShown():
 		// Closed: it opens on view, or on the view seen last.
 		v := view
 		if v == "" {
@@ -113,18 +116,33 @@ func (a *App) toggleSide(view string) {
 		if v == "" {
 			v = sideChanges
 		}
-		a.side.view, a.prefs.Side = v, v
-	case view == "" || a.prefs.Side == view:
-		a.side.view, a.prefs.Side = a.prefs.Side, ""
+		a.side.view, a.prefs.Side, a.prefs.SideTab = v, v, v
+	case view == "" || a.sideTab() == view:
+		a.side.view, a.prefs.SideTab = a.sideTab(), a.sideTab()
+		a.prefs.Side = ""
 		a.side.focused = false
 		a.focusTerminal()
 	default:
 		// Another view chosen: the panel turns to it.
-		a.side.view = view
-		a.prefs.Side = view
+		a.side.view, a.prefs.Side, a.prefs.SideTab = view, view, view
 	}
 	a.savePrefs()
 }
+
+// sideTab is the tab the panel shows, or showed last while it hides.
+func (a *App) sideTab() string {
+	tab := a.prefs.Side
+	if tab == "" {
+		tab = a.prefs.SideTab
+	}
+	if tab != sideFiles && tab != sideInfo {
+		tab = sideChanges
+	}
+	return tab
+}
+
+// rightShown tells that the panel shows.
+func (a *App) rightShown() bool { return a.prefs.Side != "" }
 
 // sideView is the view the panel shows, or would show when opened: the
 // last it showed, Changes for none.
@@ -140,8 +158,8 @@ func (a *App) sideView() string {
 
 // showSide shows a view of the panel, keeping it open when it shows it.
 func (a *App) showSide(view string) {
-	if a.prefs.Side != view {
-		a.prefs.Side = view
+	if a.prefs.Side != view || a.prefs.SideTab != view {
+		a.prefs.Side, a.prefs.SideTab = view, view
 		a.savePrefs()
 	}
 }
@@ -196,9 +214,9 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 		ui.Row(c.Key("hdr")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 16).Gap(8).Children(func() {
 			// The views, the one shown marked, as a pane's header shows
 			// its program.
-			a.sideTab(c, pal, sideInfo, locales.SideInfo(), infoIcon, view == sideInfo, "info.toggle", func() { set = sideInfo })
-			a.sideTab(c, pal, sideChanges, locales.SideChanges(), diffIcon, view == sideChanges, "changes.toggle", func() { set = sideChanges })
-			a.sideTab(c, pal, sideFiles, locales.SideFiles(), folderIcon, view == sideFiles, "files.toggle", func() { set = sideFiles })
+			a.sideTabButton(c, pal, sideInfo, locales.SideInfo(), infoIcon, view == sideInfo, "info.toggle", func() { set = sideInfo })
+			a.sideTabButton(c, pal, sideChanges, locales.SideChanges(), diffIcon, view == sideChanges, "changes.toggle", func() { set = sideChanges })
+			a.sideTabButton(c, pal, sideFiles, locales.SideFiles(), folderIcon, view == sideFiles, "files.toggle", func() { set = sideFiles })
 			if set != "" {
 				a.defer_(func() { a.showSide(set) })
 			}
@@ -206,7 +224,14 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 				ui.Text(c, a.hostOf(s.ID).shortDir(dir)).FontSize(13).TextColor(pal.textFaint).SingleLine().Ellipsis("…").Shrink(2).MinWidth(0).Tooltip(dir)
 			}
 			ui.Box(c.Key("drag")).Grow(1).AlignSelf(ui.Stretch).DragWindow()
-			iconButton(c, "close-side", closeIcon, a.tip(locales.SideClose(), "changes.toggle"), pal, func() { a.defer_(func() { a.toggleSide(a.prefs.Side) }) })
+			if view == sideFiles && a.side.files.views[s.ID] != nil {
+				iconButton(c, "files-toggle-view", docIcon, a.tip(locales.FilesCloseFile(), "files-close"), pal, func() { a.defer_(func() {
+					if fv := a.side.files.views[s.ID]; fv != nil {
+						fv.open = false
+					}
+				}) })
+			}
+			iconButton(c, "close-side", closeIcon, a.tip(locales.SideClose(), "changes.toggle"), pal, func() { a.defer_(func() { a.toggleSide("") }) })
 			if right {
 				windowControls(c, pal, a.win)
 			}
@@ -214,7 +239,7 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 		ui.Column(c.Key("body")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
 			switch view {
 			case sideFiles:
-				a.filesView(c, pal, s)
+				a.filesSide(c, pal, s)
 				return
 			case sideInfo:
 				a.infoView(c, pal, s)
@@ -222,17 +247,24 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 			}
 			a.changesView(c, pal, s, width)
 		})
+		// The viewer of a file of Files, over the tab while its button in
+		// the header, its icon, tells so.
+		if fv := a.side.files.views[s.ID]; view == sideFiles && fv != nil && fv.open {
+			ui.Column(c.Key("file")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
+				a.fileViewer(c, pal, s, fv)
+			})
+		}
 	})
 	if card.Shortcut(0, ui.KeyEscape) {
 		a.focusTerminal()
 	}
 }
 
-// sideTab is a view's name in the panel's header, a click showing it: the
+// sideTabButton is a view's name in the panel's header, a click showing it: the
 // one shown in the text's color, the others faint. The header drags the
 // window where no tab is, as the window controls are, which the tabs are
 // part of as windowControls' buttons are.
-func (a *App) sideTab(c *ui.Context, pal *palette, id, label string, svg *ui.SVG, on bool, action string, fn func()) {
+func (a *App) sideTabButton(c *ui.Context, pal *palette, id, label string, svg *ui.SVG, on bool, action string, fn func()) {
 	fg := pal.textFaint
 	if on {
 		fg = pal.text

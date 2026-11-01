@@ -978,7 +978,7 @@ func (a *App) card(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32) 
 		h = a.hostOf(s.ID)
 	}
 	if s != nil && h.conn != connVersion && a.loaded {
-		if a.prefs.Side == "" {
+		if !a.rightShown() {
 			a.panes(c, pal, bar, shown, s, true)
 			return
 		}

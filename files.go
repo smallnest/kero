@@ -3,506 +3,509 @@ package main
 import (
 	"bytes"
 	"errors"
+	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 
+	"kero/internal/client"
 	"kero/internal/proto"
 
 	"kero/locales"
 )
 
-// The Files view is the panel's second: a session's folder, a tree of it,
-// and under the tree the file chosen in it, its text, or its image. The
-// tree lists a folder as it opens it, from the kerod of the pane's host,
-// and so it shows a remote host's files as this machine's.
+// The Files tab is the tree of the worktree of the pane the user is in,
+// else of its directory, as kerod lists it (fs.list), a folder at a time
+// as the user unfolds it: what git ignores shows faded, and .git not at
+// all. A click on a file opens it in the viewer beside the panes, as text,
+// or, an image, as an image; its header opens it in a file pane, in the
+// host's editor, or in the OS app.
+
+// filesState is the Files tab's.
+type filesState struct {
+	// dirs are the folders listed, open the folders unfolded, by host and
+	// path (filesKey); places the trees' places, by host and root.
+	dirs   map[string]*dirList
+	open   map[string]bool
+	places map[string]*ui.ListState
+	// gen counts the times the tab came to show, each of which lists its
+	// folders anew; shown tells it shows this frame, and showed that it
+	// did the frame before.
+	gen           int
+	shown, showed bool
+	// views are what the viewer shows, by session.
+	views map[string]*fileView
+}
+
+// dirList is a folder as kerod listed it.
+type dirList struct {
+	entries []proto.FSEntry
+	err     string
+	busy    bool
+	stamp   string // the worktree's status it was listed at (gitStamp)
+	gen     int
+	fetched time.Time
+}
+
+// fileItem is a row of the tree: a file or a folder, depth folders in, or
+// why a folder shows nothing, err.
+type fileItem struct {
+	proto.FSEntry
+	path  string // on the host
+	rel   string // in the root, with slashes
+	depth int
+	open  bool
+	err   string
+}
+
+// fileView is a file the viewer shows, as its text, or as an image.
+type fileView struct {
+	pane string // a pane of the host it is on
+	path string // on the host
+	rel  string // in the Files' root, which its header shows
+	st   *editor.State
+	bm   *ui.Bitmap // of an image
+	err  string
+	// gone, large and binary say why it shows no text: there is no file
+	// there any more, or one too large, or one that isn't text.
+	gone, large, binary bool
+	open                bool // the tab shows it over its tree
+	busy                bool
+	stamp               string
+	fetched             time.Time
+}
+
+// The viewer bounds a file shown as text, and one shown as an image.
+const (
+	maxView  = 4 << 20
+	maxImage = 32 << 20
+)
 
 // errFilesGone is a file read that is no longer there.
 var errFilesGone = errors.New("no such file")
 
-const (
-	// treeShare is the share of the view the tree first takes, above a
-	// file.
-	treeShare = 0.5
-	// maxListed bounds the folders the tree lists at once: the rest come
-	// as those answered are.
-	maxListed = 4
-	// maxText bounds a file shown as text, and maxImage one shown as an
-	// image.
-	maxText  = 4 << 20
-	maxImage = 32 << 20
-)
-
-// filesState is the Files view's, kept across the views and the sessions.
-type filesState struct {
-	trees map[string]*fileTree // by host and folder
-	// shown is the tree the view shows, nil while it shows none; share
-	// the share of the view the tree takes, and drag where a drag of the
-	// edge between them began, 0 while none.
-	shown    *fileTree
-	share    float32
-	drag     float32
-	dragging bool
-}
-
-// fileTree is a folder's tree, as the user opened it: a folder's listing
-// as it came, its choice, the folders open, and the file shown under it.
-type fileTree struct {
-	pane    string // the pane whose host it is of
-	root    string
-	dirs    map[string]*fileDir
-	isDir   map[string]bool
-	outline ui.OutlineState[string]
-	chosen  int
-	file    *openFile // the file shown under the tree, nil for none
-	shown   string    // the file shown, as the tree writes it, "" for none
-}
-
-// fileDir is a folder of a tree: its files, as listed, or why it did not
-// list.
-type fileDir struct {
-	paths []string
-	busy  bool
-	err   string
-	// gen is the listing's: an answer to an older one, as of a refresh,
-	// is dropped.
-	gen     uint64
-	fetched time.Time
-}
-
-// openFile is the file shown under the tree.
-type openFile struct {
-	path   string
-	st     *editor.State
-	bm     *ui.Bitmap
-	busy   bool
-	binary bool
-	large  bool
-	err    string
-	gen    uint64
-}
-
-// filesRoot returns the folder the Files view shows for a session, and the
-// pane whose it is: the worktree of the pane the user is in, else its
-// folder, else another terminal pane's of the session; "" for none.
-func (a *App) filesRoot(s *proto.Session) (pane *proto.Pane, root string) {
-	here, turn := a.changesPanes(s)
-	for _, p := range []*proto.Pane{here, turn} {
-		if p == nil || p.Browser() {
-			continue
-		}
-		if p.Git != nil && p.Git.Root != "" {
-			return p, p.Git.Root
-		}
-		if dir := p.WorkDir(); dir != "" {
-			return p, dir
-		}
+// withGit gives a pane its session's worktree, the one that holds its
+// directory, when the pane has none itself.
+func withGit(s *proto.Session, p *proto.Pane) *proto.Pane {
+	if p == nil || p.Git != nil {
+		return p
+	}
+	dir := p.WorkDir()
+	if dir == "" {
+		return p
 	}
 	for i := range s.Panes {
-		p := &s.Panes[i]
-		if !p.Browser() && p.WorkDir() != "" {
-			return p, p.WorkDir()
+		if g := s.Panes[i].Git; g != nil && withinDir(dir, g.Root) {
+			cp := *p
+			cp.Git = g
+			return &cp
 		}
 	}
-	return nil, ""
+	return p
 }
 
-// tree returns the tree of a folder of a host, made as the view first
-// shows it; the pane that made it is the one the view shows it for now.
-func (a *App) tree(pane *proto.Pane, root string) *fileTree {
+// withinDir tells that dir is root or a directory in it, with the paths
+// of any host.
+func withinDir(dir, root string) bool {
+	root = strings.TrimRight(root, `/\`)
+	if dir == root {
+		return true
+	}
+	return strings.HasPrefix(dir, root+"/") || strings.HasPrefix(dir, root+`\`)
+}
+
+// filesKey keys a path of a host.
+func filesKey(h *host, p string) string { return h.name + "\x00" + p }
+
+// filesRoot is the folder the Files tab shows, and the pane it is of: the
+// worktree of the one the user is in, else its directory.
+func (a *App) filesRoot(s *proto.Session) (*proto.Pane, string) {
+	p := withGit(s, s.PaneByID(a.focusOf(s)))
+	switch {
+	case p == nil:
+		return nil, ""
+	case p.Git != nil:
+		return p, p.Git.Root
+	case p.ProcessDir != "":
+		return p, p.ProcessDir
+	}
+	return p, p.Dir
+}
+
+// filesSide is the Files tab: the root's tree, a folder listed as it
+// unfolds, and again as the worktree changes.
+func (a *App) filesSide(c *ui.Context, pal *palette, s *proto.Session) {
 	fs := &a.side.files
-	key := a.hostOf(pane.ID).name + "\x00" + root
-	t := fs.trees[key]
-	if t == nil {
-		if fs.trees == nil {
-			fs.trees = map[string]*fileTree{}
-		}
-		t = &fileTree{root: root, chosen: -1, dirs: map[string]*fileDir{}, isDir: map[string]bool{root: true}}
-		t.outline.List.Selected = &t.chosen
-		t.outline.Indent = 12
-		fs.trees[key] = t
+	if !fs.showed {
+		fs.gen++
 	}
-	t.pane = pane.ID
-	return t
-}
-
-// children returns the paths in a folder of the tree, nil for a file.
-func (t *fileTree) children(path string) []string {
-	if !t.isDir[path] {
-		return nil
-	}
-	if d := t.dirs[path]; d != nil && d.paths != nil {
-		return d.paths
-	}
-	return []string{}
-}
-
-// rel is a path as it shows in the tree: from its folder.
-func (t *fileTree) rel(path string) string {
-	return strings.TrimLeft(strings.TrimPrefix(path, t.root), `/\`)
-}
-
-// shownPath is a path as the tree showed it: with its folder's separator,
-// as a host joining its names does.
-func (t *fileTree) shownPath(path string) string {
-	if strings.Contains(t.root, `\`) || len(t.root) > 1 && t.root[1] == ':' {
-		return strings.ReplaceAll(path, "/", `\`)
-	}
-	return path
-}
-
-// hostJoin joins a name to a folder of a host, with the host's separator,
-// which its paths tell: a Windows host's have backslashes, or a drive.
-func hostJoin(dir, name string) string {
-	sep := "/"
-	if strings.Contains(dir, `\`) || len(dir) > 1 && dir[1] == ':' {
-		sep = `\`
-	}
-	if strings.HasSuffix(dir, sep) {
-		return dir + name
-	}
-	return dir + sep + name
-}
-
-// filesView is the Files view: the tree, and the file chosen in it below.
-func (a *App) filesView(c *ui.Context, pal *palette, s *proto.Session) {
-	fs := &a.side.files
-	pane, root := a.filesRoot(s)
-	if pane == nil {
-		fs.shown = nil
-		a.sideMessage(c, pal, locales.FilesNoFolder(), locales.FilesNoFolderDetail())
+	fs.shown, fs.showed = true, true
+	p, root := a.filesRoot(s)
+	if root == "" {
+		a.sideMessage(c, pal, locales.FilesNoFolder(), "")
 		return
 	}
-	t := a.tree(pane, root)
-	fs.shown = t
-	// A host not connected lists nothing: its folders come as it is.
-	if h := a.hostOf(pane.ID); h.cl == nil {
-		a.sideMessage(c, pal, locales.SideFiles(), locales.HostNotConnected(h.label()))
-		return
+	h := a.hostOf(p.ID)
+	if fs.dirs == nil || len(fs.dirs) > 2000 {
+		fs.dirs = map[string]*dirList{}
 	}
-	a.syncTree(c, t)
-	if t.shown != "" {
-		share := fs.share
-		if share == 0 {
-			share = treeShare
-		}
-		ui.Column(c.Key("files")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Bind(a.paneRef("files-body")).Children(func() {
-			ui.Column(c.Key("tree")).Grow(share).Basis(0).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
-				a.treeView(c, pal, t, true)
-			})
-			a.filesEdge(c, pal)
-			ui.Column(c.Key("file")).Grow(1 - share).Basis(0).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
-				a.fileView(c, pal, t)
-			})
-		})
-		return
+	if fs.open == nil {
+		fs.open = map[string]bool{}
 	}
-	ui.Column(c.Key("files")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
-		a.treeView(c, pal, t, true)
-	})
-}
-
-// fileOpenPicker is the row that sets what a click on a file of the tree
-// does: it shows it under the tree, opens it in a file pane, or opens it
-// in the host's editor.
-func (a *App) fileOpenPicker(c *ui.Context, pal *palette) {
-	row := ui.Row(c.Key("files-open")).Shrink(0).Padding(6, 8, 10, 8).Gap(4).AlignItems(ui.Center)
-	row.Children(func() {
-		ui.Text(c, locales.FilesOpenWith()).FontSize(11.5).TextColor(pal.textFaint).Shrink(0)
-		ui.Spacer(c)
-		for _, o := range []struct{ id, label, key string }{
-			{"preview", locales.FilesOpenPreview(), "files-open-preview"},
-			{"pane", locales.FilesOpenPane(), "files-open-pane"},
-			{"editor", locales.FilesOpenEditor(), "files-open-editor"},
-		} {
-			on := a.prefs.FileOpen == o.id || a.prefs.FileOpen == "" && o.id == "preview"
-			fg := pal.textFaint
-			if on {
-				fg = pal.text
-			}
-			b := ui.ButtonBase(c.Key(o.key)).Height(22).Padding(0, 7).Radius(5).AlignItems(ui.Center).Shrink(0).
-				Cursor(ui.CursorPointer).Label(o.label)
-			if on {
-				b.Background(pal.chip)
-			} else if b.Hovered() {
-				b.Background(pal.rowHover)
-			}
-			if b.Clicked() && a.prefs.FileOpen != o.id {
-				a.defer_(func() {
-					a.prefs.FileOpen = o.id
-					a.savePrefs()
-				})
-			}
-			b.Children(func() {
-				ui.Text(c, o.label).FontSize(12).FontWeight(600).TextColor(fg).SingleLine().Shrink(0)
-			})
-		}
-	})
-}
-
-// syncTree lists the folders the tree shows that have no listing, a few at
-// a time, and those the user asked to refresh.
-func (a *App) syncTree(c *ui.Context, t *fileTree) {
+	stamp := gitStamp(p.Git)
+	working := sessionWorking(s)
+	if working {
+		c.After(5 * time.Second)
+	}
 	asking := 0
-	for _, d := range t.dirs {
-		if d.busy {
+	for _, l := range fs.dirs {
+		if l.busy {
 			asking++
 		}
 	}
-	want := []string{t.root}
-	for p := range t.outline.Open.All() {
-		if t.isDir[p] && p != t.root {
-			want = append(want, p)
+	// The folders shown, listed again as the worktree's status changes,
+	// as the tab shows anew, and every few seconds while an agent works,
+	// a few at a time.
+	list := func(dir string) *dirList {
+		l := fs.dirs[filesKey(h, dir)]
+		stale := l == nil || !l.busy && (l.stamp != stamp || l.gen != fs.gen || working && time.Since(l.fetched) > 5*time.Second)
+		if stale && asking < 4 && h.cl != nil {
+			asking++
+			l = a.fetchDir(h, dir, p.Git != nil, stamp)
 		}
+		return l
 	}
-	slices.Sort(want)
-	for _, p := range want {
-		d := t.dirs[p]
-		if d != nil && (d.busy || d.paths != nil || d.err != "") {
-			continue
-		}
-		if asking >= maxListed {
-			c.After(50 * time.Millisecond)
+	var items []fileItem
+	var walk func(dir, rel string, depth int)
+	walk = func(dir, rel string, depth int) {
+		l := list(dir)
+		if l == nil || l.entries == nil && l.err == "" {
 			return
 		}
-		asking++
-		a.fetchDir(t, p)
+		if l.err != "" && l.entries == nil {
+			items = append(items, fileItem{path: dir, rel: rel + "/!", depth: depth, err: l.err})
+			return
+		}
+		for _, e := range l.entries {
+			if e.Dir && e.Name == ".git" {
+				continue
+			}
+			it := fileItem{FSEntry: e, path: h.joinPath(dir, e.Name), rel: path.Join(rel, e.Name), depth: depth}
+			it.open = e.Dir && fs.open[filesKey(h, it.path)]
+			items = append(items, it)
+			if it.open {
+				walk(it.path, it.rel, depth+1)
+			}
+		}
 	}
-}
+	walk(root, "", 0)
 
-// fetchDir asks kerod for a folder's listing, dotfiles too, .git aside.
-func (a *App) fetchDir(t *fileTree, path string) {
-	d := t.dirs[path]
-	if d == nil {
-		d = &fileDir{}
-		t.dirs[path] = d
-	}
-	cl := a.hostOf(t.pane).cl
-	if cl == nil {
+	ui.Row(c.Key("root")).Height(28).Shrink(0).Padding(0, 10, 6, 16).Gap(6).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, h.shortDir(root)).FontSize(12.5).TextColor(pal.textFaint).SingleLine().Ellipsis("…").MinWidth(0).Grow(1).Tooltip(root)
+		iconButton(c, "fold-folders", collapseIcon, locales.FilesCollapseFolders(), pal, func() {
+			prefix := filesKey(h, root)
+			for k := range fs.open {
+				if strings.HasPrefix(k, prefix) {
+					delete(fs.open, k)
+				}
+			}
+		})
+	})
+	if l := fs.dirs[filesKey(h, root)]; l == nil || l.entries == nil {
+		switch {
+		case l != nil && l.err != "" && !l.busy:
+			a.sideMessage(c, pal, locales.FilesCantReadFolder(), l.err)
+		case h.cl != nil:
+			ui.Column(c).Grow(1).Center().Children(func() { ui.Spinner(c) })
+		}
 		return
 	}
-	d.busy, d.err = true, ""
-	d.gen++
-	gen := d.gen
-	go func() {
-		var l proto.FSList
-		err := cl.Call("fs.list", proto.FSListParams{Dir: path, Hidden: true}, &l)
-		a.update(func() {
-			if d.gen != gen {
-				return
-			}
-			d.busy, d.fetched = false, time.Now()
-			if err != nil {
-				d.err = remoteError(err)
-				return
-			}
-			d.err = ""
-			paths := make([]string, 0, len(l.Entries))
-			for _, e := range l.Entries {
-				if e.Name == ".git" {
-					continue
+
+	if fs.places == nil {
+		fs.places = map[string]*ui.ListState{}
+	}
+	ls := fs.places[filesKey(h, root)]
+	if ls == nil {
+		ls = &ui.ListState{}
+		fs.places[filesKey(h, root)] = ls
+	}
+	var shown string
+	if v := fs.views[s.ID]; v != nil {
+		shown = v.path
+	}
+	ls.Key = func(i int) any { return treeKey{items[i].rel, items[i].Dir, items[i].path == shown} }
+	ui.List(c.Key("files"), ls, len(items), func(i int) {
+		it := items[i]
+		switch {
+		case it.err != "":
+			ui.Text(c, it.err).FontSize(12).TextColor(pal.textFaint).SingleLine().Ellipsis("…").Padding(4, 8, 4, 6+12*float32(it.depth)+28).Tooltip(it.err)
+		case it.Dir:
+			key := filesKey(h, it.path)
+			a.treeFolder(c, pal, it.Name, it.rel, it.depth, it.open, false, func() {
+				if it.open {
+					delete(fs.open, key)
+				} else {
+					fs.open[key] = true
 				}
-				p := hostJoin(path, e.Name)
-				t.isDir[p] = e.Dir
-				paths = append(paths, p)
+			})
+		default:
+			a.treeEntry(c, pal, it, it.path == shown, func() {
+				if fs.views == nil {
+					fs.views = map[string]*fileView{}
+				}
+				if fv := fs.views[s.ID]; fv != nil && fv.path == it.path {
+					// The one it shows: open, or hidden as its button
+					// hid it.
+					a.openViewer(fv)
+					return
+				}
+				fv := &fileView{pane: p.ID, path: it.path, rel: it.rel, open: true}
+				fs.views[s.ID] = fv
+				a.openViewer(fv)
+			})
+		}
+	}).Grow(1).MinHeight(0).Padding(0, 10, 16, 10)
+}
+
+// treeKey is what a row of a tree is, as its list keeps its state by.
+type treeKey struct {
+	path    string
+	dir     bool
+	current bool
+}
+
+// treeRow is a row of a tree, depth folders in, the one there chosen.
+func treeRow(c *ui.Context, pal *palette, depth int, current bool) ui.Element {
+	row := ui.Row(c.Key("row")).Height(26).Padding(0, 8, 0, 6+12*float32(depth)).Gap(5).AlignItems(ui.Center).Radius(7)
+	if pal.dark {
+		// Room for the chosen row's edge in every row.
+		row.Border(1, ui.Transparent)
+	}
+	switch {
+	case current:
+		row.Background(pal.rowSelected)
+		chosen(row, pal)
+	case row.Hovered():
+		row.Background(pal.rowHover)
+	}
+	return row
+}
+
+// treeFolder is a folder of a tree, which a click folds or unfolds;
+// faded, it is one git ignores.
+func (a *App) treeFolder(c *ui.Context, pal *palette, name, tip string, depth int, open, faded bool, toggle func()) {
+	row := treeRow(c, pal, depth, false).Tooltip(tip)
+	if faded {
+		row.Opacity(0.55)
+	}
+	if row.Clicked() {
+		toggle()
+	}
+	row.Children(func() {
+		chev := ui.Icon(c, chevronIcon).Size(9, 9).TextColor(pal.textFaint).Shrink(0)
+		chev.Rotate(chev.AnimateTo("turn", 90*b2f(open), ui.Snappy))
+		ui.Icon(c, folderIcon).Size(13, 13).TextColor(pal.textFaint).Shrink(0)
+		ui.Text(c, name).FontSize(12.5).TextColor(pal.textMuted).SingleLine().Ellipsis("…").MinWidth(0)
+	})
+}
+
+// sessionWorking tells that an agent of the session works.
+func sessionWorking(s *proto.Session) bool {
+	for _, p := range s.Panes {
+		if p.Status == proto.Working {
+			return true
+		}
+	}
+	return false
+}
+
+// treeEntry is a file of the Files tab's tree, which a click opens in the
+// viewer.
+func (a *App) treeEntry(c *ui.Context, pal *palette, it fileItem, current bool, open func()) ui.Element {
+	row := treeRow(c, pal, it.depth, current).Tooltip(it.rel)
+	if row.Clicked() {
+		open()
+	}
+	row.Children(func() {
+		ui.Box(c).Size(9, 9).Shrink(0)
+		ui.Icon(c, docIcon).Size(13, 13).TextColor(pal.textFaint).Shrink(0)
+		ui.Text(c, it.Name).FontSize(12.5).TextColor(pal.text).SingleLine().Ellipsis("…").MinWidth(0)
+	})
+	return row
+}
+
+// fetchDir asks kerod for a folder's entries, dotfiles too, marking what
+// git ignores in a worktree.
+func (a *App) fetchDir(h *host, dir string, ignored bool, stamp string) *dirList {
+	fs := &a.side.files
+	key := filesKey(h, dir)
+	l := fs.dirs[key]
+	if l == nil {
+		l = &dirList{}
+		fs.dirs[key] = l
+	}
+	l.busy = true
+	gen, cl := fs.gen, h.cl
+	go func() {
+		var res proto.FSList
+		err := cl.Call("fs.list", proto.FSListParams{Dir: dir, Hidden: true}, &res)
+		a.update(func() {
+			l.busy, l.fetched, l.stamp, l.gen = false, time.Now(), stamp, gen
+			if err != nil {
+				l.err = err.Error()
+				return
 			}
-			d.paths = paths
+			l.entries, l.err = res.Entries, ""
 		})
 	}()
+	return l
 }
 
-// treeView is the tree: a folder's folders and files, whose folders open
-// on the arrow, a double click or a click on them, and whose files open
-// under the tree.
-func (a *App) treeView(c *ui.Context, pal *palette, t *fileTree, picker bool) {
-	// The row that sets what a click on a file does, above the tree: the
-	// tree's own column, which a file under it leaves.
-	if picker {
-		a.fileOpenPicker(c, pal)
+// openViewer opens a file in the viewer, which reads it.
+func (a *App) openViewer(fv *fileView) {
+	if !fv.open {
+		fv.open, fv.fetched = true, time.Time{} // read anew
 	}
-	d := t.dirs[t.root]
-	switch {
-	case d == nil || d.paths == nil && d.err == "":
-		ui.Column(c).Grow(1).Center().Children(func() { ui.Spinner(c) })
-		return
-	case d.paths == nil:
-		a.sideMessage(c, pal, locales.FilesCantList(), d.err)
-		return
-	case len(d.paths) == 0:
-		a.sideMessage(c, pal, locales.FilesEmpty(), "")
-		return
+	if cl := a.hostOf(fv.pane).cl; cl != nil && !fv.busy && fv.fetched.IsZero() {
+		a.loadFile(cl, fv, "")
 	}
-	toggle := ""
-	tree := ui.Outline(c.Key("outline"), &t.outline, d.paths, t.children, func(path string) {
-		dir := t.isDir[path]
-		row := ui.Row(c).Grow(1).MinWidth(0).Gap(7).AlignItems(ui.Center)
-		// A folder opens or closes on a click on its name; a file opens as
-		// the prefs say, under the tree by default.
-		if row.Clicked() && row.ClickModifiers() == 0 {
-			if dir {
-				toggle = path
-			} else {
-				a.chooseFile(t, path)
-			}
-		}
-		fg := pal.text
-		if t.shown == path {
-			fg = pal.attention
-		}
-		row.Children(func() {
-			svg := docIcon
-			if dir {
-				svg = folderIcon
-			}
-			ui.Icon(c, svg).Size(14, 14).Shrink(0).TextColor(pal.textFaint)
-			ui.Text(c, proto.DirName(path)).FontSize(13).TextColor(fg).SingleLine().Ellipsis("…").MinWidth(0).Shrink(1).Tooltip(t.rel(path))
-			// A folder that does not list says why under its name.
-			if dir {
-				if sub := t.dirs[path]; sub != nil && sub.err != "" {
-					ui.Text(c, sub.err).FontSize(11.5).TextColor(pal.danger).SingleLine().Ellipsis("…").MinWidth(0).Shrink(2)
-				}
-			}
-		})
-	}).Grow(1).MinHeight(0).Padding(0, 6, 8, 6).FontSize(13)
-	if toggle != "" {
-		for i := range t.outline.Rows() {
-			if t.outline.Item(i) == toggle {
-				t.chosen = i
-			}
-		}
-		if t.outline.Open.Has(toggle) {
-			t.outline.Open.Remove(toggle)
-		} else {
-			t.outline.Open.Add(toggle)
-		}
-		tree.Focus()
+}
+
+// closeViewer closes the session's viewer.
+func (a *App) closeViewer(sid string) {
+	delete(a.side.files.views, sid)
+}
+
+// fileViewer is the viewer of a file of Files: an image as an image, else
+// its text, read only, which it reads again as the worktree changes, and
+// every few seconds while an agent works.
+func (a *App) fileViewer(c *ui.Context, pal *palette, s *proto.Session, fv *fileView) {
+	h := a.hostOf(fv.pane)
+	stamp := ""
+	if p := withGit(s, s.PaneByID(fv.pane)); p != nil {
+		stamp = gitStamp(p.Git)
 	}
-	if tree.Submitted() && t.chosen >= 0 && t.chosen < t.outline.Rows() {
-		p := t.outline.Item(t.chosen)
+	working := sessionWorking(s)
+	if working {
+		c.After(3 * time.Second)
+	}
+	if !fv.busy && h.cl != nil && (fv.fetched.IsZero() || fv.stamp != stamp || working && time.Since(fv.fetched) > 3*time.Second) {
+		a.loadFile(h.cl, fv, stamp)
+	}
+
+	dir, name := path.Split(fv.rel)
+	ui.Row(c.Key("hdr")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 16).Gap(8).Children(func() {
+		ui.Icon(c, docIcon).Size(14, 14).TextColor(pal.textFaint).Shrink(0)
+		ui.Text(c, name).FontSize(14).FontWeight(600).TextColor(pal.text).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
+		if dir = strings.TrimSuffix(dir, "/"); dir != "" {
+			ui.Text(c, dir).FontSize(13).TextColor(pal.textFaint).SingleLine().Ellipsis("…").Shrink(2).MinWidth(0).Tooltip(fv.path)
+		}
+		ui.Box(c.Key("drag")).Grow(1).AlignSelf(ui.Stretch).DragWindow()
+		if !fv.gone {
+			pid, file := fv.pane, fv.path
+			iconButton(c, "files-edit", docIcon, locales.FilesOpenInPane(), pal, func() { a.defer_(func() { a.openFileInPane(pid, file) }) })
+			iconButton(c, "files-editor", splitRightIcon, locales.FilesOpenInEditor(), pal, func() { a.defer_(func() { a.openFileInEditor(pid, file) }) })
+		}
+		if !h.remote() && !fv.gone {
+			full := fv.path
+			iconButton(c, "open", openFileIcon, locales.ChangesOpenFile(), pal, func() { openPath(full) })
+		}
+	})
+	ui.Column(c.Key("body")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
 		switch {
-		case t.isDir[p] && t.outline.Open.Has(p):
-			t.outline.Open.Remove(p)
-		case t.isDir[p]:
-			t.outline.Open.Add(p)
+		case fv.gone:
+			a.sideMessage(c, pal, locales.FilesGone(), fv.rel)
+		case fv.large:
+			a.sideMessage(c, pal, locales.ChangesTooLarge(), "")
+		case fv.binary:
+			a.sideMessage(c, pal, locales.ChangesBinary(), "")
+		case fv.st == nil && fv.err != "":
+			a.sideMessage(c, pal, locales.FilesCantReadFile(), fv.err)
+		case fv.bm != nil:
+			ui.Column(c.Key("image")).Grow(1).MinHeight(0).Padding(8).Center().Children(func() {
+				ui.Image(c, fv.bm).Shrink(1)
+			})
+		case fv.st == nil:
+			ui.Column(c).Grow(1).Center().Children(func() { ui.Spinner(c) })
 		default:
-			a.chooseFile(t, p)
+			fv.st.Font = ui.Font{Family: a.termFamily(), Size: max(a.set.FontSize-1, 10)}
+			fv.st.Theme = a.codeTheme(c, pal)
+			fv.st.ReadOnly = true
+			fv.st.NoActiveLine = true
+			fv.st.NoScrollPastEnd = true
+			editor.View(c.Key("text-"+fv.path), fv.st).Grow(1).FillWidth().MinHeight(0)
 		}
-	}
+	})
 }
 
-// chooseFile opens a file of the tree the way a click on it does: under
-// the tree, in a file pane, or in the host's editor, as the prefs say.
-func (a *App) chooseFile(t *fileTree, path string) {
-	switch a.prefs.FileOpen {
-	case "pane":
-		a.openInPane(t, path)
-	case "editor":
-		a.openInEditor(t, path)
-	default:
-		a.openFile(t, path)
-	}
-}
-
-// openFile shows a file of the tree under it, read as it first opens; a
-// listing refresh keeps it.
-func (a *App) openFile(t *fileTree, path string) {
-	if t.shown == path && t.file != nil {
-		return
-	}
-	t.shown = t.shownPath(path)
-	f := &openFile{path: path}
-	t.file = f
-	a.readFile(t, f)
-}
-
-// openInPane opens a file of the tree in a file pane beside the pane the
-// tree is of: the app's editor shows it, colored by its language, on the
-// host it is on.
-func (a *App) openInPane(t *fileTree, path string) {
-	s := a.sessionOfPane(t.pane)
-	if s == nil {
-		return
-	}
-	a.split(s, proto.CreateParams{Split: t.pane, Direction: "right", File: path})
-}
-
-// openInEditor opens a file of the tree in the host's editor, in a pane
-// of its shell.
-func (a *App) openInEditor(t *fileTree, path string) {
-	s := a.sessionOfPane(t.pane)
-	if s == nil {
-		return
-	}
-	a.split(s, proto.CreateParams{Split: t.pane, Direction: "right", Command: editorCommand(a.hostOf(t.pane), path)})
-}
-
-// readFile reads a file from the kerod of the tree's host: an image to
-// show, else its text. A file too large, or binary, is told of instead.
-func (a *App) readFile(t *fileTree, f *openFile) {
-	cl := a.hostOf(t.pane).cl
-	if cl == nil {
-		return
-	}
-	f.busy, f.err = true, ""
-	f.gen++
-	gen, path := f.gen, f.path
-	image := peekable[strings.ToLower(filepath.Ext(path))]
+// loadFile reads a file of the viewer: an image to show, else its text,
+// anew for its first, else as an edit, so that it stays scrolled where it
+// was.
+func (a *App) loadFile(cl *client.Client, fv *fileView, stamp string) {
+	fv.busy = true
+	image := peekable[strings.ToLower(filepath.Ext(fv.path))]
 	go func() {
 		var st proto.FSStat
-		var r proto.FSRead
+		var data []byte
 		var bm *ui.Bitmap
-		err := cl.Call("fs.stat", proto.FSStatParams{Path: path}, &st)
-		large := err == nil && (image && st.Size > maxImage || !image && st.Size > maxText)
-		if err == nil && (!st.Exists || st.Dir) {
-			err = errFilesGone
+		limit := int64(maxView)
+		if image {
+			limit = maxImage
 		}
-		if err == nil && !large {
-			err = cl.Call("fs.read", proto.FSReadParams{Path: path, Max: max(maxImage, maxText)}, &r)
-		}
-		if err == nil && !large && image {
-			bm, err = ui.DecodeBitmap(r.Data)
+		err := cl.Call("fs.stat", proto.FSStatParams{Path: fv.path}, &st)
+		if err == nil && st.Exists && !st.Dir && st.Size <= limit {
+			var r proto.FSRead
+			err = cl.Call("fs.read", proto.FSReadParams{Path: fv.path, Max: limit}, &r)
+			data = r.Data
+			if err == nil && image {
+				bm, err = ui.DecodeBitmap(data)
+				image = bm != nil // else its bytes as text
+			}
 		}
 		a.update(func() {
-			if f.gen != gen {
-				return
-			}
-			f.busy = false
+			fv.busy, fv.fetched, fv.stamp = false, time.Now(), stamp
 			if err != nil {
-				f.err = remoteError(err)
+				fv.err = err.Error()
 				return
 			}
-			f.large, f.binary = large, false
-			switch {
-			case large:
-				f.st, f.bm = nil, nil
-			case image:
-				f.bm = bm
-				f.st = nil
-			case isBinary(r.Data):
-				f.binary = true
-				f.st, f.bm = nil, nil
-			default:
-				f.bm = nil
-				b := editor.NewBuffer(string(r.Data))
-				b.SetLanguage(editor.LanguageFor(filepath.Base(path)))
-				if f.st == nil {
-					f.st = &editor.State{Buffer: b}
-				}
+			fv.err = ""
+			fv.gone = !st.Exists || st.Dir
+			fv.large = !fv.gone && st.Size > limit
+			fv.binary = !fv.gone && !fv.large && !image && isBinary(data)
+			if fv.gone || fv.large || fv.binary {
+				fv.bm = nil
+				return
 			}
+			if image {
+				fv.bm, fv.st = bm, nil
+				return
+			}
+			fv.bm = nil
+			showFileText(fv, string(data))
 		})
 	}()
 }
 
-// isBinary tells text from what is not: a NUL in its first bytes, as git
-// tells, or bytes that are no UTF-8.
-func isBinary(b []byte) bool {
-	head := b[:min(len(b), 8000)]
-	return bytes.IndexByte(head, 0) >= 0 || !utf8.Valid(b)
+// showFileText puts a file's text in its viewer's editor, read only.
+func showFileText(fv *fileView, text string) {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	if fv.st == nil {
+		buf := editor.NewBuffer(text)
+		buf.SetLanguage(editor.LanguageFor(path.Base(fv.rel)))
+		fv.st = &editor.State{Buffer: buf, ReadOnly: true}
+		fv.st.NoActiveLine = true
+		return
+	}
+	replaceText(fv.st.Buffer, text)
+}
+
+// isBinary tells a file that isn't text, as git does: a NUL in its first
+// 8000 bytes.
+func isBinary(data []byte) bool {
+	return bytes.IndexByte(data[:min(len(data), 8000)], 0) >= 0
 }
 
 // remoteError says what a call to a host's kerod came to: a method its
@@ -514,79 +517,22 @@ func remoteError(err error) string {
 	return err.Error()
 }
 
-// filesEdge is the edge between the tree and the file, which a drag
-// moves.
-func (a *App) filesEdge(c *ui.Context, pal *palette) {
-	fs := &a.side.files
-	d := ui.Box(c.Key("files-edge")).Height(paneGap).Shrink(0).Cursor(ui.CursorResizeRow).KeepFocus()
-	if d.Hovered() || d.Pressed() {
-		d.Draw(func(p *ui.Painter, r ui.Rect) {
-			p.Fill(ui.Rect{X: r.X + r.W/2 - 18, Y: r.Y + r.H/2 - 1.5, W: 36, H: 3}, pal.textFaint.Alpha(0.7), 1.5)
-		})
+// openFileInPane opens a file in a file pane beside a pane of its host,
+// which shows its text, or its image.
+func (a *App) openFileInPane(pane, file string) {
+	s := a.sessionOfPane(pane)
+	if s == nil {
+		return
 	}
-	if _, dy, ok := d.Dragged(); ok {
-		if h := a.paneRef("files-body").Bounds(c).H - paneGap; h > 0 {
-			if !fs.dragging {
-				fs.drag, fs.dragging = fs.share, true
-				if fs.drag == 0 {
-					fs.drag = treeShare
-				}
-			}
-			fs.drag += dy / h
-			fs.share = min(max(fs.drag, 0.12), 0.88)
-		}
-	} else if !d.Pressed() {
-		fs.dragging = false
-	}
-	if d.DoubleClicked() {
-		fs.share = 0
-	}
+	a.split(s, proto.CreateParams{Split: pane, Direction: "right", File: file})
 }
 
-// fileView is the file shown: its name, and its text in its editor, or its
-// image, or why it shows neither.
-func (a *App) fileView(c *ui.Context, pal *palette, t *fileTree) {
-	f := t.file
-	ui.Column(c.Key("open-" + f.path)).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
-		hdr := ui.Row(c.Key("hdr")).Height(stickyH).Shrink(0).Padding(0, 6, 0, 12).Gap(8).AlignItems(ui.Center).Background(pal.chip)
-		hdr.Tooltip(f.path)
-		hdr.Children(func() {
-			ui.Icon(c, docIcon).Size(13, 13).TextColor(pal.textFaint).Shrink(0)
-			ui.Text(c, proto.DirName(f.path)).FontSize(13).FontWeight(600).TextColor(pal.text).SingleLine().Ellipsis("…").Shrink(0).MaxWidth(220)
-			ui.Text(c, strings.TrimSuffix(t.rel(f.path), proto.DirName(f.path))).FontSize(12).TextColor(pal.textFaint).
-				SingleLine().Ellipsis("…").MinWidth(0).Shrink(1)
-			ui.Spacer(c)
-			iconButton(c, "files-edit", docIcon, locales.FilesOpenInPane(), pal, func() { a.defer_(func() { a.openInPane(t, f.path) }) })
-			iconButton(c, "files-editor", splitRightIcon, locales.FilesOpenInEditor(), pal, func() { a.defer_(func() { a.openInEditor(t, f.path) }) })
-			iconButton(c, "files-refresh", reloadIcon, locales.FilesRefresh(), pal, func() { a.defer_(func() { a.readFile(t, f) }) })
-			iconButton(c, "files-close", closeIcon, locales.FilesCloseFile(), pal, func() {
-				a.defer_(func() {
-					t.shown, t.file = "", nil
-					a.side.files.share = 0
-				})
-			})
-		})
-		switch {
-		case f.err != "":
-			a.sectionNote(c, pal, locales.FilesCantRead()+": "+f.err)
-		case f.binary:
-			a.sectionNote(c, pal, locales.FilesBinary())
-		case f.large:
-			a.sectionNote(c, pal, locales.FilesLarge())
-		case f.busy:
-			ui.Column(c.Key("loading")).Grow(1).Center().Children(func() { ui.Spinner(c) })
-		case f.bm != nil:
-			ui.Column(c.Key("image")).Grow(1).MinHeight(0).Padding(8).Center().Children(func() {
-				ui.Image(c, f.bm).Shrink(1)
-			})
-		default:
-			st := f.st
-			st.ReadOnly = true
-			st.SoftWrap = true
-			st.LineNumbers = editor.LineNumbersOff
-			st.Font = ui.Font{Family: a.termFamily(), Size: max(a.set.FontSize-1, 10)}
-			st.Theme = a.codeTheme(c, pal)
-			editor.View(c.Key("text"), st).Grow(1).MinHeight(0)
-		}
-	})
+// openFileInEditor opens a file in the host's editor, in a pane of its
+// shell.
+func (a *App) openFileInEditor(pane, file string) {
+	s := a.sessionOfPane(pane)
+	if s == nil {
+		return
+	}
+	a.split(s, proto.CreateParams{Split: pane, Direction: "right", Command: editorCommand(a.hostOf(pane), file)})
 }

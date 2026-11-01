@@ -102,12 +102,12 @@ func (a *App) readFilePane(p *proto.Pane, f *filePane) {
 		var r proto.FSRead
 		var bm *ui.Bitmap
 		err := cl.Call("fs.stat", proto.FSStatParams{Path: path}, &st)
-		large := err == nil && (image && st.Size > maxImage || !image && st.Size > maxText)
+		large := err == nil && (image && st.Size > maxImage || !image && st.Size > maxView)
 		if err == nil && (!st.Exists || st.Dir) {
 			err = errFilesGone
 		}
 		if err == nil && !large {
-			err = cl.Call("fs.read", proto.FSReadParams{Path: path, Max: max(maxImage, maxText)}, &r)
+			err = cl.Call("fs.read", proto.FSReadParams{Path: path, Max: max(maxImage, maxView)}, &r)
 		}
 		if err == nil && !large && image {
 			bm, err = ui.DecodeBitmap(r.Data)

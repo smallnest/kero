@@ -98,7 +98,7 @@ func (a *App) run(id string, args map[string]string) {
 	case "sidebar.toggle":
 		a.toggleSidebar()
 	case "side.toggle":
-		a.toggleSide(a.prefs.Side)
+		a.toggleSide("")
 	case "changes.toggle":
 		a.toggleSide(sideChanges)
 	case "files.toggle":

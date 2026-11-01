@@ -57,12 +57,15 @@ type prefs struct {
 	SidebarOrder string  `json:"sidebarOrder,omitempty"`
 	FontSize     float32 `json:"fontSize,omitempty"`
 	// Side is the view the side panel shows, "" while it is hidden, and
-	// SideWidth its width.
-	Side      string  `json:"side,omitempty"`
-	SideWidth float32 `json:"sideWidth,omitempty"`
-	// FileOpen is what a click on a file of the side panel's Files view
-	// does: "preview" or "" shows it under the tree, "pane" opens it in a
-	// file pane, and "editor" in the host's editor.
+	// SideTab the view it shows again; SideWidth is its width, and
+	// RightWidth the viewer's.
+	Side       string  `json:"side,omitempty"`
+	SideTab    string  `json:"sideTab,omitempty"`
+	RightWidth float32 `json:"rightWidth,omitempty"`
+	SideWidth  float32 `json:"sideWidth,omitempty"`
+	// FileOpen is what a click on a file of the Files view does:
+	// "preview" or "" shows it in the viewer, "pane" opens it in a file
+	// pane, and "editor" in the host's editor.
 	FileOpen string `json:"fileOpen,omitempty"`
 	// EndedOpen and ArchivedOpen tell the sidebar's sections of the
 	// agents' ended conversations unfolded (session-history).

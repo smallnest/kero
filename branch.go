@@ -25,7 +25,7 @@ func (a *App) gitChip(c *ui.Context, pal *palette, s *proto.Session, p *proto.Pa
 	// first, down to its counts.
 	b := ui.ButtonBase(c.Key("git")).Height(24).Padding(0, 8).Gap(5).Radius(7).AlignItems(ui.Center).Shrink(8).
 		Label(summary).Tooltip(summary + "\n" + a.tip(locales.GitShowChanges(), "changes.toggle"))
-	if b.Hovered() || a.prefs.Side == sideChanges {
+	if b.Hovered() || a.sideTab() == sideChanges {
 		b.Background(pal.rowHover)
 	}
 	b.Children(func() {
