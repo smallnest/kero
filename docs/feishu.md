@@ -109,7 +109,7 @@ The chat shows in a session's pane, in place of its terminal. To open it, click 
 
 The session's host reads the turns with `feishu.feed` as the chat opens, and again each time that the host's state changes. The top shows the chat's name, and the search button opens a list of the chats that the bot is in. A choice shows that chat in the pane.
 
-To write to the chat, type in the field at the bottom, and press Enter. The prompt goes to the chat as a message from the user, and the bot answers it as any other message.
+To prompt the agent, type in the field at the bottom, and press Enter. The text goes to the focused pane's terminal as a paste, and Enter follows apart from it, the way a Feishu message drives the pane. It does not go to Feishu.
 
 ## Settings
 

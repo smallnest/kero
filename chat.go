@@ -14,8 +14,8 @@ import (
 // The Chat view is a session's conversation as a chat: the prompts the
 // session got, the tools its agent ran, and the answers it gave, which
 // the agent keeps in its transcript, with the Feishu chat the session is
-// with, whose turns the chat got. A prompt sent here goes to that chat as
-// the user's message, which the bot gives the session. The session's host
+// with, whose turns the chat got. A prompt sent here goes to the
+// session's pane, as a prompt for its agent. The session's host
 // reads it (feishu.feed) as the view opens and as the chat's turns go on.
 
 // chatRefresh is how soon the view reads a chat window again: a chat's
@@ -111,11 +111,14 @@ func (a *App) chatPick(session, chat string) {
 	}
 }
 
-// sendChat sends the field's text to the session's chat.
+// sendChat types the field's text in the session's pane, as a prompt for
+// its agent, and presses Enter: the same place a Feishu message of the
+// session's turn goes. The text goes as a paste, apart from the Enter,
+// so that a newline in it is no Enter.
 func (a *App) sendChat(s *proto.Session) {
 	f := a.chatOf(s.ID)
 	text := strings.TrimSpace(f.draft)
-	if text == "" || f.feed.Chat == "" {
+	if text == "" {
 		return
 	}
 	h := a.hostOf(s.ID)
@@ -123,9 +126,24 @@ func (a *App) sendChat(s *proto.Session) {
 		a.toast(locales.ChatHostOffline())
 		return
 	}
-	if err := h.cl.Call("feishu.send", proto.FeishuSend{Chat: f.feed.Chat, Text: text}, nil); err != nil {
-		a.toast(err.Error())
+	pane := a.focusOf(s)
+	if pane == "" {
+		a.toast(locales.ChatSessionNone())
 		return
+	}
+	if t := a.termFor(pane); t != nil {
+		t.Paste(text)
+		t.Send([]byte("\r"))
+	} else {
+		cl := h.cl
+		// Sent apart, so that a program takes no newline for an Enter.
+		go func() {
+			if cl.Call("send", proto.SendParams{ID: pane, Data: text}, nil) != nil {
+				return
+			}
+			time.Sleep(120 * time.Millisecond)
+			cl.Call("send", proto.SendParams{ID: pane, Data: "\r"}, nil)
+		}()
 	}
 	f.draft = ""
 	// The turn reads from the host as its state changes.
@@ -239,14 +257,14 @@ func (a *App) chatLine(c *ui.Context, pal *palette, l proto.FeishuLine) {
 // which Enter sends.
 func (a *App) chatField(c *ui.Context, pal *palette, s *proto.Session, f *chatFeed) {
 	draft := f.draft
-	ready := f.feed.Chat != "" && a.hostOf(s.ID).cl != nil
+	ready := a.hostOf(s.ID).cl != nil && a.focusOf(s) != ""
 	infoRule(c, pal)
 	ui.Row(c.Key("field")).Padding(8, 12, 10, 12).Gap(8).AlignItems(ui.Center).Children(func() {
 		var in ui.Element
 		frame := ui.Row(c.Key("frame")).Grow(1).MinWidth(0).Cursor(ui.CursorText).Children(func() {
 			ph := locales.ChatPlaceholder()
 			if !ready {
-				ph = locales.ChatSessionNone()
+				ph = locales.ChatHostOffline()
 			}
 			in = ui.TextInputBase(c.Key("in"), &draft).Grow(1).MinWidth(0).AlignSelf(ui.Stretch).Padding(0, 8).FontSize(12.5).Placeholder(ph).Label(ph)
 		})

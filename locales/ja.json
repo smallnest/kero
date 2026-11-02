@@ -129,7 +129,7 @@
   "chatOpen": "チャットを開く",
   "chatChooseTitle": "Feishu のチャットを選択",
   "chatChoosePlaceholder": "チャットを検索",
-  "chatPlaceholder": "チャットに書く",
+  "chatPlaceholder": "エージェントに送る",
   "chatSend": "送信",
   "chatNothing": "まだ何もありません。プロンプトを書くか、エージェントの返答を待ってください。",
   "chatReadingNow": "読み込み中…",

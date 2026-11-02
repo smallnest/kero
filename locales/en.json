@@ -184,7 +184,7 @@
   "chatOpen": "Open Chat",
   "chatChooseTitle": "Choose a Feishu Chat",
   "chatChoosePlaceholder": "Search the chats",
-  "chatPlaceholder": "Write to the chat",
+  "chatPlaceholder": "Prompt the agent",
   "chatSend": "Send",
   "chatNothing": "Nothing here yet. Write a prompt, or wait for the agent.",
   "chatReadingNow": "Reading…",

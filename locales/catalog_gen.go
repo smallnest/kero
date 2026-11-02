@@ -1346,11 +1346,11 @@ func (msgs Messages) ChatChoosePlaceholder() string {
 	return Catalog.Format(msgs.locale, "chatChoosePlaceholder", nil)
 }
 
-// ChatPlaceholder says "Write to the chat"
+// ChatPlaceholder says "Prompt the agent"
 // in the language the app shows.
 func ChatPlaceholder() string { return In(i18n.Locale()).ChatPlaceholder() }
 
-// ChatPlaceholder says "Write to the chat"
+// ChatPlaceholder says "Prompt the agent"
 // in the language of msgs.
 func (msgs Messages) ChatPlaceholder() string {
 	return Catalog.Format(msgs.locale, "chatPlaceholder", nil)

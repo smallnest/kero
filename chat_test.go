@@ -6,10 +6,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 
 	"kero/internal/client"
@@ -26,7 +28,32 @@ type fakeKerod struct {
 	chats proto.FeishuChats
 	sent  []proto.FeishuSend
 	seen  int
-	a     *App // whose sessions the state answers
+	a     *App  // whose sessions the state answers
+	prog  *pipe // the pane's program
+}
+
+// pipe is a program's side of a pane's terminal: what it gets, as typed.
+type pipe struct {
+	mu  sync.Mutex
+	got strings.Builder
+}
+
+func (p *pipe) Read(b []byte) (int, error) { select {} }
+
+func (p *pipe) Write(b []byte) (int, error) {
+	p.mu.Lock()
+	p.got.Write(b)
+	p.mu.Unlock()
+	return len(b), nil
+}
+
+func (p *pipe) Close() error { return nil }
+
+// typed is what the program got.
+func (p *pipe) typed() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.got.String()
 }
 
 func (f *fakeKerod) answer(req proto.Request) proto.Message {
@@ -139,6 +166,17 @@ func chatApp(t *testing.T) (*App, *fakeKerod) {
 	h := a.local()
 	h.cl = cl
 	h.conn = connReady
+	// The pane's terminal, whose program is a pipe here, takes the chat's
+	// prompts, as the user would type them.
+	f.prog = &pipe{}
+	o := a.termOptions("a", nil)
+	o.Conn = f.prog
+	trm, err := terminal.New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { trm.Close() })
+	a.terms["a"] = &termEntry{term: trm, started: time.Now()}
 	return a, f
 }
 
@@ -186,15 +224,14 @@ func TestChatView(t *testing.T) {
 	tt.Frame()
 	tt.Key(0, ui.KeyEnter)
 	tt.Frame()
-	chatSettle(tt, func() bool {
-		f.mu.Lock()
-		defer f.mu.Unlock()
-		return len(f.sent) > 0
-	})
+	chatSettle(tt, func() bool { return strings.Contains(f.prog.typed(), "Run the tests") })
+	if got := f.prog.typed(); !strings.Contains(got, "Run the tests") || !strings.HasSuffix(got, "\r") {
+		t.Fatalf("the pane's program got %q", got)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if len(f.sent) != 1 || f.sent[0] != (proto.FeishuSend{Chat: "oc_1", Text: "Run the tests"}) {
-		t.Fatalf("the prompt sent %+v", f.sent)
+	if len(f.sent) != 0 {
+		t.Errorf("the prompt went to Feishu too: %+v", f.sent)
 	}
 	if d := a.chatOf("s1").draft; d != "" {
 		t.Errorf("the field keeps %q", d)
