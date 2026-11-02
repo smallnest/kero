@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"kero/internal/detect"
@@ -38,6 +39,55 @@ type Feishu struct {
 	// their hostnames: only the one that answers a message does, and the
 	// others leave it. Empty, or one: every message is this machine's.
 	Host []string `json:"host,omitempty"`
+}
+
+// machine is an environment the app read, by the time it read it.
+type machine struct {
+	Env []string `json:"env"`
+	At  string   `json:"at"` // RFC 3339
+}
+
+// appMachines are the app environments the app reads, by hostname.
+var appMachines struct {
+	mu sync.Mutex
+	m  map[string]machine
+}
+
+// loadMachines reads the app environments once.
+func loadMachines() {
+	appMachines.mu.Lock()
+	defer appMachines.mu.Unlock()
+	if appMachines.m != nil {
+		return
+	}
+	appMachines.m = map[string]machine{}
+	if b, err := os.ReadFile(filepath.Join(proto.Dir(), "feishu-env.json")); err == nil {
+		json.Unmarshal(b, &appMachines.m)
+	}
+}
+
+// AppEnv is the environment the app read for the host, and when.
+func AppEnv(host string) ([]string, time.Time) {
+	loadMachines()
+	appMachines.mu.Lock()
+	defer appMachines.mu.Unlock()
+	m := appMachines.m[host]
+	at, _ := time.Parse(time.RFC3339, m.At)
+	return m.Env, at
+}
+
+// SetAppEnv keeps the environment the app read for the host, in kerod's
+// directory as the configuration's settings have it.
+func SetAppEnv(host string, env []string, at time.Time) error {
+	loadMachines()
+	appMachines.mu.Lock()
+	appMachines.m[host] = machine{Env: env, At: at.Format(time.RFC3339)}
+	b, err := json.Marshal(appMachines.m)
+	appMachines.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(proto.Dir(), "feishu-env.json"), b, 0o600)
 }
 
 // The ways a prompt runs its agent.

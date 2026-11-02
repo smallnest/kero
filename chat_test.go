@@ -148,8 +148,11 @@ func chatApp(t *testing.T) (*App, *fakeKerod) {
 	f := &fakeKerod{a: a}
 	f.feed = proto.FeishuFeed{ID: "s1", Chat: "oc_1", Name: "Kero bot", Host: "mac", Pane: "a", Agent: "claude", Lines: []proto.FeishuLine{
 		{Kind: "note", Text: "Fix the build"},
-		{Kind: "tool", Text: "Tool Bash go build"},
+		{Kind: "think", Text: "The build broke."},
+		{Kind: "tool", Text: "Tool Bash", Title: "go build", Detail: `{"command":"go build","description":"Build it"}`},
+		{Kind: "tool", Text: "Result", Detail: "# kero\n./main.go:3:1: syntax error"},
 		{Kind: "agent", Text: "I will look."},
+		{Kind: "agent", Text: "Here: **fixed** the `main.go` syntax:\n\n```go\nfunc main() {}\n```\n\n- one\n- two"},
 		{Kind: "agent", Text: "The build passes.", Answer: true},
 	}}
 	f.chats = proto.FeishuChats{Host: "mac", Chats: []proto.FeishuChat{{ID: "oc_1", Name: "Kero bot", Type: "p2p", Session: "s1"}, {ID: "oc_2", Name: "Team", Type: "group"}}}
@@ -209,104 +212,44 @@ func TestChatView(t *testing.T) {
 	if !a.paneChat["a"] {
 		t.Fatal("the pane shows no chat")
 	}
-	for _, want := range []string{"Kero bot", "Fix the build", "Tool Bash go build", "The build passes."} {
+	// The agent's Markdown reads as it is written: no ** or ` about.
+	for _, want := range []string{"Fix the build", "Bash", "go build", locales.ChatOutput(), "The build passes.", "Here: fixed the main.go syntax:", "func main() {}", "one"} {
 		if !tt.HasText(want) {
 			t.Errorf("the conversation lacks %q: %v", want, tt.Texts())
 		}
 	}
-	// The field takes the focus, which settles in a frame or two, and
-	// typing comes after.
-	if err := tt.Click(locales.ChatPlaceholder()); err != nil {
-		t.Fatal(err)
+	if tt.HasText("**fixed**") {
+		t.Errorf("the Markdown shows unread: %v", tt.Texts())
 	}
-	time.Sleep(20 * time.Millisecond)
-	tt.Type("Run the tests")
-	tt.Frame()
-	tt.Key(0, ui.KeyEnter)
-	tt.Frame()
-	chatSettle(tt, func() bool { return strings.Contains(f.prog.typed(), "Run the tests") })
-	if got := f.prog.typed(); !strings.Contains(got, "Run the tests") || !strings.HasSuffix(got, "\r") {
-		t.Fatalf("the pane's program got %q", got)
-	}
+	// The window only shows: it has no field to write a prompt in.
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if len(f.sent) != 0 {
-		t.Errorf("the prompt went to Feishu too: %+v", f.sent)
-	}
-	if d := a.chatOf("s1").draft; d != "" {
-		t.Errorf("the field keeps %q", d)
+	if f.prog.typed() != "" {
+		t.Errorf("the pane's program got %q", f.prog.typed())
 	}
 }
 
-// The chats of the app, a choice showing the window of one.
-func TestChatChoose(t *testing.T) {
+// The Chat view lets the window be narrow: the conversation shrinks with
+// it, as a chat app's does.
+func TestChatNarrow(t *testing.T) {
 	a, _ := chatApp(t)
 	a.showPaneChat(a.session("s1"), "a")
 	tt := ui.NewTester(a.view, 1600, 800)
 	tt.Frame()
 	chatSettle(tt, func() bool { return tt.HasText("Fix the build") })
-	// The call answers in a goroutine, so it runs as a frame's would.
-	a.later = append(a.later, func() { a.openChats("s1") })
-	for i := 0; i < 50 && !a.pal.open; i++ {
-		tt.Frame()
-		time.Sleep(10 * time.Millisecond)
+	shot(t, tt, "chat-wide")
+	tt.SetSize(900, 600)
+	chatSettle(tt, func() bool { return tt.HasText("The build passes.") })
+	shot(t, tt, "chat-narrow")
+	if !tt.HasText("The build passes.") {
+		t.Errorf("the narrow view lacks the answer: %v", tt.Texts())
 	}
-	tt.Frame()
-	if !tt.HasText("Team") || !tt.HasText("oc_2") {
-		t.Fatalf("the chats: %v", tt.Texts())
-	}
-	if err := tt.Click("Team"); err != nil {
+	// A tool's line opens its details.
+	if err := tt.Click("Bash"); err != nil {
 		t.Fatal(err)
 	}
-	chatSettle(tt, func() bool { return a.chatOf("s1").feed.Chat == "oc_2" })
-	if got := a.chatOf("s1").feed.Chat; got != "oc_2" {
-		t.Errorf("the window shows %q", got)
-	}
-}
-
-// The header's chat button turns a pane to its chat, and back to the
-// terminal, which the chat's card shows alone.
-func TestChatToggle(t *testing.T) {
-	a, _ := chatApp(t)
-	tt := ui.NewTester(a.view, 1600, 800)
-	for i := 0; i < 3; i++ {
-		tt.Frame()
-	}
-	// The controls show while the pointer is over the pane, or the pane
-	// has the focus, as it does here.
-	if err := tt.Click(locales.SideChat()); err != nil {
-		t.Fatalf("the chat button: %v", err)
-	}
-	tt.Frame()
-	if !a.paneChat["a"] {
-		t.Fatal("the pane shows no chat")
-	}
-	chatSettle(tt, func() bool { return tt.HasText("Fix the build") })
-	if !tt.HasText("Fix the build") {
-		t.Errorf("the chat: %v", tt.Texts())
-	}
-	if err := tt.Click(locales.ActionShowTerminal()); err != nil {
-		t.Fatalf("the terminal button: %v", err)
-	}
-	tt.Frame()
-	if a.paneChat["a"] {
-		t.Error("the pane shows the chat still")
-	}
-	// The other pane's chat shows it zoomed, and the terminal its card
-	// again.
-	cur := a.session("s1")
-	cur.Zoomed = ""
-	a.showPaneChat(cur, "b")
-	chatSettle(tt, func() bool { return a.session("s1").Zoomed == "b" })
-	if z := a.session("s1").Zoomed; z != "b" {
-		t.Fatalf("the other pane is not zoomed: %q", z)
-	}
-	a.hidePaneChat(a.session("s1"), "b")
-	tt.Frame()
-	if len(a.paneChat) != 0 || a.session("s1").Zoomed != "" {
-		t.Errorf("the panes after the terminal: %v, zoomed %q", a.paneChat, a.session("s1").Zoomed)
-	}
-	if tt.HasText(locales.ActionShowTerminal()) {
-		t.Error("the terminal's pane shows the chat's button still")
+	chatSettle(tt, func() bool { return tt.HasText(`{"command":"go build","description":"Build it"}`) })
+	if !tt.HasText(`{"command":"go build","description":"Build it"}`) {
+		t.Errorf("the tool's details stay folded: %v", tt.Texts())
 	}
 }

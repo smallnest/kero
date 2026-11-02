@@ -44,3 +44,15 @@ func TestByVersion(t *testing.T) {
 		t.Errorf("the order %q", got)
 	}
 }
+
+// The bot's commands run in the app's environment, as a pane's: the
+// variables the app starts from launchd without, as the agent's provider
+// settings, are the app's.
+func TestBotEnvFromApp(t *testing.T) {
+	d := &Daemon{}
+	d.appEnv = []string{"PATH=/usr/bin", "KERO_TEST_PROVIDER=yes", "KERO_TEST_KEY=app's"}
+	env := strings.Join(d.botEnv(), "\n")
+	if !strings.Contains(env, "KERO_TEST_PROVIDER=yes") || !strings.Contains(env, "KERO_TEST_KEY=app's") {
+		t.Errorf("the bot's environment is %s", env)
+	}
+}

@@ -96,9 +96,9 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 		b.replyAt(key, response, chatID, err.Error())
 		return
 	}
-	// The card first says the prompt ran, then the reply: the card is
-	// no place for the terminal's text.
-	if card != nil && card.id != "" {
+	// A terminal's turn shows as the reply's card: the card says the
+	// prompt ran, and the reply card follows with its answer.
+	if card != nil {
 		b.card(card, "done", word(card.lang, "inTerminal"), "")
 	}
 	if r.hook {
@@ -112,7 +112,7 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 		b.mu.Unlock()
 		b.save()
 	}
-	b.replyAt(key, response, chatID, b.replyWith(r))
+	b.replyTurn(key, response, chatID, b.replyWith(r), "Sent. /status shows the turn.")
 }
 
 // drive types text into the session's pane, which Enter ends, and follows

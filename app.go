@@ -225,6 +225,9 @@ func newApp() *App {
 		refs: map[string]*ui.Handle{}, focus: map[string]string{}, arrived: map[string]bool{}}
 	a.loadPrefs()
 	a.set = settings.Load()
+	applied.Lock()
+	applied.s = a.set
+	applied.Unlock()
 	a.ss.problems = settings.Problems()
 	a.applied = a.set.Clone()
 	a.selected = a.prefs.Selected
@@ -1112,13 +1115,37 @@ func (a *App) zoom(steps int, reset bool) {
 // applySettings makes settings the app's, saving them: the terminals take
 // what changed at once, and are attached again for what only a new
 // terminal takes.
-func (a *App) applySettings(s settings.Settings) { a.apply(s, true) }
+func (a *App) applySettings(s settings.Settings) {
+	a.apply(s, true)
+	a.rememberEnv()
+}
+
+// rememberEnv keeps this window's environment, which kerod runs the
+// bot's commands in: launchd starts it with the system's PATH, and none
+// of the account's variables, the providers' settings among them. The
+// settings' save, as the app starts and as each of them changes, reads
+// them again, as a token that ended is read where it is kept.
+func (a *App) rememberEnv() {
+	if !settings.FeishuSet(settings.Load().Feishu) {
+		return
+	}
+	host, err := os.Hostname()
+	if err != nil {
+		return
+	}
+	if err := settings.SetAppEnv(host, feishuAppEnv(), time.Now()); err != nil {
+		a.toast(err.Error())
+	}
+}
 
 // apply makes settings the app's, saving them to the configuration when
 // they come from the app rather than from the file.
 func (a *App) apply(s settings.Settings, save bool) {
 	old := a.applied
 	a.set, a.applied = s, s.Clone()
+	applied.Lock()
+	applied.s = s
+	applied.Unlock()
 	if save {
 		if err := settings.Save(s); err != nil {
 			a.toast(locales.ToastSaveSettingsFailed(err.Error()))
@@ -1216,6 +1243,12 @@ func (a *App) apply(s settings.Settings, save bool) {
 	}
 	if (!slices.Equal(old.Hosts, s.Hosts) || !slices.Equal(old.TailcatHosts, s.TailcatHosts) || old.Tailcat != s.Tailcat) && a.win != nil {
 		a.syncHosts()
+	}
+	// The bot's commands run in this window's environment, which a token
+	// or a variable read at each login changes: the bot connects again
+	// as the window reads settings again.
+	if a.win != nil {
+		a.restartFeishu()
 	}
 	if a.win != nil {
 		a.win.Invalidate()
@@ -1880,6 +1913,14 @@ func (a *App) busyCount(h *host) int {
 		}
 	}
 	return n
+}
+
+// restartFeishu connects the bot again, with what the configuration says
+// now: the environment its agent's commands run in.
+func (a *App) restartFeishu() {
+	p := proto.FeishuEnv{Env: feishuAppEnv()}
+	p.Host, _ = os.Hostname()
+	a.callOn(a.local(), "feishu.restart", p, nil)
 }
 
 // restartDaemon restarts this machine's kerod, as when it is of another

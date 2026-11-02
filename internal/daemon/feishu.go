@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"kero/internal/feishu"
 	"kero/internal/proto"
@@ -58,7 +59,7 @@ func (d *Daemon) startFeishu() {
 		Secret:   secret,
 		Luna:     &botLuna{d: d},
 		Log:      func(f string, a ...any) { d.log.Printf(f, a...) },
-		Env:      botEnv(),
+		Env:      d.botEnv(),
 	})
 	d.mu.Lock()
 	d.bot, d.feishu = b, conn
@@ -339,16 +340,52 @@ func conversationOf(cmd []string) (proto.AgentSession, bool) {
 	return proto.AgentSession{}, false
 }
 
-// botEnv is the bot's environment, which its commands take: kerod's,
-// less the app's own, as a pane's is, and the places a library would need
-// on its path.
-func botEnv() []string {
+// botEnv is the bot's environment, which its commands take: the app's,
+// which its settings keep, as the window read it, with the account's
+// places on its path; else the app's that connected; else kerod's own.
+func (d *Daemon) botEnv() []string {
+	var app []string
+	host, _ := os.Hostname()
+	app, at := settings.AppEnv(host)
+	if time.Since(at) > 24*time.Hour {
+		// A window of a week ago may run with a token that ended.
+		app = nil
+	}
+	if len(app) == 0 {
+		d.mu.Lock()
+		app = d.appEnv
+		d.mu.Unlock()
+	}
+	if len(app) > 0 {
+		return withoutPath(app)
+	}
 	var env []string
 	for _, kv := range os.Environ() {
-		k, _, _ := strings.Cut(kv, "=")
-		if k != "PATH" {
+		if k, _, _ := strings.Cut(kv, "="); k != "PATH" {
 			env = append(env, kv)
 		}
 	}
-	return append(env, "PATH="+withHomePaths(os.Getenv("PATH")))
+	return withoutPath(env)
+}
+
+// withoutPath is an environment with the account's places after its own
+// on the PATH, as a launchd job's has none of them.
+func withoutPath(env []string) []string {
+	var out []string
+	for _, kv := range env {
+		if k, _, _ := strings.Cut(kv, "="); k != "PATH" {
+			out = append(out, kv)
+		}
+	}
+	return append(out, "PATH="+withHomePaths(pathIn(env)))
+}
+
+// pathIn is an environment's PATH.
+func pathIn(env []string) string {
+	for _, kv := range env {
+		if k, v, _ := strings.Cut(kv, "="); k == "PATH" {
+			return v
+		}
+	}
+	return ""
 }

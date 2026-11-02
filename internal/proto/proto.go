@@ -31,6 +31,11 @@ const Version = 3
 type Hello struct {
 	Kind    string `json:"kind"` // "control" or "attach"
 	Version int    `json:"version"`
+	// Env is the environment of the app that connects, which its kerod
+	// runs the agents it starts without a terminal in: the app starts
+	// from launchd, as on macOS, with the system's PATH and none of the
+	// account's variables, as its login shell's profile sets them.
+	Env []string `json:"env,omitempty"`
 	// Attach only.
 	Session string `json:"session,omitempty"`
 	Cols    int    `json:"cols,omitempty"`
@@ -400,12 +405,24 @@ type FeishuFeed struct {
 	Evidence string `json:"evidence,omitempty"`
 }
 
+// FeishuEnv is a host's environment, which the app sends its kerod as
+// the bot connects: the agents the bot runs without a terminal need the
+// app's variables, as a launchd job starts it without the account's.
+type FeishuEnv struct {
+	Host string   `json:"host"`
+	Env  []string `json:"env"`
+}
+
 // FeishuLine is a line of a chat window's conversation.
 type FeishuLine struct {
 	At     string `json:"at,omitempty"` // RFC 3339
-	Kind   string `json:"kind"`         // "user", "agent", "tool" or "note"
+	Kind   string `json:"kind"`         // "user", "agent", "tool", "think" or "note"
 	Text   string `json:"text"`
 	Answer bool   `json:"answer,omitempty"` // the turn's answer, which the chat got
+	// Title is a tool's name, or what it ran; Detail its arguments or
+	// its output, which a chat window shows on a line of its own.
+	Title  string `json:"title,omitempty"`
+	Detail string `json:"detail,omitempty"`
 }
 
 // FeishuChat is a chat the bot is in, and the session it turns go to

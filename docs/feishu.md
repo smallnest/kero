@@ -103,13 +103,18 @@ Without the file that the bot gives the pane, `kero answer` does nothing. Outsid
 
 The chat shows in a session's pane, in place of its terminal. To open it, click **Chat** on the session's menu, or the chat button in the pane's header. The pane shows alone, so that the chat has its place. The button in the header turns the pane back to its terminal. The chat shows the chat that the session is in:
 
-- the prompts that the user wrote, to the right;
-- the tools that the agent ran, in a faint line;
-- the agent's messages, to the left, with the turn's answer on a chip.
+- the prompts that the user wrote, to the right, on the accent's bubbles;
+- the agent's thoughts, in faint text;
+- the tools that the agent ran, and their output, each on a faint line: click a tool to open its arguments and its full output;
+- the agent's messages, to the left, with the turn's answer on a stronger bubble.
 
-The session's host reads the turns with `feishu.feed` as the chat opens, and again each time that the host's state changes. The top shows the chat's name, and the search button opens a list of the chats that the bot is in. A choice shows that chat in the pane.
+The messages are Markdown. The chat shows headings, lists, quotes, tables, code blocks, and links; a link opens in the browser.
 
-To prompt the agent, type in the field at the bottom, and press Enter. The text goes to the focused pane's terminal as a paste, and Enter follows apart from it, the way a Feishu message drives the pane. It does not go to Feishu.
+The conversation reads in a column of a fixed width, in the middle of the pane. The column gets smaller with a narrow pane.
+
+The view only shows the conversation. It has no field: write your prompts in Feishu. The session's host reads the turns with `feishu.feed` as the chat opens, and again each time that the host's state changes.
+
+In Feishu, each turn shows as two cards (`feishu-cards`). The first card says that the agent works, its text as the work goes, then says that the answer follows. The second card is the answer: its title the first words of the answer, its text the answer as Markdown, and its state under it.
 
 ## Settings
 
@@ -146,6 +151,7 @@ feishu-agent-command = pi=pi
 | `feishu-allow` | empty | Who may send prompts: `open_id`, `user_id` or `email` values. Empty allows only the user who ran `kero feishu setup`. |
 | `feishu-timeout` | `30m` | The longest a turn waits before its card says it timed out. |
 | `feishu-stream` | `2s` | How often a working card takes the new text. |
+| `feishu-cards` | `true` | Every answer shows as a card: the turn's card, then the answer's own card, whose text is Markdown. `false` sends the answers as messages. |
 | `feishu-run` | `session` | How a prompt runs its agent: `command`, as the agent's own command in the background, which tells the reply and no terminal shows; or `session`, in the session's pane, as a user's turn. |
 | `feishu-agent` | `default` | The agent a `/new` session runs: `default`, or a name the detector knows, such as `claude`, `codex`, `opencode` or `pi`. |
 | `feishu-dir` | empty | The directory new sessions start in when the message names no project. Empty uses `new-session-directory`. |

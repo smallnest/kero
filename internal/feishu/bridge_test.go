@@ -267,17 +267,24 @@ type fakeMessages struct {
 	cards   []string // each card's JSON, sent or updated
 	replies []string // each reply to a message
 	reacts  []string
-	fail    bool      // sending a card fails, as an app without the card
+	fail    bool      // sending a card fails: the answers go as messages
 	keep    *fakeLuna // what kerod keeps of what is sent
 	targets []string  // each message's receive ID, "kind id"
+	kept    int       // the messages sent, which the kept ones count
+	// send sends the text of every message, as a chat's does; false when
+	// the tests read the cards alone.
+	send bool
 }
 
 func (m *fakeMessages) Send(kind, id, text string) (string, error) {
-	m.sent = append(m.sent, text)
+	if m.send || m.fail {
+		m.sent = append(m.sent, text)
+	}
 	m.targets = append(m.targets, kind+" "+id)
 	// What kerod keeps of what is sent, which another host hears: Feishu,
 	// as the message that every host finds.
-	id = fmt.Sprintf("om_sent_%d", len(m.sent))
+	m.kept++
+	id = fmt.Sprintf("om_sent_%d", m.kept)
 	m.keep.msgs = append(m.keep.msgs, &larkim.EventMessage{MessageId: str(id), ChatId: str("c1"), ChatType: str("p2p"), MessageType: str("text"), Content: str(text)})
 	m.keep.kept[id] = text
 	m.keep.byID[id] = str("c1")
@@ -285,7 +292,9 @@ func (m *fakeMessages) Send(kind, id, text string) (string, error) {
 }
 
 func (m *fakeMessages) SendCard(kind, id, cardJSON string) (string, error) {
-	if m.fail {
+	// Only a card's body's JSON fails, as it does for a card JSON that
+	// Feishu no longer takes: a card is what the app sends.
+	if m.fail && !strings.HasPrefix(strings.TrimSpace(cardJSON), "{") {
 		return "", fmt.Errorf("no card")
 	}
 	m.cards = append(m.cards, cardJSON)
@@ -297,7 +306,13 @@ func (m *fakeMessages) UpdateCard(id, cardJSON string) error {
 	return nil
 }
 
+// sendReply records a reply apart from a card's message: sending replies
+// fails, as Feishu's does for an app that no longer replies to events,
+// unless the cards fail too, as an app without them.
 func (m *fakeMessages) SendReply(id, text string) (string, error) {
+	if !m.fail {
+		return "", fmt.Errorf("no reply")
+	}
 	m.sent = append(m.sent, text)
 	m.replies = append(m.replies, text)
 	return m.keptReply(id, text), nil
@@ -329,18 +344,25 @@ func (m *fakeMessages) Download(key string, image bool) ([]byte, error) {
 	return []byte("\x89PNG\r\n\x1a\n0000"), nil
 }
 
-// lastCard is the last card shown, as a map.
+// lastCard is the last card sent or updated, nil for none.
 func (m *fakeMessages) lastCard(t *testing.T) map[string]any {
-	t.Helper()
-	if len(m.cards) == 0 {
-		t.Fatal("no card")
-	}
 	var c map[string]any
-	if err := json.Unmarshal([]byte(m.cards[len(m.cards)-1]), &c); err != nil {
+	if len(m.cards) == 0 {
+		if t != nil {
+			t.Helper()
+			t.Fatal("no card")
+		}
+		return nil
+	}
+	if err := json.Unmarshal([]byte(m.cards[len(m.cards)-1]), &c); err != nil && t != nil {
+		t.Helper()
 		t.Fatal(err)
 	}
 	return c
 }
+
+// cardText is the text of the last card.
+func (m *fakeMessages) cardText() string { return cardText(m.lastCard(nil)) }
 
 // cardText is a card's text.
 func cardText(c map[string]any) string {
@@ -424,11 +446,19 @@ func textMsgFrom(chat, id, text string) *larkim.P2MessageReceiveV1 {
 	return e
 }
 
+// last is the last answer: its card's text, as feishu-cards sends it, or
+// the message that answers without cards.
 func last(msgs *fakeMessages) string {
-	if len(msgs.sent) == 0 {
+	if msgs.fail {
+		if len(msgs.sent) == 0 {
+			return ""
+		}
+		return msgs.sent[len(msgs.sent)-1]
+	}
+	if len(msgs.cards) == 0 {
 		return ""
 	}
-	return msgs.sent[len(msgs.sent)-1]
+	return msgs.cardText()
 }
 
 // jsonText is a message's content as Feishu sends a text message's: JSON.
@@ -486,7 +516,7 @@ func TestNotAllowed(t *testing.T) {
 	b, luna, msgs := newBot(t)
 	b.cfg.Allow = nil
 	b.onMessage(nil, textMsg("c1", "ou_stranger", "/new"))
-	if len(luna.created) != 0 || len(msgs.sent) != 1 || !strings.Contains(last(msgs), "not allowed") {
+	if len(luna.created) != 0 || len(msgs.cards) != 1 || !strings.Contains(last(msgs), "not allowed") {
 		t.Fatalf("created %+v, replied %q", luna.created, msgs.sent)
 	}
 	// Who ran setup may, and another event of the same ID is ignored.
@@ -634,8 +664,9 @@ func TestCommandMode(t *testing.T) {
 	b.leave("c1")
 	luna.files = []string{"2", ""}
 	b.onMessage(nil, textMsg("c1", "ou_me", "1+1=?"))
+	// The card's answer, then the turn's state.
 	got := last(msgs)
-	if got != "2" {
+	if !strings.Contains(got, "2") {
 		t.Fatalf("replied %q", got)
 	}
 	if len(luna.ran) != 1 {
@@ -773,9 +804,9 @@ func TestHostHandoff(t *testing.T) {
 	// /host mac: the chat's host, which mac is, answers the prompt, and the
 	// next message answers its answer.
 	mac()
-	replies := len(msgs.replies)
+	replies := len(msgs.cards)
 	b.onMessage(nil, textMsg("c1", "ou_me", "/host mac"))
-	if n := len(msgs.replies); n != replies+1 || !strings.Contains(msgs.replies[n-1], "Messages here go to mac.") {
+	if n := len(msgs.cards); n != replies+1 || !strings.Contains(last(msgs), "Messages here go to mac.") {
 		t.Fatalf("mac sent %+v", luna.sent)
 	}
 	if b.chat("c1").host != "mac" {
@@ -841,8 +872,8 @@ func TestCardTurn(t *testing.T) {
 	if !strings.Contains(string(state), `Fix the tests`) && !strings.Contains(string(state), `fix the tests`) {
 		t.Errorf("cards %s", state)
 	}
-	if len(msgs.replies) == 0 || !strings.Contains(msgs.replies[len(msgs.replies)-1], "Fixed 2 tests.") {
-		t.Errorf("replies %q", msgs.replies)
+	if n := len(msgs.cards); n == 0 || !strings.Contains(cardText(msgs.lastCard(t)), "Fixed 2 tests.") {
+		t.Errorf("the answer's card is %v", msgs.cards)
 	}
 }
 

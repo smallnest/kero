@@ -81,6 +81,10 @@ type Daemon struct {
 	// restarting: kerod stops to start again, as a remote client asked
 	// (proto.KindRestart).
 	restarting bool
+	// appEnv is the environment of the app that last connected, which
+	// the agents it starts without a terminal run in (botEnv). A kerod
+	// its app starts has it already; one launchd started may not.
+	appEnv []string
 	// asks are the browser calls waiting for the app's answer, by the
 	// number they went out with.
 	asks    map[int64]chan proto.BrowserAnswer
@@ -773,6 +777,9 @@ func (d *Daemon) serveHello(conn net.Conn, r *bufio.Reader, line []byte, id iden
 	}
 	d.mu.Lock()
 	d.clients[info] = struct{}{}
+	if hello.Kind != "attach" && len(hello.Env) > 0 {
+		d.appEnv = append([]string(nil), hello.Env...)
+	}
 	d.mu.Unlock()
 	defer func() {
 		d.mu.Lock()

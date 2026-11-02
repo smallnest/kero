@@ -37,6 +37,7 @@ type turnCard struct {
 	text    string // the body the card shows
 	state   string // working, done, asks or error
 	rich    bool   // the card's body is Markdown
+	meta    string // the turn's summary, under its text
 	title   bool   // the card's header, in JSON 2.0 as a sent card takes
 }
 
@@ -62,7 +63,7 @@ func (b *Bot) card(c *turnCard, state, text, note string) {
 		return
 	}
 	c.state = state
-	shown, err := cardJSON(Card{Title: c.turn, Text: body, State: state, Session: c.session}, c.lang)
+	shown, err := cardJSON(Card{Title: c.turn, Text: body, State: state, Session: c.session, Meta: c.meta}, c.lang)
 	if err != nil {
 		b.logf("feishu: card: %v", err)
 		return

@@ -343,7 +343,7 @@ func ConnectVia(d Dialer) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	w, r, err := handshake(conn, proto.Hello{Kind: "control"})
+	w, r, err := handshake(conn, proto.Hello{Kind: "control", Env: os.Environ()})
 	if err != nil {
 		conn.Close()
 		return nil, err

@@ -30,6 +30,10 @@ func TestClaudeTranscript(t *testing.T) {
 	if !slices.Equal(kinds, want) {
 		t.Fatalf("kinds %v, want %v: %+v", kinds, want, l)
 	}
+	call := l[2]
+	if call.Title != "go build" || !strings.Contains(call.Detail, `"command":"go build"`) {
+		t.Errorf("the tool's call is %+v", call)
+	}
 	last := l[len(l)-1]
 	if !last.Answer || last.Text != "The build passes." {
 		t.Errorf("the turn's answer is %+v", last)
@@ -37,7 +41,7 @@ func TestClaudeTranscript(t *testing.T) {
 	if l[0].Text != "Fix the build" {
 		t.Errorf("the prompt is %q", l[0].Text)
 	}
-	if l[3].Text != "Result: ok" {
+	if l[3].Text != "Result" || l[3].Detail != "ok" {
 		t.Errorf("the tool's result is %q", l[3].Text)
 	}
 	if claudeTranscript([]byte("not json\n{}\n")) != nil {
@@ -106,6 +110,7 @@ func TestWindowEvent(t *testing.T) {
 
 func TestFeed(t *testing.T) {
 	b, luna, msgs := newBot(t)
+	msgs.send = true
 	home := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", home)
 	dir := filepath.Join(home, "projects", encodeDir("/tmp/api"))
@@ -145,4 +150,47 @@ func TestFeed(t *testing.T) {
 		t.Errorf("prompt %+v %+v", msgs.targets, msgs.sent)
 	}
 
+}
+
+// A turn that a chat ran without a terminal names its conversation
+// by its ID: the window shows that file, not the newest of a directory.
+func TestTranscriptByID(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", home)
+	dir := filepath.Join(home, "projects", "-tmp-proj")
+	os.MkdirAll(dir, 0o700)
+	for name, text := range map[string]string{
+		"chat.jsonl":   `{"type":"user","message":{"content":"hi"}}` + "\n" + `{"type":"assistant","message":{"content":[{"type":"text","text":"From the chat."}]}}`,
+		"newest.jsonl": `{"type":"user","message":{"content":"hi"}}` + "\n" + `{"type":"assistant","message":{"content":[{"type":"text","text":"From the terminal."}]}}`,
+	} {
+		os.WriteFile(filepath.Join(dir, name), []byte(text), 0o600)
+	}
+	newest := filepath.Join(dir, "newest.jsonl")
+	os.Chtimes(newest, time.Now(), time.Now().Add(time.Minute))
+	l := (&Bot{}).lines(&proto.Session{Pane: proto.Pane{Dir: "/tmp/proj"}}, proto.FeishuFeed{Agent: "claude", Conversation: "chat", Chat: "oc_1"})
+	if len(l) == 0 || l[len(l)-1].Text != "From the chat." {
+		t.Errorf("the window shows %+v", l)
+	}
+}
+
+// An answer's card reads the answer as Markdown, as the agent wrote it,
+// and the commands' notes too: any answer is a card when cards are on.
+func TestReplyCard(t *testing.T) {
+	b, _, msgs := newBot(t)
+	b.reply("c1", "## Fixed\n\nUse `kero`:\n\n- one\n- two")
+	if len(msgs.cards) != 1 || len(msgs.sent) != 0 {
+		t.Fatalf("cards %d, messages %d", len(msgs.cards), len(msgs.sent))
+	}
+	c := msgs.lastCard(t)
+	if title := c["header"].(map[string]any)["title"].(map[string]any)["content"]; title != "Fixed" {
+		t.Errorf("the title is %q", title)
+	}
+	text := cardText(c)
+	if !strings.Contains(text, "## Fixed") || strings.Contains(text, "```") {
+		t.Errorf("the answer is %q", text)
+	}
+	b.reply("c1", "/new starts one.")
+	if !strings.Contains(last(msgs), "/new starts one.") {
+		t.Errorf("a command's note is %q", last(msgs))
+	}
 }

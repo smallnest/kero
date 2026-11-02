@@ -1,9 +1,12 @@
 package main
 
 import (
+	"sync"
 	"time"
 
 	"github.com/egoist/mygo/ui"
+
+	"kero/internal/settings"
 )
 
 // Surfaces stand out by their color and an edge, crisp, on whole pixels.
@@ -130,8 +133,30 @@ func sizedButtonAt(c *ui.Context, key, label, keys string, primary bool, height,
 // borderless returns the theme with kero's look: its accent, and no lines
 // around controls, which stand out by their fill: white fields and
 // buttons on soft panels.
+// applied is the settings the window shows: the last Apply's.
+var applied struct {
+	sync.RWMutex
+	s settings.Settings
+}
+
+// appliedSettings is the settings the window shows, for what it builds.
+func appliedSettings() settings.Settings {
+	applied.RLock()
+	defer applied.RUnlock()
+	return applied.s
+}
+
 func borderless(c *ui.Context, pal *palette) *ui.Theme {
 	t := *c.Theme()
+	// Text is the setting's: the font, its size and weight, which the
+	// terminal shows too.
+	s := appliedSettings()
+	if s.FontSize >= 8 && s.FontSize <= 30 {
+		t.FontSize = s.FontSize
+	}
+	if s.FontFamily != "" {
+		t.Font = s.FontFamily
+	}
 	t.Accent = pal.accent
 	t.Selection = pal.accent.Alpha(0.25)
 	t.Border = ui.Transparent

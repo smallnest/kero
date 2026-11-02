@@ -1,10 +1,12 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/markdown"
 
 	"kero/internal/proto"
 
@@ -29,19 +31,39 @@ const chatShow = 200
 // chatState is the Chat view's, by session.
 type chatState struct {
 	feeds map[string]*chatFeed // the sessions' chat windows
+	// tools are the tools that show their details, by session and the
+	// tool's line.
+	tools map[string]map[string]bool
+}
+
+// toolOpen tells that a conversation's tool, at a line, shows its
+// details: a click on its line folds or opens them.
+func (a *App) toolOpen(session string, at int, open bool) bool {
+	if a.side.chat.tools == nil {
+		a.side.chat.tools = map[string]map[string]bool{}
+	}
+	t := a.side.chat.tools[session]
+	if t == nil {
+		t = map[string]bool{}
+		a.side.chat.tools[session] = t
+	}
+	key := strconv.Itoa(at)
+	if open {
+		t[key] = !t[key]
+	}
+	return t[key]
 }
 
 // chatFeed is a session's chat window, as the host in it read it.
 type chatFeed struct {
-	h     *host     // the host of the read
-	at    time.Time // when the last read answered
-	busy  bool      // a read is under way
-	got   bool      // a read answered: the turns of the chat are as it says
-	err   string    // why the last read failed
-	feed  proto.FeishuFeed
-	pick  string       // the chat the user chose, "" for the session's window
-	draft string       // the field's text, which a send clears
-	list  ui.ListState // the conversation's place, which follows its end
+	h    *host     // the host of the read
+	at   time.Time // when the last read answered
+	busy bool      // a read is under way
+	got  bool      // a read answered: the turns of the chat are as it says
+	err  string    // why the last read failed
+	feed proto.FeishuFeed
+	pick string       // the chat the user chose, "" for the session's window
+	list ui.ListState // the conversation's place, which follows its end
 }
 
 // chatOf is a session's chat window.
@@ -73,7 +95,7 @@ func (a *App) chatChanged(h *host) {
 func (a *App) readChat(s *proto.Session) {
 	f := a.chatOf(s.ID)
 	h := a.hostOf(s.ID)
-	if f.busy || f.got && time.Since(f.at) < chatRefresh {
+	if f.busy || f.got && len(f.feed.Lines) > 0 && time.Since(f.at) < chatRefresh {
 		return
 	}
 	if h.cl == nil {
@@ -102,104 +124,29 @@ func (a *App) readChat(s *proto.Session) {
 	}()
 }
 
-// chatPick tells a session's window a chat to show.
-func (a *App) chatPick(session, chat string) {
-	f := a.chatOf(session)
-	f.got, f.pick, f.feed.Chat = true, chat, chat
-	if s := a.session(session); s != nil {
-		a.readChat(s)
-	}
-}
-
-// sendChat types the field's text in the session's pane, as a prompt for
-// its agent, and presses Enter: the same place a Feishu message of the
-// session's turn goes. The text goes as a paste, apart from the Enter,
-// so that a newline in it is no Enter.
-func (a *App) sendChat(s *proto.Session) {
-	f := a.chatOf(s.ID)
-	text := strings.TrimSpace(f.draft)
-	if text == "" {
-		return
-	}
-	h := a.hostOf(s.ID)
-	if h.cl == nil {
-		a.toast(locales.ChatHostOffline())
-		return
-	}
-	pane := a.focusOf(s)
-	if pane == "" {
-		a.toast(locales.ChatSessionNone())
-		return
-	}
-	if t := a.termFor(pane); t != nil {
-		t.Paste(text)
-		t.Send([]byte("\r"))
-	} else {
-		cl := h.cl
-		// Sent apart, so that a program takes no newline for an Enter.
-		go func() {
-			if cl.Call("send", proto.SendParams{ID: pane, Data: text}, nil) != nil {
-				return
-			}
-			time.Sleep(120 * time.Millisecond)
-			cl.Call("send", proto.SendParams{ID: pane, Data: "\r"}, nil)
-		}()
-	}
-	f.draft = ""
-	// The turn reads from the host as its state changes.
-	f.got = false
-}
-
-// chatBody is the view: the chat at its top, the conversation, and the
-// field under it.
+// chatBody is the view: the conversation, in a column of a comfortable
+// width. It shows the chat's turns, which Feishu sends: a prompt is not
+// written here.
 func (a *App) chatBody(c *ui.Context, pal *palette, s *proto.Session) {
 	f := a.chatOf(s.ID)
 	a.readChat(s)
-	a.chatHead(c, pal, s, f)
 	ui.Column(c.Key("lines")).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Children(func() {
-		a.chatLines(c, pal, f)
+		a.chatLines(c, pal, s, f)
 	})
-	a.chatField(c, pal, s, f)
 }
 
-// chatHead is the view's top: the chat the session is with, the way to
-// one of the app's, and the state of the read.
-func (a *App) chatHead(c *ui.Context, pal *palette, s *proto.Session, f *chatFeed) {
-	ui.Row(c.Key("head")).Height(headerH).Shrink(0).Padding(0, 8, 0, 12).Gap(8).AlignItems(ui.Center).Children(func() {
-		name := f.feed.Name
-		if name == "" {
-			name = f.feed.Chat
-		}
-		if f.feed.Chat == "" {
-			name = locales.ChatSessionNone()
-		}
-		ui.Icon(c, chatIcon).Size(13, 13).TextColor(pal.textMuted).Shrink(0)
-		ui.Text(c, name).FontSize(12.5).FontWeight(600).TextColor(pal.text).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0).Tooltip(f.tip())
-		if f.err != "" {
-			ui.Text(c, f.err).FontSize(11.5).TextColor(pal.danger).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0).Tooltip(f.err)
-		}
-		ui.Box(c).Grow(1).AlignSelf(ui.Stretch).DragWindow()
-		if h := a.hostOf(s.ID); h.cl != nil {
-			iconButton(c, "chat-chats", searchIcon, locales.ChatChooseTitle(), pal, func() {
-				a.defer_(func() { a.openChats(s.ID) })
-			})
-		}
-	})
-	infoRule(c, pal)
-}
+// chatWidth is how wide a conversation's column is, its bubbles inside
+// it: as a chat app's, a long line reads best at a width.
+const chatWidth = 720
 
-// tip is the chat's ID, and its host.
-func (f *chatFeed) tip() string {
-	if f.feed.Chat == "" {
-		return ""
-	}
-	return f.feed.Chat + " · " + f.feed.Host
-}
+// chatBubble is how wide a bubble's text may be: most of the column, as
+// a chat app's.
+const chatBubble = chatWidth * 0.88
 
 // chatLines shows the conversation: what the user wrote to the right,
 // the agent's messages to the left, its tools faint, and each turn's
 // answer marked.
-func (a *App) chatLines(c *ui.Context, pal *palette, f *chatFeed) {
+func (a *App) chatLines(c *ui.Context, pal *palette, s *proto.Session, f *chatFeed) {
 	lines := f.feed.Lines
 	if len(lines) > chatShow {
 		lines = lines[len(lines)-chatShow:]
@@ -219,85 +166,158 @@ func (a *App) chatLines(c *ui.Context, pal *palette, f *chatFeed) {
 	}
 	f.list.FollowEnd, f.list.FollowAnimation = true, &ui.Smooth
 	ui.List(c.Key("chat"), &f.list, len(lines), func(i int) {
-		a.chatLine(c, pal, lines[i])
-	}).Grow(1).MinHeight(0).Padding(10, 12, 10, 12).Gap(6)
+		a.chatLine(c, pal, f, s.ID, i, lines[i])
+	}).Grow(1).MinHeight(0).AlignItems(ui.Stretch).Padding(18, 16, 12, 8).Gap(10)
 }
 
 // read tells that a read of the window answered before.
 func (f *chatFeed) read() bool { return f.feed.ID != "" }
 
 // chatLine is a line of the conversation.
-func (a *App) chatLine(c *ui.Context, pal *palette, l proto.FeishuLine) {
+func (a *App) chatLine(c *ui.Context, pal *palette, f *chatFeed, session string, i int, l proto.FeishuLine) {
 	text := strings.TrimSpace(l.Text)
-	if text == "" {
+	if text == "" && l.Detail == "" && l.Title == "" {
 		return
 	}
-	switch l.Kind {
-	case "tool":
-		ui.Text(c, text).FontSize(11.5).TextColor(pal.textFaint).FontFeatures("tnum").SingleLine().Ellipsis("…").Padding(0, 2).Tooltip(text)
-	case "note", "user":
-		ui.Row(c).AlignSelf(ui.End).MaxWidthPercent(88).Children(func() {
-			ui.Column(c).Padding(6, 10).Radius(10).Background(pal.control).Children(func() {
-				ui.Text(c, text).FontSize(12.5).TextColor(pal.text).Wrap().Selectable()
+	// The column's: a line of the conversation, in the middle of the
+	// pane at a fixed width, as wide as it, its own text inside a
+	// bubble, the agent's or the user's.
+	ui.Column(c).AlignSelf(ui.Center).WidthPercent(100).MaxWidth(chatWidth).AlignItems(ui.Stretch).Children(func() {
+		switch l.Kind {
+		case "tool":
+			a.chatTool(c, pal, session, i, l)
+			return
+		case "think":
+			ui.Column(c).MaxWidth(chatWidth*0.9).Padding(6, 2).Gap(2).Children(func() {
+				ui.Text(c, locales.ChatThought()).FontSize(11).FontWeight(600).TextColor(pal.textFaint)
+				a.chatMarkdown(c, pal, text, pal.textMuted, pal.textMuted.Alpha(0.08))
+			})
+			return
+		case "note", "user":
+			// The user's prompt: a Feishu message's, or one typed in
+			// the terminal, its bubble as wide as the column, which a
+			// long prompt takes.
+			ui.Row(c).AlignSelf(ui.Stretch).Justify(ui.End).Children(func() {
+				ui.Box(c).Grow(1)
+				ui.Column(c).Padding(8, 13).Radius(14).Background(pal.accent).Children(func() {
+					a.chatMarkdown(c, pal, text, chatOnAccent, ui.RGBA(255, 255, 255, 0.16))
+				})
+			})
+			return
+		}
+		// The agent's: its text on a soft bubble, the turn's answer a
+		// shade stronger.
+		bg := pal.text.Alpha(0.05)
+		if l.Answer {
+			bg = pal.text.Alpha(0.085)
+		}
+		ui.Row(c).AlignSelf(ui.Stretch).MaxWidth(chatBubble).Children(func() {
+			ui.Column(c).Padding(8, 13).Radius(14).Background(bg).Children(func() {
+				a.chatMarkdown(c, pal, text, pal.text, pal.text.Alpha(0.07))
 			})
 		})
-	default:
-		body := ui.Column(c).Padding(6, 10).Radius(10).Children(func() {
-			ui.Text(c, text).FontSize(12.5).TextColor(pal.textMuted).Wrap().Selectable()
-		})
-		if l.Answer {
-			// The turn's answer: the text, on the chip, as a chat shows
-			// what it answered.
-			body.Background(pal.chip)
-		}
-	}
-}
-
-// chatField is the field under the conversation: a prompt for the chat,
-// which Enter sends.
-func (a *App) chatField(c *ui.Context, pal *palette, s *proto.Session, f *chatFeed) {
-	draft := f.draft
-	ready := a.hostOf(s.ID).cl != nil && a.focusOf(s) != ""
-	infoRule(c, pal)
-	ui.Row(c.Key("field")).Padding(8, 12, 10, 12).Gap(8).AlignItems(ui.Center).Children(func() {
-		var in ui.Element
-		frame := ui.Row(c.Key("frame")).Grow(1).MinWidth(0).Cursor(ui.CursorText).Children(func() {
-			ph := locales.ChatPlaceholder()
-			if !ready {
-				ph = locales.ChatHostOffline()
-			}
-			in = ui.TextInputBase(c.Key("in"), &draft).Grow(1).MinWidth(0).AlignSelf(ui.Stretch).Padding(0, 8).FontSize(12.5).Placeholder(ph).Label(ph)
-		})
-		f.draft = draft
-		field(c, frame, in.Focused(), pal).Padding(0)
-		if in.Submitted() && ready {
-			a.defer_(func() { a.sendChat(s) })
-		}
-		if fieldButton(c, "chat-send", locales.ChatSend(), true, pal) && ready {
-			a.defer_(func() { a.sendChat(s) })
-		}
 	})
 }
 
-// openChats opens the palette on the app's chats, a choice showing the
-// session's window of one.
-func (a *App) openChats(session string) {
-	h := a.hostOf(session)
-	if h.cl == nil {
-		a.toast(locales.ChatHostOffline())
-		return
+// chatThemes are the Markdown themes of the chat windows, by day and
+// by night: a message's colors, which differ, its own.
+var chatThemes = map[string]markdown.Theme{}
+
+// chatOnAccent is the color of the text on the user's prompts.
+var chatOnAccent = ui.Hex("#ffffff")
+
+// chatMarkdown shows a message's text as Markdown, as a chat app does:
+// headings, lists, quotes, tables, code blocks, and links, which open in
+// the browser. fg is the color of its text and code the fill of code
+// spans, which differ with the message's surface.
+func (a *App) chatMarkdown(c *ui.Context, pal *palette, text string, fg, code ui.Color) {
+	key := "light"
+	if pal.dark {
+		key = "dark"
 	}
-	// The call is no frame's: it waits on a read, and a frame's would not
-	// wait on it.
-	cl := h.cl
-	go func() {
-		var chats proto.FeishuChats
-		if err := cl.Call("feishu.chats", nil, &chats); err != nil {
-			a.main(func() { a.toast(err.Error()) })
+	th, ok := chatThemes[key]
+	if !ok || th.Text != fg || th.CodeBackground != code {
+		th = markdown.Theme{
+			FontSize:            13,
+			LineHeight:          1.5,
+			Text:                fg,
+			Muted:               fg.Alpha(0.68),
+			Strong:              fg,
+			Code:                fg,
+			CodeBackground:      code,
+			BlockSpacing:        0.55,
+			ItemSpacing:         0.2,
+			QuoteBar:            code.Mix(fg, 0.3),
+			QuoteText:           fg.Alpha(0.75),
+			Rule:                code,
+			CodeBlockBackground: code,
+			CodeBlockBorder:     code,
+			TableBorder:         code,
+			TableHeader:         code,
+		}
+		chatThemes[key] = th
+	}
+	markdown.View(c, text, &markdown.Options{
+		Theme:    &th,
+		WrapCode: true,
+		OnLink:   func(url string) { c.OpenURL(url) },
+	})
+}
+
+// chatTool is a tool's line: its icon and its name, and what it ran,
+// with the output under it, which a click folds or opens.
+func (a *App) chatTool(c *ui.Context, pal *palette, session string, at int, l proto.FeishuLine) {
+	g, name := gearIcon, strings.TrimPrefix(l.Text, "Tool ")
+	if l.Text == "Result" {
+		g, name = returnIcon, locales.ChatOutput()
+	}
+	// A tool's name is its line, and what it ran, after it: a line
+	// without a name, as an older host's, says no more than it holds.
+	arg := l.Title
+	if name == l.Text {
+		arg = ""
+	}
+	if arg == "" {
+		arg = strings.TrimSpace(l.Detail)
+	}
+	ui.Column(c).AlignSelf(ui.Stretch).Children(func() {
+		row := ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, g).Size(11, 11).TextColor(pal.textFaint).Shrink(0)
+			ui.Text(c, name).FontSize(11.5).FontWeight(500).TextColor(pal.textMuted).SingleLine().Shrink(0)
+			if arg != "" {
+				ui.Text(c, shortText(arg, 90)).Font("monospace").FontSize(11).TextColor(pal.textFaint).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
+			}
+		})
+		// A tool's arguments open under its line, and its output, which
+		// the click takes from the line.
+		open := a.toolOpen(session, at, row.Clicked())
+		if row.Clicked() {
+			c.Invalidate()
+		}
+		var detail string
+		switch {
+		case l.Text == "Result":
+			if l.Detail != "" {
+				detail = l.Detail
+			}
+		case l.Title != "":
+			detail = l.Detail
+		}
+		if detail == "" || !open {
 			return
 		}
-		a.main(func() {
-			a.pal = paletteState{open: true, chats: &chats, chatFor: session, gen: a.pal.gen + 1}
+		ui.Scroll(c.Key("detail")).MaxHeight(240).Padding(8, 10).Margin(4, 20, 0, 18).Radius(8).Background(pal.text.Alpha(0.04)).Children(func() {
+			ui.Text(c, shortText(detail, 4000)).Font("monospace").FontSize(11.5).TextColor(pal.textMuted).LineHeight(1.35).Wrap().Selectable()
 		})
-	}()
+	})
+}
+
+// shortText is s in one line, cut at n characters.
+func shortText(s string, n int) string {
+	s = strings.TrimSpace(s)
+	s = strings.Join(strings.Fields(s), " ")
+	if r := []rune(s); len(r) > n {
+		return string(r[:n]) + "…"
+	}
+	return s
 }

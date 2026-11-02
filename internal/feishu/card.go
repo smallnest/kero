@@ -9,12 +9,16 @@ import (
 )
 
 // Card is a turn's card: its title, the agent's text, the state it shows,
-// and the session it is about, which its button opens in Kero.
+// and the session it is about, which its button opens in Kero. Meta is
+// the turn's summary, under the text; Note what it says under it, as an
+// error's words.
 type Card struct {
 	Title   string
 	Text    string
 	State   string // working, done, asks or error
 	Session string
+	Meta    string
+	Note    string
 }
 
 // cardState is a card's header color: grey while the agent works, green
@@ -46,21 +50,15 @@ func cardJSON(c Card, lang string) (string, error) {
 		title += " · " + word(lang, "state.working")
 	}
 	body := plainBody(strings.TrimSpace(c.Text))
-	if len(body) > 30<<10 {
-		body = truncate(body, 30<<10)
-	}
-	if markdown() {
-		body = codeFence(body)
-	}
-	if len(body) > maxAnswer && !markdown() {
+	if len(body) > maxAnswer {
 		body = truncate(body, maxAnswer)
 	}
-	var elems []any
-	note := word(lang, "state."+c.State)
-	if c.Session != "" {
-		note += " · " + c.Session
+	// The agent's words are Markdown, as they wrote it: its titles,
+	// lists, tables and code blocks read as they are written.
+	if markdown() {
+		body = markdownText(body)
 	}
-	elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(note) + "*"})
+	var elems []any
 	if body != "" {
 		if markdown() {
 			elems = append(elems, map[string]any{"tag": "markdown", "content": body})
@@ -68,6 +66,20 @@ func cardJSON(c Card, lang string) (string, error) {
 			elems = append(elems, map[string]any{"tag": "div", "text": map[string]any{"tag": "plain_text", "content": body}})
 		}
 	}
+	if c.Note != "" {
+		elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(c.Note) + "*"})
+	}
+	if len(elems) > 0 {
+		elems = append(elems, map[string]any{"tag": "hr"})
+	}
+	note := word(lang, "state."+c.State)
+	if c.Meta != "" {
+		note += " · " + c.Meta
+	}
+	if c.Session != "" {
+		note += " · " + c.Session
+	}
+	elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(note) + "*"})
 	if c.Session != "" && settings.Load().FeishuOpenButton {
 		elems = append(elems, map[string]any{
 			"tag": "action",
@@ -127,7 +139,7 @@ func word(lang, key string) string {
 			"state.working": "working", "state.done": "done", "state.asks": "waiting for you", "state.error": "error",
 			"asks": "The agent waits for your answer. Use /answer, or send a message.",
 			"open": "Open in Kero", "opened": "Kero shows the session.", "gone": "This card's session is gone.",
-			"inTerminal":  "Done. The answer is in the next message.",
+			"inTerminal":  "The answer follows in its own card.",
 			"earlier":     "An earlier turn",
 			"earlierNote": "This card is replaced by the next turn's.",
 		},
@@ -135,7 +147,7 @@ func word(lang, key string) string {
 			"state.working": "运行中", "state.done": "完成", "state.asks": "等待你回答", "state.error": "出错",
 			"asks": "代理在等待你回答。用 /answer 回答，或发送一条消息。",
 			"open": "在 Kero 中打开", "opened": "Kero 已打开该会话。", "gone": "这张卡片的会话已不存在。",
-			"inTerminal":  "已完成，回答在下一条消息中。",
+			"inTerminal":  "回答在下一张卡片中。",
 			"earlier":     "较早的一轮",
 			"earlierNote": "这张卡片已由下一轮的卡片取代。",
 		},
@@ -143,7 +155,7 @@ func word(lang, key string) string {
 			"state.working": "実行中", "state.done": "完了", "state.asks": "回答待ち", "state.error": "エラー",
 			"asks": "エージェントは回答を待っています。/answer で答えるか、メッセージを送ってください。",
 			"open": "Kero で開く", "opened": "Kero でセッションを開きました。", "gone": "このカードのセッションは終了しました。",
-			"inTerminal":  "完了しました。回答は次のメッセージにあります。",
+			"inTerminal":  "回答は次のカードにあります。",
 			"earlier":     "以前のターン",
 			"earlierNote": "このカードは次のターンのカードに置き換えられました。",
 		},
@@ -262,11 +274,5 @@ func bodyOf(shown string) string {
 	return string(data)
 }
 
-// markdownText keeps a plain text's rows from being taken for Markdown's
-// in a card that is.
-func markdownText(t string) string {
-	if strings.Contains(t, "|") || strings.Contains(t, "# ") {
-		return codeFence(t)
-	}
-	return t
-}
+// markdownText is an agent's words for a card that reads Markdown.
+func markdownText(t string) string { return t }

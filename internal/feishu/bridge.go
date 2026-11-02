@@ -776,7 +776,12 @@ func (b *Bot) reply(chatID, text string) {
 // replyAt answers a message in a chat as a reply to it, which the hosts
 // that share the app hear and the chat's answers follow: event is the
 // event the message answers, "" for a message of its own.
-func (b *Bot) replyAt(key, event, chatID, text string) {
+func (b *Bot) replyAt(key, event, chatID, text string) { b.replyTurn(key, event, chatID, "", text) }
+
+// replyTurn ends a turn in a chat: text says what the turn did, as
+// "Sent." does, and card is the turn's answer, which its card shows.
+// A card is the turn's answer, and text a note about it.
+func (b *Bot) replyTurn(key, event, chatID, card, text string) {
 	text = truncate(strings.TrimSpace(text), maxText)
 	if text == "" {
 		return
@@ -793,6 +798,20 @@ func (b *Bot) replyAt(key, event, chatID, text string) {
 		text = hopText(event) + fromText(want) + text
 		b.noteTurn(event, chatID, text)
 	}
+	// Every answer shows as a card (feishu-cards), as the wrapper the
+	// agent runs in shows its turns: no message without one. An app that
+	// several hosts share keeps every answer, which the hosts answer the
+	// next messages with: the card goes beside it.
+	answer := strings.TrimSpace(card)
+	if answer == "" {
+		answer = text
+	}
+	if cards() {
+		if err := b.replyCard(chatID, answer, text); err == nil && !b.shared() {
+			return
+		}
+	}
+	text = strings.Join([]string{answer, strings.TrimSpace(text)}, "\n\n")
 	var err error
 	if event != "" {
 		_, err = sendReply(b.msgs, event, text)
@@ -803,6 +822,49 @@ func (b *Bot) replyAt(key, event, chatID, text string) {
 	if _, err = b.msgs.Send("chat_id", chatID, text); err != nil {
 		b.logf("feishu: reply to %s: %v", chatID, err)
 	}
+}
+
+// titleLen is how long a card's title is, about: a prompt's first line,
+// or its words, cut where they end.
+const titleLen = 60
+
+// titleOf is the title of the card that answers a turn: the first line
+// of its text, all of it when it is short, and its words cut otherwise.
+func titleOf(text string) string {
+	line, _, _ := strings.Cut(text, "\n")
+	line = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "#>*-• "))
+	if r := []rune(line); len(r) > titleLen {
+		cut := titleLen
+		for i := titleLen; i > titleLen/2; i-- {
+			if r[i-1] == ' ' {
+				cut = i - 1
+				break
+			}
+		}
+		line = strings.TrimSpace(string(r[:cut]))
+	}
+	if line == "" {
+		return text
+	}
+	return line
+}
+
+// replyCard answers a turn in a chat with a card: its title the answer's
+// first words, its text the answer, in the done state's color, and note
+// what the turn did under it.
+func (b *Bot) replyCard(chatID, text, note string) error {
+	if strings.TrimSpace(note) == strings.TrimSpace(text) {
+		note = ""
+	}
+	shown, err := cardJSON(Card{Title: titleOf(text), Text: strings.TrimSpace(text), State: "done", Note: note}, langOf(text))
+	if err != nil {
+		return err
+	}
+	_, err = b.msgs.SendCard("chat_id", chatID, shown)
+	if err != nil {
+		b.logf("feishu: sending a card: %v", err)
+	}
+	return err
 }
 
 // shared tells an app that several hosts connect from.

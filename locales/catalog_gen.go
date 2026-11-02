@@ -1346,16 +1346,6 @@ func (msgs Messages) ChatChoosePlaceholder() string {
 	return Catalog.Format(msgs.locale, "chatChoosePlaceholder", nil)
 }
 
-// ChatPlaceholder says "Prompt the agent"
-// in the language the app shows.
-func ChatPlaceholder() string { return In(i18n.Locale()).ChatPlaceholder() }
-
-// ChatPlaceholder says "Prompt the agent"
-// in the language of msgs.
-func (msgs Messages) ChatPlaceholder() string {
-	return Catalog.Format(msgs.locale, "chatPlaceholder", nil)
-}
-
 // ChatSend says "Send"
 // in the language the app shows.
 func ChatSend() string { return In(i18n.Locale()).ChatSend() }
@@ -1374,6 +1364,26 @@ func ChatNothing() string { return In(i18n.Locale()).ChatNothing() }
 // in the language of msgs.
 func (msgs Messages) ChatNothing() string {
 	return Catalog.Format(msgs.locale, "chatNothing", nil)
+}
+
+// ChatThought says "Thought"
+// in the language the app shows.
+func ChatThought() string { return In(i18n.Locale()).ChatThought() }
+
+// ChatThought says "Thought"
+// in the language of msgs.
+func (msgs Messages) ChatThought() string {
+	return Catalog.Format(msgs.locale, "chatThought", nil)
+}
+
+// ChatOutput says "Output"
+// in the language the app shows.
+func ChatOutput() string { return In(i18n.Locale()).ChatOutput() }
+
+// ChatOutput says "Output"
+// in the language of msgs.
+func (msgs Messages) ChatOutput() string {
+	return Catalog.Format(msgs.locale, "chatOutput", nil)
 }
 
 // ChatReadingNow says "Reading…"

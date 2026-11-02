@@ -31,10 +31,6 @@ type paletteState struct {
 	convs []hostConversation
 	only  bool
 	gen   int
-	// chats are the Feishu app's chats, which the palette shows alone for
-	// chatFor to choose the one its chat window shows (chat.go).
-	chats   *proto.FeishuChats
-	chatFor string
 }
 
 // hostConversation is a conversation a host's kerod remembers.
@@ -305,10 +301,6 @@ func keywords(query, words string) int {
 
 func (a *App) paletteView(c *ui.Context, pal *palette) {
 	if !a.pal.open {
-		return
-	}
-	if a.pal.chats != nil {
-		a.chatsView(c, pal)
 		return
 	}
 	var items []paletteItem

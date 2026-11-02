@@ -88,12 +88,17 @@ func contentLines(content any) []proto.FeishuLine {
 				out = append(out, proto.FeishuLine{Kind: "agent", Text: text})
 			}
 		}
+		if typ == "thinking" {
+			text, _ := m["thinking"].(string)
+			if strings.TrimSpace(text) != "" {
+				out = append(out, proto.FeishuLine{Kind: "think", Text: text})
+			}
+		}
 		if typ == "tool_use" {
-			name, _ := m["name"].(string)
-			out = append(out, proto.FeishuLine{Kind: "tool", Text: toolText(name, m["input"])})
+			out = append(out, toolCall(m["name"], m["input"]))
 		}
 		if typ == "tool_result" {
-			out = append(out, proto.FeishuLine{Kind: "tool", Text: "Result: " + short(resultText(m["content"]), 200)})
+			out = append(out, proto.FeishuLine{Kind: "tool", Text: "Result", Detail: resultText(m["content"])})
 		}
 	}
 	return out
@@ -136,6 +141,30 @@ func answersTranscript(data []byte) []proto.FeishuLine {
 		return nil
 	}
 	return out
+}
+
+// toolCall is a tool a message calls: its name and, as its title, what
+// it runs, which is its command, its file or its question; its
+// arguments, as its detail, where they are more.
+func toolCall(name any, input any) proto.FeishuLine {
+	n, _ := name.(string)
+	l := proto.FeishuLine{Kind: "tool", Text: "Tool " + firstNotEmpty(n, "call") + " " + short(mustJSON(input), 200)}
+	m, _ := input.(map[string]any)
+	all := mustJSON(input)
+	for _, key := range []string{"command", "file_path", "path", "pattern", "url", "description", "prompt"} {
+		if s, ok := m[key].(string); ok && strings.TrimSpace(s) != "" {
+			l.Title = short(s, 120)
+			l.Detail = all
+			break
+		}
+	}
+	return l
+}
+
+// mustJSON is v as JSON, whatever it holds.
+func mustJSON(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }
 
 func toolText(name string, input any) string {
@@ -315,9 +344,15 @@ func (b *Bot) pin(session, chat string) {
 // the agent's transcript, which the answer file fills for its last turn.
 func (b *Bot) lines(s *proto.Session, f proto.FeishuFeed) []proto.FeishuLine {
 	var out []proto.FeishuLine
-	file := transcriptFile(f.Conversation, f.Agent, sessionDir(s))
+	dir := sessionDir(s)
+	if len(f.Conversation) > 0 {
+		dir = ""
+	}
+	file := transcriptFile(f.Conversation, f.Agent, dir)
 	if file != "" {
 		if data, err := os.ReadFile(file); err == nil {
+			// A terminal's conversation is the directory's, newest of
+			// the agent's files; one that a chat runs is the ID's.
 			out = transcript(f.Agent, data)
 		}
 	}
@@ -368,6 +403,9 @@ func answersIn(dir string) []proto.FeishuLine {
 
 // transcript is an agent's transcript from its file.
 func transcript(agent string, data []byte) []proto.FeishuLine {
+	if agent == "" {
+		agent = "claude" // the newest file of a directory is Claude Code's
+	}
 	switch agent {
 	case "claude":
 		return claudeTranscript(data)
@@ -390,14 +428,45 @@ func sessionDir(s *proto.Session) string {
 	return ""
 }
 
-// transcriptFile finds the file of an agent's conversation: the newest
-// file that Claude Code keeps for the directory, which resumes the
-// directory's conversation after kerod loses the ID.
+// transcriptFile finds the file of an agent's conversation: the one that
+// Claude Code keeps for the conversation's ID, which names it, or the
+// newest file of the directory, which resumes the directory's
+// conversation after kerod loses the ID.
 func transcriptFile(conv, agent, dir string) string {
 	if agent == "claude" {
-		return newestTranscript(filepath.Join(claudeHome(), "projects"), encodeDir(dir))
+		root := filepath.Join(claudeHome(), "projects")
+		if conv != "" {
+			if file := byID(root, conv); file != "" {
+				return file
+			}
+		}
+		if dir != "" {
+			return newestTranscript(root, encodeDir(dir))
+		}
 	}
 	return ""
+}
+
+// byID is the file Claude Code keeps of a conversation, which it names
+// <id>.jsonl in the project of the conversation's directory.
+func byID(root, conv string) string {
+	projects, err := os.ReadDir(root)
+	if err != nil {
+		return ""
+	}
+	for _, p := range projects {
+		if p.IsDir() {
+			if file := filepath.Join(root, p.Name(), conv+".jsonl"); exists(file) {
+				return file
+			}
+		}
+	}
+	return ""
+}
+
+func exists(file string) bool {
+	_, err := os.Stat(file)
+	return err == nil
 }
 
 // claudeHome is Claude Code's directory, as its hook is told.

@@ -12,6 +12,7 @@ import (
 
 	"kero/internal/proto"
 	"kero/internal/remote"
+	"kero/internal/settings"
 )
 
 // call runs a control method. Methods taking a pane take a session too,
@@ -500,6 +501,15 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		return d.feishuWindow(method, raw)
 
 	case "feishu.restart":
+		var p proto.FeishuEnv
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		if len(p.Env) > 0 {
+			if err := settings.SetAppEnv(p.Host, p.Env, time.Now()); err != nil {
+				return nil, err
+			}
+		}
 		d.startFeishu()
 		d.mu.Lock()
 		d.idleAt = time.Now()

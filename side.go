@@ -200,7 +200,8 @@ func (a *App) sideWidth(w float32) float32 {
 		sw = defaultSide
 	}
 	if w > 0 {
-		sw = min(sw, w-minPanes)
+		// The panel's own gap from the row's edge is its margin.
+		sw = min(sw, w-minPanes-paneGap)
 	}
 	return max(sw, minSide)
 }
@@ -245,7 +246,7 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 	// sidebar does.
 	in := card.AnimateTo("in", b2f(a.rightShown()), sidebarMotion)
 	card.Opacity(in)
-	card.Margin(0, (1-in)*cardGap, 0, 0)
+	card.Margin(0, (1-in)*cardGap, 0, paneGap)
 	view, set := a.sideView(), ""
 	card.Children(func() {
 		ui.Row(c.Key("hdr")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 16).Gap(8).Children(func() {
