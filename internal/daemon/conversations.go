@@ -193,6 +193,10 @@ func (cs *convStore) find(agent, id string) (proto.Conversation, bool) {
 func paneConversation(p *pane, project, name string) *proto.Conversation {
 	as := p.info.AgentSession
 	if as == nil {
+		// A command of a chat's, which names its conversation.
+		as = p.conv
+	}
+	if as == nil {
 		return nil
 	}
 	// The pane tells the chat window which conversation it runs, as its

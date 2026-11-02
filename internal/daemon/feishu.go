@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"kero/internal/feishu"
@@ -55,6 +58,7 @@ func (d *Daemon) startFeishu() {
 		Secret:   secret,
 		Luna:     &botLuna{d: d},
 		Log:      func(f string, a ...any) { d.log.Printf(f, a...) },
+		Env:      botEnv(),
 	})
 	d.mu.Lock()
 	d.bot, d.feishu = b, conn
@@ -319,4 +323,32 @@ func derefStr(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// conversationOf returns the conversation an agent's command runs, as
+// the command names it: Claude Code's --session-id, or --resume.
+func conversationOf(cmd []string) (proto.AgentSession, bool) {
+	if len(cmd) == 0 || !strings.HasPrefix(filepath.Base(cmd[0]), "claude") {
+		return proto.AgentSession{}, false
+	}
+	for i, w := range cmd {
+		if (w == "--session-id" || w == "--resume" || w == "--session_id" || w == "-r") && i+1 < len(cmd) && len(cmd[i+1]) > 0 {
+			return proto.AgentSession{Agent: "claude", ID: cmd[i+1]}, true
+		}
+	}
+	return proto.AgentSession{}, false
+}
+
+// botEnv is the bot's environment, which its commands take: kerod's,
+// less the app's own, as a pane's is, and the places a library would need
+// on its path.
+func botEnv() []string {
+	var env []string
+	for _, kv := range os.Environ() {
+		k, _, _ := strings.Cut(kv, "=")
+		if k != "PATH" {
+			env = append(env, kv)
+		}
+	}
+	return append(env, "PATH="+withHomePaths(os.Getenv("PATH")))
 }

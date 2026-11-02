@@ -111,7 +111,15 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 	// wrong. The children go without stdin, which carries nothing.
 	cmd := exec.Command(p.Command[0], p.Command[1:]...)
 	cmd.Dir = dir
-	cmd.Env = d.environment(p.ID, pn.info.ID, shell, nil)
+	if as, ok := conversationOf(p.Command); ok {
+		// The conversation the command runs is the pane's, which a chat
+		// window shows, though the command has no terminal to tell it.
+		pn.mu.Lock()
+		pn.conv = &as
+		pn.info.AgentSessionID = as.ID
+		pn.mu.Unlock()
+	}
+	cmd.Env = d.environment(p.ID, pn.info.ID, shell, p.Env)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = out, out, nil
 	if runtime.GOOS != "windows" {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}

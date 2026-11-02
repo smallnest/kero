@@ -889,6 +889,9 @@ type (
 		Out     string   `json:"out"`
 		Command []string `json:"command"`
 		Dir     string   `json:"dir,omitempty"`
+		// Env is "KEY=value", added to the daemon's for the command: a
+		// client's, which a launchd job's may not have.
+		Env []string `json:"env,omitempty"`
 	}
 	// AnswerParams give a pane the directory of its agent's answer files,
 	// which the agent's Stop hook writes each turn's answer to, while a

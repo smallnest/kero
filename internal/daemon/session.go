@@ -77,8 +77,10 @@ type pane struct {
 	changed  chan struct{} // closed and replaced on every status change
 	// framing tells that frames for the clients are due, after output.
 	framing bool
-	// bg is the command the session runs without a terminal (background.go).
-	bg *background
+	// bg is the command the session runs without a terminal (background.go),
+	// and conv the conversation that command runs.
+	bg   *background
+	conv *proto.AgentSession
 }
 
 // headless connects the daemon's emulator to the program: it reads

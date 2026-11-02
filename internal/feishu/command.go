@@ -46,7 +46,15 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		sid = newUUID()
 	}
 	cmd := b.backgroundCommand(agent, sid, base.sid, text)
-	if err := b.api.Call("agent.background", proto.BackgroundParams{ID: session, Command: cmd, Dir: dir, Out: b.outFile(session)}, nil); err != nil {
+	// The app's run has its environment, while kerod's, which runs the
+	// command, may have none of the agent's provider's.
+	params := proto.BackgroundParams{ID: session, Command: cmd, Dir: dir, Out: b.outFile(session)}
+	for _, kv := range b.env {
+		if strings.Contains(kv, "=") {
+			params.Env = append(params.Env, kv)
+		}
+	}
+	if err := b.api.Call("agent.background", params, nil); err != nil {
 		b.reply(chatID, err.Error())
 		return
 	}

@@ -126,6 +126,7 @@ func (a *larkAPI) Get(messageID string) (feishuMessage, error) {
 // Bot is one machine's connection to a Feishu app.
 type Bot struct {
 	cfg   settings.Feishu
+	env   []string
 	api   myLuna
 	lark  *lark.Client
 	ws    *larkws.Client
@@ -234,6 +235,9 @@ type Config struct {
 	Secret   settings.FeishuSecret
 	Luna     Luna
 	Log      func(format string, args ...any)
+	// Env is the environment the app runs in, which the commands it runs
+	// take: kerod's, which runs them, may be a launchd job's.
+	Env []string
 }
 
 // New makes the bot; Run holds its connection.
@@ -243,6 +247,7 @@ func New(c Config) *Bot {
 	}
 	b := &Bot{
 		cfg:      c.Settings,
+		env:      c.Env,
 		api:      c.Luna,
 		me:       c.Secret.Me,
 		logf:     c.Log,

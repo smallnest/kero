@@ -197,3 +197,18 @@ func TestFeishuShared(t *testing.T) {
 		t.Fatalf("a take by none %+v, %v", took, err)
 	}
 }
+
+// A chat's command names the conversation it runs, which a chat window
+// shows.
+func TestConversationOf(t *testing.T) {
+	as, ok := conversationOf([]string{"/Users/x/.local/bin/claude", "-p", "--output-format", "text", "--session-id", "abc"})
+	if !ok || as.Agent != "claude" || as.ID != "abc" {
+		t.Errorf("%+v %v", as, ok)
+	}
+	if as, ok := conversationOf([]string{"claude", "-p", "--resume", "def"}); !ok || as.ID != "def" {
+		t.Errorf("%+v %v", as, ok)
+	}
+	if _, ok := conversationOf([]string{"codex", "exec"}); ok {
+		t.Error("codex took a conversation")
+	}
+}
