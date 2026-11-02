@@ -591,6 +591,10 @@ func (a *App) own(h *host, s proto.Session) {
 // focus, kero do): this machine's as Settings › Agents says, another's as
 // Settings › Hosts does.
 func (a *App) remoteControl(h *host) bool {
+	// Feishu takes prompts as the agent runs them, without the app.
+	if settings.Load().Feishu != nil && settings.Load().Feishu.App != "" {
+		return true
+	}
 	if !h.remote() {
 		return a.set.RemoteControl
 	}

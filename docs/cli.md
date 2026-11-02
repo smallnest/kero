@@ -214,6 +214,17 @@ kero pets install <pack.zip>     # install a Codex pet pack, a .codex-pet.zip
 kero pets rm <name>              # remove a pet kero installed
 ```
 
+## Feishu
+
+```sh
+kero feishu setup                # ask for the app's ID and secret, keep them, connect, and say what's next
+kero feishu status               # whether the bot is connected
+kero feishu test                 # check that Feishu knows the app
+kero feishu send <chat> <text…>  # send a message to a chat, by its ID
+```
+
+A Feishu chat drives the coding agent in the session it's bound to: `/new` starts one, `/use` binds an open one, and other text is a prompt. See [Feishu](./feishu.md).
+
 ## Other machines
 
 `-H <host>` before the command, or `$KERO_HOST`, points a command that acts on sessions at kerod on another machine: a host you added, or an address such as `me@devbox` or `wsl://Ubuntu`. See [Remote Hosts](./remote.md).

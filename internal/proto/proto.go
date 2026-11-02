@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 )
 
 // Version changes whenever the protocol changes in a way the other side
@@ -177,6 +178,9 @@ type Pane struct {
 	ProcessDir string `json:"processDir,omitempty"`
 	// Agent names the coding agent running in the foreground, when known.
 	Agent string `json:"agent,omitempty"`
+	// AgentSessionID is the conversation that the agent runs in the pane,
+	// as its hook told kerod: "" when it has none.
+	AgentSessionID string `json:"agentSessionId,omitempty"`
 	// Runtime names the interpreter of a foreground script, as "node",
 	// when Process is the script's name.
 	Runtime string `json:"runtime,omitempty"`
@@ -210,6 +214,9 @@ type Pane struct {
 	// AgentSession is the coding agent's own session, as its hook told
 	// (kero hook), while the agent runs: what a restore resumes.
 	AgentSession *AgentSession `json:"agentSession,omitempty"`
+	// FeishuAnswer is the file the agent's Stop hook writes each turn's
+	// answer to, while a Feishu chat drives the agent.
+	FeishuAnswer string `json:"feishuAnswer,omitempty"`
 	// Restored: the daemon restarted (as after a reboot) and this pane's
 	// shell was started again in its directory, under its old scrollback.
 	Restored bool `json:"restored,omitempty"`
@@ -334,6 +341,117 @@ type Session struct {
 	// Worktree is the linked git worktree kero made for the session to
 	// work in, nil for none.
 	Worktree *Worktree `json:"worktree,omitempty"`
+}
+
+// FeishuMessage is a message as Feishu has it (feishu.message): a bot's
+// answer after a response, or a prompt, as an event's message is.
+type FeishuMessage = larkim.EventMessage
+
+// FeishuKeep is a turn's response for a host of a shared app to answer
+// (feishu.keep): the event it answers, the chat it came to, and the
+// response.
+type FeishuKeep struct {
+	Event string `json:"event"`
+	Chat  string `json:"chat,omitempty"`
+	Text  string `json:"text"`
+}
+
+// FeishuKept is what a chat's host asked kerod to keep (feishu.kept).
+type FeishuKept struct {
+	Turns []FeishuTurn `json:"turns"`
+}
+
+// FeishuTurn is a turn's response: the event it answers, in the chat it
+// came to.
+type FeishuTurn struct {
+	Event string `json:"event"`
+	Chat  string `json:"chat,omitempty"`
+	Text  string `json:"text"`
+}
+
+// FeishuTake is an event a host of a shared app asks for (feishu.take):
+// the event, and the host, "" for the hosts' answer.
+type FeishuTake struct {
+	Event string `json:"event"`
+	Host  string `json:"host,omitempty"`
+}
+
+// FeishuTaken is the host that took an event (feishu.take).
+type FeishuTaken struct {
+	Host string `json:"host"`
+}
+
+// FeishuFeed is a chat's conversation with a session, as that session's
+// pane's agent keeps it, for a chat window (feishu.feed).
+type FeishuFeed struct {
+	ID           string       `json:"id"` // the session's
+	Chat         string       `json:"chat,omitempty"`
+	Name         string       `json:"name,omitempty"`
+	Pane         string       `json:"pane,omitempty"`
+	Agent        string       `json:"agent,omitempty"`
+	Conversation string       `json:"conversation,omitempty"`
+	Status       string       `json:"status,omitempty"`
+	Message      string       `json:"message,omitempty"`
+	Host         string       `json:"host,omitempty"`
+	Lines        []FeishuLine `json:"lines"`
+	// Evidence is the pane's answer file, which a chat's driver gives
+	// the pane: its answer is the last turn's, which the conversation
+	// may not hold yet.
+	Evidence string `json:"evidence,omitempty"`
+}
+
+// FeishuLine is a line of a chat window's conversation.
+type FeishuLine struct {
+	At     string `json:"at,omitempty"` // RFC 3339
+	Kind   string `json:"kind"`         // "user", "agent", "tool" or "note"
+	Text   string `json:"text"`
+	Answer bool   `json:"answer,omitempty"` // the turn's answer, which the chat got
+}
+
+// FeishuChat is a chat the bot is in, and the session it turns go to
+// (feishu.chats).
+type FeishuChat struct {
+	ID      string `json:"id"`
+	Name    string `json:"name,omitempty"`
+	Type    string `json:"type,omitempty"` // "p2p" or "group"
+	Session string `json:"session,omitempty"`
+	Turns   int    `json:"turns,omitempty"`
+	Last    string `json:"last,omitempty"` // RFC 3339
+}
+
+// FeishuChats are the chats the bot is in (feishu.chats), and the host
+// that answers them.
+type FeishuChats struct {
+	Host  string       `json:"host,omitempty"`
+	Chats []FeishuChat `json:"chats"`
+}
+
+// FeishuFeedParams asks a chat window for the conversation of a session's
+// pane (feishu.feed), and of a chat, "" for none.
+type FeishuFeedParams struct {
+	Session string `json:"session"`
+	Chat    string `json:"chat,omitempty"`
+}
+
+// FeishuSend is a chat window's prompt (feishu.send): the chat it goes
+// to, as the user's message, and its text.
+type FeishuSend struct {
+	Chat string `json:"chat"`
+	Text string `json:"text"`
+}
+
+// FeishuSent is the message a chat window's prompt became (feishu.send).
+type FeishuSent struct {
+	Message string `json:"message"`
+}
+
+// FeishuState is kerod's connection to its Feishu app (feishu.status).
+type FeishuState struct {
+	Configured bool   `json:"configured"` // feishu-app names an app
+	Secret     bool   `json:"secret"`     // the App Secret is kept
+	Connected  bool   `json:"connected"`  // the bot's connection runs
+	App        string `json:"app,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 // Worktree is a linked git worktree kero made for a session: Path checks
@@ -735,6 +853,9 @@ func itoa(n int) string {
 }
 
 // Params of the control methods.
+// MaxOutput is the largest output a background command's call gives.
+const MaxOutput = 256 << 10
+
 type (
 	CreateParams struct {
 		// Split, a session or a pane, makes a pane beside that pane (the
@@ -752,17 +873,47 @@ type (
 		Env     []string `json:"env,omitempty"`
 		// URL makes a browser pane showing it, instead of a shell; File
 		// a file pane, showing the path.
-		URL   string `json:"url,omitempty"`
-		File  string `json:"file,omitempty"`
-		After string `json:"after,omitempty"` // put it after this session
-		Cols  int    `json:"cols,omitempty"`
-		Rows  int    `json:"rows,omitempty"`
-		// Worktree starts the session in a linked git worktree of its own
-		// of Dir's repository, on a new branch of this name from Base: the
-		// repository's default branch when "", "HEAD" for Dir's. An
-		// existing branch no worktree has is checked out as it is.
+		URL      string `json:"url,omitempty"`
+		File     string `json:"file,omitempty"`
+		After    string `json:"after,omitempty"` // put it after this session
+		Cols     int    `json:"cols,omitempty"`
+		Rows     int    `json:"rows,omitempty"`
 		Worktree string `json:"worktree,omitempty"`
 		Base     string `json:"base,omitempty"`
+	}
+	// BackgroundParams are a background command's: the id it is known by,
+	// as a chat's, and Out, the file its output goes to; the session is
+	// the ID.
+	BackgroundParams struct {
+		ID      string   `json:"id"`
+		Out     string   `json:"out"`
+		Command []string `json:"command"`
+		Dir     string   `json:"dir,omitempty"`
+	}
+	// AnswerParams give a pane the directory of its agent's answer files,
+	// which the agent's Stop hook writes each turn's answer to, while a
+	// Feishu chat drives it; its ID is the pane.
+	AnswerParams struct {
+		Pane string `json:"pane"`
+		Dir  string `json:"dir"`
+	}
+	// OutputParams are a background command's output since From bytes.
+	OutputParams struct {
+		ID   string `json:"id"`
+		From int64  `json:"from,omitempty"`
+	}
+	// Output is the output from From, which grew by more than it holds,
+	// and whether the command ended, and with what.
+	Output struct {
+		Text   string `json:"text"`
+		From   int64  `json:"from"`
+		Ended  bool   `json:"ended,omitempty"`
+		Error  string `json:"error,omitempty"`
+		Exited int    `json:"exited,omitempty"`
+	}
+	// SessionParams are a session's ID.
+	SessionParams struct {
+		ID string `json:"id"`
 	}
 	IDParams struct {
 		ID string `json:"id"`

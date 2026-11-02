@@ -46,6 +46,10 @@ type paneInfo struct {
 	listedAt time.Time // when they were
 	ports    int
 	listErr  string // why the processes did not list
+	// feishu is the bot's state, as kerod last told it (infoFeishu).
+	feishu    *proto.FeishuState
+	feishuAt  time.Time
+	feishuGot bool // a read of it is under way
 }
 
 // paneInfoOf returns a pane's Info view, made for the pane as it is now.
@@ -180,6 +184,7 @@ func (a *App) infoBody(c *ui.Context, pal *palette, s *proto.Session, p *proto.P
 		a.infoProcs(c, pal, p, st)
 		a.infoPorts(c, pal, p, st)
 		a.infoMagpie(c, pal)
+		a.infoFeishu(c, pal, p)
 	})
 }
 

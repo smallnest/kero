@@ -759,6 +759,19 @@ func (a *App) sessionMenu(m *ui.Menu, s *proto.Session) {
 			}
 		}
 	})
+	if a.set.Feishu != nil && a.set.Feishu.App != "" {
+		// The session's conversation, as a chat: its agent's, with the
+		// Feishu chat it is with (chat.go).
+		// It shows in the pane the user is in, in its terminal's place.
+		if m.Item(locales.ChatOpen()).Chosen() {
+			pid := a.focusOf(s)
+			a.defer_(func() {
+				if cur := a.session(id); cur != nil && pid != "" {
+					a.showPaneChat(cur, pid)
+				}
+			})
+		}
+	}
 	m.Separator()
 	if m.Item(locales.SessionCopyId()).Chosen() {
 		a.copyText = id

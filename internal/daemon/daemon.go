@@ -31,6 +31,7 @@ import (
 	"kero/internal/build"
 	"kero/internal/clilink"
 	"kero/internal/detach"
+	"kero/internal/feishu"
 	"kero/internal/proto"
 	"kero/internal/settings"
 	"kero/internal/shell"
@@ -58,6 +59,11 @@ type Daemon struct {
 	clients  map[*proto.ClientInfo]struct{} // the connections, for kero clients
 	conns    int
 	idleAt   time.Time
+	// bot is the connection to Feishu, nil unless feishu-app names one;
+	// feishuApp keeps for the app's other hosts (feishu.go).
+	bot       *bot
+	feishu    *feishu.Bot // the bot's connection, while it runs
+	feishuApp sharedFeishu
 	// restoredAt is when what a restore started again last changed, as
 	// Unix milliseconds (store.go).
 	restoredAt int64
@@ -185,6 +191,7 @@ func Run(opts Options) error {
 	// The listeners first: Tailscale Serve's socket takes a umask of its
 	// own, which no program kerod starts may get.
 	d.net = d.listen()
+	d.startFeishu()
 	d.loadConversations()
 	d.restore()
 
@@ -232,6 +239,11 @@ func Run(opts Options) error {
 		}
 	}()
 	<-d.quit
+	d.mu.Lock()
+	if b := d.bot; b != nil {
+		b.cancel()
+	}
+	d.mu.Unlock()
 	ln.Close()
 	d.net.close()
 	if d.restarting {
@@ -389,7 +401,8 @@ func (d *Daemon) tickLoop() {
 			panes = append(panes, p)
 		}
 		// A server, or a kerod others reach over the network, stays.
-		idle := len(d.sessions) == 0 && d.conns == 0 && !d.opts.Serve && !d.net.active()
+		bot := d.bot != nil
+		idle := len(d.sessions) == 0 && d.conns == 0 && !d.opts.Serve && !d.net.active() && !bot
 		if !idle {
 			d.idleAt = now
 		}
@@ -569,8 +582,13 @@ func (d *Daemon) environment(sid, pid, shell string, extra []string) []string {
 	if os.Getenv("LANG") == "" && os.Getenv("LC_ALL") == "" && os.Getenv("LC_CTYPE") == "" {
 		set("LANG=en_US.UTF-8")
 	}
-	// The CLI, after what the user's profile puts first.
+	// The CLI, after what the user's profile puts first. A launchd job's
+	// PATH is the system's alone, which has no agent a user installed, so
+	// the account's own places follow it.
 	path := os.Getenv("PATH")
+	if runtime.GOOS == "darwin" {
+		path = withHomePaths(path)
+	}
 	if path == "" && runtime.GOOS != "windows" {
 		path = "/usr/bin:/bin:/usr/sbin:/sbin"
 	}

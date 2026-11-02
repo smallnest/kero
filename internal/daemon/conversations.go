@@ -195,6 +195,9 @@ func paneConversation(p *pane, project, name string) *proto.Conversation {
 	if as == nil {
 		return nil
 	}
+	// The pane tells the chat window which conversation it runs, as its
+	// agent's hook last said.
+	p.info.AgentSessionID = as.ID
 	c := &proto.Conversation{Agent: as.Agent, ID: as.ID, Dir: p.info.WorkDir(), Project: project, Name: name}
 	if t := proto.CleanTitle(p.info.Title); t != "" && !genericTitle(t, as.Agent) {
 		c.Title = t

@@ -56,6 +56,7 @@ var (
 	copyIcon        = glyph("f7-doc-on-doc")
 	infoIcon        = glyph("lucide-info")
 	linkIcon        = glyph("f7-arrow-up-right")
+	chatIcon        = icon(`<path d="M2.5 3.5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H6.5L3 13.5v-3a2 2 0 0 1-.5-1.3z"/><path d="M5.5 5.5h5M5.5 8h3"/>`)
 	editIcon        = glyph("f7-pencil")
 	infoCopyIcon    = icon(`<rect x="5.5" y="5.5" width="8" height="8" rx="2"/><path d="M10.5 5.5v-1a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1"/>`)
 	cpuIcon         = icon(`<rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/><rect x="5.75" y="5.75" width="4.5" height="4.5" rx="1"/><path d="M6 1v1.5M10 1v1.5M6 13.5V15M10 13.5V15M1 6h1.5M1 10h1.5M13.5 6H15M13.5 10H15"/>`)

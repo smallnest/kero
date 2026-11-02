@@ -124,7 +124,7 @@ func mapChoice(name, doc string, f func(*Settings) *string, file, ours []string)
 
 // keys are the configuration's keys, in the order a new file and
 // `kero config show` list them.
-var keys = []key{
+var keys = append([]key{
 	mapChoice("new-session-directory", "where a new session starts", func(s *Settings) *string { return &s.NewSessionDir },
 		[]string{"current", "project", "home"}, []string{"current", "project", "home"}),
 	choiceKey("session-name", "what names a session you or an agent didn't: the program in the pane you're in, else in the one that most needs you; the program in the one that most needs you; or the first pane's folder",
@@ -404,6 +404,7 @@ var keys = []key{
 		}},
 	boolKey("tailcat-rotate", "start kerod's tailcat listener with the key again, whose pair code changed: kero tailcat rotate sets it", func(s *Settings) *bool { return &s.TailcatRotate }),
 	boolKey("remote-updates", "let Kero on another machine that connects update the Kero app here to its version, which restarts it", func(s *Settings) *bool { return &s.RemoteUpdates }),
+
 	boolKey("git-status", "show the git branch and changes of each session", func(s *Settings) *bool { return &s.GitStatus }),
 	choiceKey("worktree-base", "what a session's own git worktree branches from: the repository's default branch, or the branch of the session you're in", func(s *Settings) *string { return &s.WorktreeBase }, "default", "current"),
 	stringKey("worktree-dir", "where sessions' own git worktrees go, each under its repository's name; empty for .kero/worktrees in the repository", func(s *Settings) *string { return &s.WorktreeDir }),
@@ -487,7 +488,7 @@ var keys = []key{
 			}
 			return nil
 		}},
-}
+}, append(feishuKeys(), feishuCardKeys()...)...)
 
 func adListIDs() []string {
 	var ids []string

@@ -48,6 +48,9 @@ type savedPane struct {
 	URL   string `json:"url,omitempty"`
 	Title string `json:"title,omitempty"`
 	File  string `json:"file,omitempty"`
+	// Background tells a pane that runs a session's commands instead of a
+	// terminal, which it starts none of.
+	Background bool `json:"background,omitempty"`
 	// Agent is the agent's session that ran in it, to resume, and Turn
 	// where its last turn started.
 	Agent   *proto.AgentSession `json:"agent,omitempty"`
@@ -88,7 +91,7 @@ func (d *Daemon) saveState() {
 		ss := savedSession{ID: s.id, Project: s.project, Name: s.name, AgentNamed: s.agentNamed, Created: s.created, Layout: s.layout, Focus: s.focus}
 		for _, p := range s.panes {
 			p.mu.Lock()
-			sp := savedPane{ID: p.info.ID, Dir: p.info.Dir, Command: p.info.Command, URL: p.info.URL, File: p.info.File,
+			sp := savedPane{ID: p.info.ID, Dir: p.info.Dir, Command: p.info.Command, URL: p.info.URL, File: p.info.File, Background: p.bg != nil,
 				Agent: p.info.AgentSession, Turn: p.info.Turn, Created: p.info.Created, Cols: p.info.Cols, Rows: p.info.Rows}
 			if p.info.Browser() {
 				sp.Title = p.info.Title
@@ -219,6 +222,10 @@ func (d *Daemon) restorePane(sid string, sp savedPane) *pane {
 	// daemon's end marks the restore once, after every pane (noteRestore).
 	if h, err := os.ReadFile(d.historyPath(sp.ID)); err == nil && len(h) > 0 {
 		p.term.Feed(h)
+	}
+	if sp.Background {
+		p.bg = newBackground("")
+		return p
 	}
 	// The shell alone: what ran in it may not want to run again unasked.
 	// But an agent's conversation, which only waits for the user.

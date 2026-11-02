@@ -131,6 +131,7 @@ Usage:
   kero report <state> [message] [--kind k] [--progress n] [--app a] [--id i]
                                 report this program's status (OSC 7501):
                                 idle, working, done, blocked, error, clear
+  kero feishu setup|status     drive the sessions from Feishu (kero feishu help)
   kero do <action> [key=value…]  run an action of the app, as its menus do
                                 (needs Remote Control, in Settings › Agents)
   kero actions                  list the actions kero do runs
@@ -184,8 +185,8 @@ ambiguous one), 4 kerod unreachable.
 
 // Commands lists the subcommands, which main sends here.
 var Commands = []string{"ls", "list", "new", "split", "send", "key", "prompt", "read", "capture", "wait", "events", "status", "diff",
-	"history", "resume", "rename", "focus", "close", "kill", "restart", "notify", "report", "projects", "skill", "hook", "daemon", "do", "actions", "config",
-	"browser", "hosts", "clients", "pets", "__bridge", "-H", "--host", "help", "--help", "-h", "version", "--version"}
+	"history", "resume", "rename", "focus", "close", "kill", "restart", "notify", "report", "projects", "skill", "hook", "answer", "daemon", "do", "actions", "config",
+	"browser", "hosts", "clients", "pets", "feishu", "__bridge", "-H", "--host", "help", "--help", "-h", "version", "--version"}
 
 // IsCommand reports whether an argument starts a command of the CLI, as
 // main tells them from the app's.
@@ -322,10 +323,14 @@ func run(args []string, host string) error {
 		return skillCmd(args)
 	case "hook":
 		return hookCmd(args)
+	case "answer":
+		return answerCmd(args)
 	case "config":
 		return configCmd(args)
 	case "pets":
 		return petsCmd(args)
+	case "feishu":
+		return feishuCmd(args, host)
 	}
 	if cmd == "ls" || cmd == "list" {
 		f, err := parse(args, nil, map[string]string{"json": "json", "j": "json", "all": "all", "a": "all"})

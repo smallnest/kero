@@ -21,7 +21,7 @@ import (
 // kerodSource is the code of Kero's packages that kerod runs (go list
 // -deps ./internal/daemon), which TestKerodSource keeps whole.
 //
-//go:embed internal/actions internal/adblock internal/build internal/clilink internal/daemon internal/detach internal/detect internal/git internal/proto internal/remote internal/settings internal/shell internal/tailscale internal/update
+//go:embed internal/actions internal/adblock internal/build internal/clilink internal/daemon internal/detach internal/detect internal/feishu internal/git internal/proto internal/remote internal/settings internal/shell internal/tailscale internal/update
 var kerodSource embed.FS
 
 // kerodModules are the other modules whose code kerod runs, which
@@ -41,13 +41,16 @@ var kerodModules = []string{
 	"github.com/go-json-experiment/json",
 	"github.com/go-text/typesetting",
 	"github.com/godbus/dbus/v5",
+	"github.com/gogo/protobuf",
 	"github.com/golang/groupcache",
 	"github.com/google/btree",
+	"github.com/gorilla/websocket",
 	"github.com/hashicorp/yamux",
 	"github.com/hdevalence/ed25519consensus",
 	"github.com/jsimonetti/rtnetlink",
 	"github.com/klauspost/compress",
 	"github.com/kr/fs",
+	"github.com/larksuite/oapi-sdk-go/v3",
 	"github.com/mdlayher/netlink",
 	"github.com/mdlayher/socket",
 	"github.com/mitchellh/go-ps",

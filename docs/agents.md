@@ -29,6 +29,8 @@ The hook goes where each agent looks for one, for the agents you have installed:
 
 Kero follows `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `PI_CODING_AGENT_DIR` and `XDG_CONFIG_HOME` when they move an agent's files, and leaves the rest of each settings file as it was.
 
+For [Feishu](./feishu.md) chats, Claude Code gets a `Stop` hook as well. As each turn ends, the hook writes the agent's final message to the file the bot gives the pane. The bot replies with that message, not with the terminal's frames. To turn it on, run `kero skill setup` again. The other agents keep the terminal's text.
+
 Pass `--agent` with `claude`, `codex`, `pi` or `opencode` to set up one agent only. Setup is once: the skill is a link to Kero's own copy, which follows Kero as it updates, and Kero keeps the Pi and OpenCode plugins current too. `kero skill status` tells you whether each part is current.
 
 ```sh

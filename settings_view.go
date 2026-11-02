@@ -78,6 +78,7 @@ type settingsState struct {
 	tailcat      tailcatDraft               // and the Tailcat group's
 	hostEdit     hostDraft                  // a host's, as the user edits it
 	tailnet      tailnetLook                // this machine on the tailnet, for the Hosts page
+	feishu       feishuDraft                // the Feishu group's form
 	confirm      *confirmation              // a question, asked in this window
 }
 
@@ -103,6 +104,8 @@ func (a *App) openSettings(page string) {
 		}
 	})
 	a.ss.draft = map[string]string{}
+	a.ss.feishu = feishuDraft{}
+	a.ss.feishu = feishuDraft{}
 	a.refreshAgents()
 	a.refreshService()
 	a.setWin = mygo.NewWindow(framed(mygo.WindowOptions{
@@ -1053,6 +1056,7 @@ func (a *App) agentsPage(c *ui.Context, pal *palette) {
 		})
 	})
 	codeBlock(c, pal, "kero do pane.split.down\nkero do session.attention\nkero actions        # what kero do runs")
+	a.feishuGroup(c, pal)
 	settingsGroup(c, pal, locales.SetCli(), locales.SetCliDetail(), func() {
 		detail := locales.SetCliNotInstalled()
 		if a.ss.cliPath != "" {

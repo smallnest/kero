@@ -9,7 +9,7 @@
   },
   {
     "title": "Automation",
-    "items": ["cli", "agents", "remote"]
+    "items": ["cli", "agents", "feishu", "remote"]
   },
   {
     "title": "Reference",

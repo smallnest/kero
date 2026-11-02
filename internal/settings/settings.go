@@ -7,6 +7,7 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -76,6 +77,12 @@ type Settings struct {
 	Env        []string `json:"env"`   // "KEY=value", added to every pane's
 	Scrollback int      `json:"scrollback"`
 
+	// Feishu's cards
+	FeishuCards      bool `json:"feishuCards"`      // a turn's card updates as the agent works
+	FeishuMarkdown   bool `json:"feishuMarkdown"`   // cards' text as Markdown
+	FeishuOpenButton bool `json:"feishuOpenButton"` // a card's button opens its session in Kero
+	FeishuCardBody   bool `json:"feishuCardBody"`   // a card is sent as its body's JSON, as an update takes it
+
 	// Notifications
 	NotifyWaiting bool `json:"notifyWaiting"` // a session needs you
 	NotifyDone    bool `json:"notifyDone"`    // an agent finished
@@ -86,6 +93,8 @@ type Settings struct {
 
 	// Agents
 	RemoteControl bool `json:"remoteControl"` // kero focus and kero do drive the app
+	// Feishu drives the sessions from Feishu chats (package feishu).
+	Feishu *Feishu `json:"feishu,omitempty"`
 
 	// Git
 	GitStatus  bool   `json:"gitStatus"`  // each pane's branch and changes, which kerod follows
@@ -176,50 +185,53 @@ const PaneBlurRadius = 16
 // Default returns the settings of a new install.
 func Default() Settings {
 	return Settings{
-		NewSessionDir:   "current",
-		SessionName:     proto.NameFocused,
-		SidebarRows:     "detailed",
-		ConfirmClose:    true,
-		RestoreSessions: true,
-		ResumeAgents:    true,
-		QuitConfirm:     true,
-		AppIcon:         "dock-and-menubar",
-		Appearance:      "system",
-		Language:        "system",
-		Background:      "rex",
-		Vibrancy:        true,
-		WindowOpacity:   DefaultWindowOpacity,
-		WindowBlur:      true,
-		PaneOpacity:     DefaultPaneOpacity,
-		Pet:             true,
-		PetOffset:       0.5,
-		PetSet:          PetSetKero,
-		PetSize:         DefaultPetSize,
-		DimUnfocused:    true,
-		FontSize:        13,
-		LineHeight:      1.22,
-		FontWeight:      400,
-		Ligatures:       true,
-		MinContrast:     3,
-		Cursor:          "block",
-		CursorBlink:     true,
-		LightTheme:      "kero",
-		DarkTheme:       "kero",
-		Clipboard:       "ask",
-		RightClick:      "menu",
-		ScrollPrecision: 1,
-		ScrollDiscrete:  3,
-		Scrollback:      4,
-		NotifyWaiting:   true,
-		NotifyDone:      true,
-		NotifyFailed:    true,
-		DockBadge:       true,
-		RemoteControl:   true,
-		GitStatus:       true,
-		DiffLayout:      "auto",
-		WorktreeBase:    "default",
-		BlockAds:        true,
-		AdLists:         slices.Clone(adblock.DefaultLists),
+		NewSessionDir:    "current",
+		SessionName:      proto.NameFocused,
+		SidebarRows:      "detailed",
+		ConfirmClose:     true,
+		RestoreSessions:  true,
+		ResumeAgents:     true,
+		QuitConfirm:      true,
+		AppIcon:          "dock-and-menubar",
+		Appearance:       "system",
+		Language:         "system",
+		Background:       "rex",
+		Vibrancy:         true,
+		WindowOpacity:    DefaultWindowOpacity,
+		WindowBlur:       true,
+		PaneOpacity:      DefaultPaneOpacity,
+		Pet:              true,
+		PetOffset:        0.5,
+		PetSet:           PetSetKero,
+		PetSize:          DefaultPetSize,
+		DimUnfocused:     true,
+		FontSize:         13,
+		LineHeight:       1.22,
+		FontWeight:       400,
+		Ligatures:        true,
+		MinContrast:      3,
+		Cursor:           "block",
+		CursorBlink:      true,
+		LightTheme:       "kero",
+		DarkTheme:        "kero",
+		Clipboard:        "ask",
+		RightClick:       "menu",
+		ScrollPrecision:  1,
+		ScrollDiscrete:   3,
+		Scrollback:       4,
+		NotifyWaiting:    true,
+		NotifyDone:       true,
+		NotifyFailed:     true,
+		DockBadge:        true,
+		RemoteControl:    true,
+		FeishuCards:      true,
+		FeishuMarkdown:   true,
+		FeishuOpenButton: true,
+		GitStatus:        true,
+		DiffLayout:       "auto",
+		WorktreeBase:     "default",
+		BlockAds:         true,
+		AdLists:          slices.Clone(adblock.DefaultLists),
 	}
 }
 
@@ -283,6 +295,14 @@ func Load() Settings {
 	s, probs := parse(string(b))
 	cache, mtime, problems = &s, st.ModTime().UnixNano(), probs
 	return clone(s)
+}
+
+// Reload forgets the last Load: the settings are read again, as a
+// test's KERO_HOME takes another configuration. It is no key.
+func Reload() {
+	mu.Lock()
+	defer mu.Unlock()
+	cache = nil
 }
 
 // Problems returns what the file got wrong, as of the last Load: keys
@@ -390,6 +410,15 @@ func clone(s Settings) Settings {
 	s.AdLists = slices.Clone(s.AdLists)
 	s.Hosts = slices.Clone(s.Hosts)
 	s.Listen = slices.Clone(s.Listen)
+	if s.Feishu != nil {
+		f := *s.Feishu
+		f.Allow = append([]string(nil), f.Allow...)
+		f.Host = slices.Clone(f.Host)
+		if f.Agents != nil {
+			f.Agents = maps.Clone(f.Agents)
+		}
+		s.Feishu = &f
+	}
 	s.ListenAllow = slices.Clone(s.ListenAllow)
 	s.TailcatHosts = slices.Clone(s.TailcatHosts)
 	if s.Shortcuts != nil {
@@ -466,6 +495,7 @@ func (s *Settings) normalize() {
 	if !ValidTailcatPort(s.TailcatPort) {
 		s.TailcatPort = d.TailcatPort
 	}
+	normalizeFeishu(s.Feishu)
 	if s.TailcatRelay != "" && !ValidDERPMapURL(s.TailcatRelay) {
 		s.TailcatRelay = d.TailcatRelay
 	}

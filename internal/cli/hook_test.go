@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"kero/internal/proto"
 )
 
 func testHook(t *testing.T, settings string) agentHook {
@@ -55,7 +57,8 @@ func TestHookInstallKeepsSettings(t *testing.T) {
 	if i, j, k := strings.Index(got, `"model"`), strings.Index(got, `"hooks"`), strings.Index(got, `"env"`); !(i < j && j < k) {
 		t.Fatalf("keys out of order:\n%s", got)
 	}
-	for _, want := range []string{`"say done"`, `"echo hi"`, `"matcher": "startup"`, `"timeout": 10`, "kero home/bin/kero' hook claude"} {
+	for _, want := range []string{`"say done"`, `"echo hi"`, `"matcher": "startup"`, `"timeout": 10`,
+		"kero home/bin/kero' hook claude", "kero home/bin/kero' answer claude"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("no %s in:\n%s", want, got)
 		}
@@ -176,5 +179,43 @@ func TestAgentPlugins(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(home, ".pi", "agent", "extensions")); err != nil {
 		t.Fatal("Pi's extensions directory went with Kero's extension")
+	}
+}
+
+// answerPath takes the file the bot gives a pane, and no other: one of
+// kerod's answer directories, which a command outside the hook may not
+// write.
+func TestAnswerPath(t *testing.T) {
+	dir := filepath.Join(proto.Dir(), "feishu-answers", "feishu-answers-claude-p1", "turn.json")
+	if got, err := answerPath(dir); err != nil || got != dir {
+		t.Errorf("answerPath(%q) = %q, %v", dir, got, err)
+	}
+	// The answer directories are those of kerod's feishu-answers.
+	outside := filepath.Join(t.TempDir(), "feishu-answers-other")
+	defer func(d string) { answers = d }(answers)
+	answers = filepath.Dir(dir)
+	if _, err := answerPath(filepath.Join(outside, "turn.json")); err == nil {
+		t.Error("answerPath took a directory the bot gives none")
+	}
+}
+
+// The hook's answer is the agent's last message, where its hook gives none.
+func TestTranscriptAnswer(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", home)
+	dir := filepath.Join(home, "projects", "-tmp-api")
+	os.MkdirAll(dir, 0o755)
+	lines := `{"type":"user","message":{"role":"user","content":"Run the tests"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Running."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"All tests pass."}]}}
+`
+	if err := os.WriteFile(filepath.Join(dir, "s-1.jsonl"), []byte(lines), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := transcriptAnswer("claude", "s-1"); got != "All tests pass." {
+		t.Errorf("the answer is %q", got)
+	}
+	if got := transcriptAnswer("claude", "s-2"); got != "" {
+		t.Errorf("a session without a transcript answers %q", got)
 	}
 }

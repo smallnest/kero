@@ -209,6 +209,17 @@ kero pets install <pack.zip>     # Codex ペットパック（.codex-pet.zip）�
 kero pets rm <名前>              # Kero がインストールしたペットを削除する
 ```
 
+## Feishu
+
+```sh
+kero feishu setup                # アプリの ID と secret を尋ね、保存して接続し、次にすることを示す
+kero feishu status               # ボットが接続しているか
+kero feishu test                 # Feishu がアプリを認識するか確認する
+kero feishu send <チャット> <テキスト…>  # チャット ID でメッセージを送る
+```
+
+Feishu のチャットは、結び付いたセッションのコーディングエージェントを動かします: `/new` で始め、`/use` で開いているセッションに結び付け、そのほかのテキストはプロンプトです。[Feishu](./feishu.md)を参照してください。
+
 ## ほかのマシン
 
 コマンドの前に `-H <host>` を付けるか `$KERO_HOST` を設定すると、セッションに対するコマンドを別のマシンの kerod に向けられます: 追加したホスト、または `me@devbox` や `wsl://Ubuntu` のようなアドレスです。[リモートホスト](./remote.md)を参照してください。

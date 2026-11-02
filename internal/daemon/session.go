@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -76,6 +77,8 @@ type pane struct {
 	changed  chan struct{} // closed and replaced on every status change
 	// framing tells that frames for the clients are due, after output.
 	framing bool
+	// bg is the command the session runs without a terminal (background.go).
+	bg *background
 }
 
 // headless connects the daemon's emulator to the program: it reads
@@ -293,7 +296,7 @@ func (s *pane) setStatus(st proto.Status) {
 	// An agent going to work from idle starts a turn, which a snapshot of
 	// its worktree marks; one going on after the user answered it, from
 	// waiting, goes on with its turn.
-	if st == proto.Working && (s.info.Status == proto.Idle || s.info.Status == proto.Failed) && s.info.Agent != "" {
+	if st == proto.Working && (s.info.Status == proto.Idle || s.info.Status == proto.Failed) && len(s.info.Agent) > 0 {
 		go s.d.git.snapshot(s, s.info.WorkDir(), time.Now())
 	}
 	s.info.Status = st
@@ -758,7 +761,6 @@ func (s *pane) close() {
 	s.closed = true
 	close(s.changed) // wakes those waiting on it
 	s.changed = make(chan struct{})
-	proc := s.proc
 	clients := s.clients
 	s.clients = map[*attachment]struct{}{}
 	s.mu.Unlock()
@@ -767,6 +769,15 @@ func (s *pane) close() {
 	for c := range clients {
 		c.send(proto.FrameClosed, nil)
 		c.finish()
+	}
+	if s.term != nil {
+		s.term.Close()
+	}
+	s.mu.Lock()
+	bg, proc := s.bg, s.proc
+	s.mu.Unlock()
+	if bg != nil {
+		bg.stop()
 	}
 	if proc != nil {
 		proc.Close()
@@ -778,9 +789,34 @@ func (s *pane) close() {
 			}
 		}()
 	}
-	if s.term != nil {
-		s.term.Close()
+}
+
+// setBackground records a background command's process, whose end sets
+// the session idle, as a program's end does; s.mu must not be held.
+func (s *pane) setBackground(cmd *exec.Cmd) {
+	s.mu.Lock()
+	s.info.Status, s.info.Message, s.info.Since = proto.Working, "", time.Now().UnixMilli()
+	s.mu.Unlock()
+	s.wake()
+	s.d.git.poke(s.info.WorkDir())
+	s.d.changed()
+}
+
+// bgDone is a background command's end: the session goes idle, and tells
+// of a failure.
+func (s *pane) bgDone() {
+	s.mu.Lock()
+	code, err := s.bg.code, s.bg.err
+	s.info.ExitCode = code
+	if s.closed || code == 0 && err == "" {
+		s.setStatus(proto.Idle)
+	} else {
+		s.setStatus(proto.Failed)
+		s.info.Message = "The agent ended with code " + fmt.Sprint(code)
 	}
+	s.info.Unread = true
+	s.mu.Unlock()
+	s.d.changed()
 }
 
 // attach registers a client, returning the first frame of its mirror,

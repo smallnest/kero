@@ -186,22 +186,31 @@ func kero() string {
 	return exe
 }
 
-// command is the hook's command line: the kero command of Kero's own
-// directory (package clilink), which stays where it is as Kero updates.
-func (h agentHook) command() string {
+// command is the hook's command line on an event: the kero command of
+// Kero's own directory (package clilink), which stays where it is as
+// Kero updates.
+func (h agentHook) command(event string) string {
 	if runtime.GOOS == "windows" {
-		return `"` + kero() + `" hook ` + h.agent
+		return `"` + kero() + `" ` + sub(event) + " " + h.agent
 	}
-	return "'" + strings.ReplaceAll(kero(), "'", `'\''`) + "' hook " + h.agent
+	return "'" + strings.ReplaceAll(kero(), "'", `'\''`) + "' " + sub(event) + " " + h.agent
 }
 
-// ours tells kero's hook commands, of this kero or another's.
-func (h agentHook) ours(command string) bool {
-	return strings.Contains(command, "kero") && strings.HasSuffix(command, " hook "+h.agent)
+// events are the hook events kero's hooks run on: the start of an
+// agent's session, and the end of each turn, whose answer goes to a
+// Feishu chat that drives the agent.
+var events = []string{"SessionStart", "Stop"}
+
+// sub is the hook command's subcommand of an event.
+func sub(event string) string {
+	if event == "Stop" {
+		return "answer"
+	}
+	return "hook"
 }
 
-// state is "current", "outdated" (kero's hook, of another command line)
-// or "missing".
+// state is "current", "outdated" (kero's hooks, of another command line,
+// or not on every event) or "missing".
 func (h agentHook) state() string {
 	b, err := os.ReadFile(h.file)
 	if err != nil {
@@ -212,21 +221,25 @@ func (h agentHook) state() string {
 		return "missing"
 	}
 	state := "missing"
-	h.each(settings, func(command string) {
-		if command == h.command() {
-			state = "current"
-		} else if state == "missing" {
-			state = "outdated"
-		}
-	})
+	for _, ev := range events {
+		h.each(settings, ev, func(command string) {
+			if command == h.command(ev) {
+				if state == "missing" {
+					state = "current"
+				}
+			} else {
+				state = "outdated"
+			}
+		})
+	}
 	return state
 }
 
-// each calls fn with the command of each of kero's SessionStart hooks.
-func (h agentHook) each(settings object, fn func(command string)) {
+// each calls fn with the command of each of kero's hooks on an event.
+func (h agentHook) each(settings object, event string, fn func(command string)) {
 	hooks, _ := parseObject(settings.get("hooks"))
 	var groups []object
-	json.Unmarshal(hooks.get("SessionStart"), &groups)
+	json.Unmarshal(hooks.get(event), &groups)
 	for _, g := range groups {
 		var handlers []struct{ Type, Command string }
 		json.Unmarshal(g.get("hooks"), &handlers)
@@ -238,7 +251,14 @@ func (h agentHook) each(settings object, fn func(command string)) {
 	}
 }
 
-// install puts the hook in the agent's settings, in place of kero's
+// ours tells kero's hook commands, of this kero or another's: its hook at
+// start, or its answer at a turn's end.
+func (h agentHook) ours(command string) bool {
+	return strings.Contains(command, "kero") &&
+		(strings.HasSuffix(command, " hook "+h.agent) || strings.HasSuffix(command, " answer "+h.agent))
+}
+
+// install puts the hooks in the agent's settings, in place of kero's
 // others, keeping the rest of the file as it is.
 func (h agentHook) install() error {
 	linkCLI()
@@ -267,6 +287,7 @@ func (h agentHook) remove() error {
 	return h.edit(false)
 }
 
+// edit puts kero's hooks on each event, or takes them out.
 func (h agentHook) edit(add bool) error {
 	b, err := os.ReadFile(h.file)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -282,49 +303,24 @@ func (h agentHook) edit(add bool) error {
 	if err != nil {
 		return fmt.Errorf("%s: hooks: %w", proto.ShortDir(h.file), err)
 	}
-	var groups []object
-	if raw := hooks.get("SessionStart"); raw != nil {
-		if err := json.Unmarshal(raw, &groups); err != nil {
-			return fmt.Errorf("%s: hooks.SessionStart: %w", proto.ShortDir(h.file), err)
+	changed := false
+	for _, ev := range events {
+		o, err := h.editEvent(hooks, ev, add)
+		if err != nil {
+			return err
 		}
-	}
-	// Already there, alone: nothing to do. Else drop kero's handlers, and
-	// the groups they leave empty.
-	n, exact := 0, false
-	h.each(settings, func(command string) {
-		n++
-		exact = exact || command == h.command()
-	})
-	if add && n == 1 && exact || !add && n == 0 {
-		return nil
-	}
-	kept := groups[:0]
-	for _, g := range groups {
-		var handlers []json.RawMessage
-		json.Unmarshal(g.get("hooks"), &handlers)
-		n := len(handlers)
-		handlers = slices.DeleteFunc(handlers, func(raw json.RawMessage) bool {
-			var hd struct{ Type, Command string }
-			json.Unmarshal(raw, &hd)
-			return hd.Type == "command" && h.ours(hd.Command)
-		})
-		if n > 0 && len(handlers) == 0 {
+		if o == nil {
 			continue
 		}
-		if len(handlers) != n {
-			g = g.set("hooks", marshal(handlers))
+		changed = true
+		if len(o) > 2 {
+			hooks = hooks.set(ev, o)
+		} else {
+			hooks = hooks.del(ev)
 		}
-		kept = append(kept, g)
 	}
-	groups = kept
-	if add {
-		handler := object{{"type", marshal("command")}, {"command", marshal(h.command())}, {"timeout", marshal(10)}}
-		groups = append(groups, object{{"hooks", marshal([]object{handler})}})
-	}
-	if len(groups) > 0 {
-		hooks = hooks.set("SessionStart", marshal(groups))
-	} else {
-		hooks = hooks.del("SessionStart")
+	if !changed {
+		return nil
 	}
 	if len(hooks) > 0 {
 		settings = settings.set("hooks", hooks.marshal())
@@ -341,6 +337,61 @@ func (h agentHook) edit(add bool) error {
 		return nil
 	}
 	return writeFileAtomic(h.file, pretty.Bytes())
+}
+
+// stops tells whether the agent's Stop hook says a turn's end for an
+// answer file: of the agents Kero hooks, Claude Code's says it, and its
+// last message.
+func (h agentHook) stops() bool { return h.agent == "claude" }
+
+// editEvent is an event's groups of hooks of kero's, or nil when they
+// are as they should be: already there, alone, for add; none, for
+// remove.
+func (h agentHook) editEvent(hooks object, event string, add bool) (json.RawMessage, error) {
+	var groups []object
+	if raw := hooks.get(event); raw != nil {
+		if err := json.Unmarshal(raw, &groups); err != nil {
+			return nil, fmt.Errorf("%s: hooks.%s: %w", proto.ShortDir(h.file), event, err)
+		}
+	}
+	if event == "Stop" && !h.stops() {
+		// An agent whose turn's end the hook can't tell, as Codex's: it
+		// asks its question there, and an answer file is no question's.
+		return nil, nil
+	}
+	// Else drop kero's handlers, and the groups they leave empty.
+	kept, mine, exact := []object{}, 0, false
+	for _, g := range groups {
+		var handlers []json.RawMessage
+		json.Unmarshal(g.get("hooks"), &handlers)
+		n := len(handlers)
+		handlers = slices.DeleteFunc(handlers, func(raw json.RawMessage) bool {
+			var hd struct{ Type, Command string }
+			json.Unmarshal(raw, &hd)
+			ours := hd.Type == "command" && h.ours(hd.Command)
+			if ours && hd.Command == h.command(event) && n == 1 {
+				exact = true
+			}
+			return ours
+		})
+		mine += n - len(handlers)
+		if n > 0 && len(handlers) == 0 {
+			continue
+		}
+		if len(handlers) != n {
+			g = g.set("hooks", marshal(handlers))
+		}
+		kept = append(kept, g)
+	}
+	if add && mine == 1 && exact || !add && mine == 0 {
+		return nil, nil
+	}
+	groups = kept
+	if add {
+		handler := object{{"type", marshal("command")}, {"command", marshal(h.command(event))}, {"timeout", marshal(10)}}
+		groups = append(groups, object{{"hooks", marshal([]object{handler})}})
+	}
+	return marshal(groups), nil
 }
 
 // agentPlugin is a plugin kero installs for an agent: files of its own,

@@ -33,11 +33,25 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 	case "state":
 		return d.state(), nil
 
+	case "feishu.message", "feishu.keep", "feishu.kept", "feishu.take":
+		return d.feishuShared(method, raw)
+
 	case "subscribe", "watch":
 		// A watcher, as kero events, hears what an app does but is no app
 		// (Daemon.watchers). The first state goes out under the lock the
 		// later ones do, so none of them comes before it.
 		d.mu.Lock()
+		// One that asks to stay is no app either, but keeps kerod at its
+		// work, as a bot's connection does.
+		var p struct {
+			Stay bool `json:"stay,omitempty"`
+		}
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		if p.Stay {
+			d.idleAt = time.Now()
+		}
 		if method == "watch" {
 			d.watchers[c] = struct{}{}
 		} else {
@@ -57,6 +71,67 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 			return nil, errors.New("split: which pane?")
 		}
 		return d.create(p)
+
+	case "agent.background":
+		var p proto.BackgroundParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return true, d.runBackground(p)
+
+	case "pane.answer":
+		var p proto.AnswerParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		pn, err := findPane(p.Pane)
+		if err != nil {
+			return nil, err
+		}
+		pn.mu.Lock()
+		pn.info.FeishuAnswer = p.Dir
+		info := pn.info
+		pn.mu.Unlock()
+		d.changed()
+		return info, nil
+
+	case "agent.output":
+		var p proto.OutputParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return d.backgroundOutput(p)
+
+	case "session.setBackground":
+		var p proto.SessionParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		d.mu.Lock()
+		ok := d.findSessionLocked(p.ID) != nil
+		d.mu.Unlock()
+		if !ok {
+			return nil, fmt.Errorf("no session %s", p.ID)
+		}
+		return true, d.setBackground(p.ID)
+
+	case "agent.stop":
+		var p proto.SessionParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		if err := d.stopBackground(p.ID); err != nil {
+			return nil, err
+		}
+		return true, nil
+
+	case "session.hasBackground":
+		var p proto.SessionParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		bg, _ := d.backgroundOf(p.ID)
+		return bg != nil, nil
 
 	case "close":
 		// The fork's app closes with {"id"}, upstream's with the
@@ -417,6 +492,19 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 
 	case "conversations":
 		return d.conversations(), nil
+
+	case "feishu.status":
+		return d.feishuStatus(), nil
+
+	case "feishu.chats", "feishu.feed", "feishu.send":
+		return d.feishuWindow(method, raw)
+
+	case "feishu.restart":
+		d.startFeishu()
+		d.mu.Lock()
+		d.idleAt = time.Now()
+		d.mu.Unlock()
+		return true, nil
 
 	case "conversation.resume":
 		var p proto.ConversationParams

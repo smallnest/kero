@@ -61,6 +61,7 @@ type sideState struct {
 	theme    *editor.Theme
 	themeKey string
 	info     infoState
+	chat     chatState
 }
 
 // infoState is the Info view's, which keeps its place as the views change.

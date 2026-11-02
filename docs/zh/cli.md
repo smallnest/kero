@@ -208,6 +208,17 @@ kero pets install <包.zip>       # 安装 Codex 宠物包，即 .codex-pet.zip
 kero pets rm <名字>              # 删除 Kero 安装的宠物
 ```
 
+## 飞书
+
+```sh
+kero feishu setup                # 输入应用的 ID 和 secret，保存并连接，给出下一步
+kero feishu status               # 机器人是否已连接
+kero feishu test                 # 检查飞书是否认得这个应用
+kero feishu send <会话> <文字…>   # 按会话 ID 发送一条消息
+```
+
+飞书会话可以驱动它绑定的 Kero 会话里的编程智能体：`/new` 新建一个，`/use` 绑定一个已有会话，其他文字作为提示发送。见 [飞书](./feishu.md)。
+
 ## 其他机器
 
 在命令前加 `-H <host>`，或设置 `$KERO_HOST`，可以让操作会话的命令指向另一台机器上的 kerod：可以是你添加过的主机，也可以是 `me@devbox`、`wsl://Ubuntu` 这样的地址。见 [远程主机](./remote.md)。

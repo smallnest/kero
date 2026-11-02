@@ -84,6 +84,7 @@ func settingsIndex() []searchEntry {
 		{"notifications", locales.SetDockBounce(), "dock-bounce attention"},
 
 		{"agents", locales.SetRemoteControlRow(), "remote-control kero do focus browser automation"},
+		{"agents", locales.SetFeishu(), "feishu lark bot chat app secret feishu-app feishu-allow feishu-agent feishu-run feishu-dir feishu-cards feishu-markdown feishu-open-button feishu-card-body feishu-host feishu-timeout feishu-stream"},
 		{"agents", locales.SetCliRow(), "cli command line tool install path"},
 		{"agents", "Claude Code", "skill agents install"},
 		{"agents", "Codex, OpenCode, Pi", "skill agents install"},

@@ -92,6 +92,14 @@ func (a *App) focusTerminal() {
 // right tells that they reach the window's right edge, which the side
 // panel takes while it shows.
 func (a *App) panes(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32, s *proto.Session, right bool) {
+	// One pane shows its chat in place of its terminal, alone, so that
+	// the chat has the room side by side would leave it.
+	if len(s.Zoomed) == 0 || s.Zoomed == a.focusOf(s) {
+		if p0 := s.PaneByID(a.focusOf(s)); p0 != nil && a.paneChat[p0.ID] && a.feishuOn() {
+			a.paneCard(c, pal, bar, shown, s, p0, true, true, right, false)
+			return
+		}
+	}
 	multi := len(s.Panes) > 1
 	if z := s.PaneByID(s.Zoomed); z != nil || s.Layout == nil || !multi {
 		p := z
@@ -196,6 +204,9 @@ func (a *App) divider(c *ui.Context, pal *palette, s *proto.Session, l *proto.La
 // window controls elsewhere (windowControls).
 func (a *App) paneCard(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32, s *proto.Session, p *proto.Pane, top, left, right, multi bool) {
 	focused := p.ID == a.focusOf(s)
+	// A pane alone, or the zoomed one, shows its chat in place of its
+	// terminal, which panes lays out the one card for.
+	chat := focused && a.feishuOn() && (len(s.Zoomed) == 0 || s.Zoomed == p.ID)
 	bg := pal.card
 	// A browser's page stays opaque, so its toolbar does too, and neither
 	// fades: a page is read, not typed into, from beside it.
@@ -217,6 +228,13 @@ func (a *App) paneCard(c *ui.Context, pal *palette, bar ui.TitleBar, shown float
 		raised(card.Background(bgNow), pal)
 	}
 	hovered := card.Hovered()
+	if chat {
+		hovered = true
+	}
+	// The chat's card is opaque, as a browser's page is.
+	if chat {
+		card.Background(bgNow)
+	}
 	if a.set.FocusFollowsMouse && multi {
 		a.followMouse(c, s, p, card, hovered, focused)
 	}
@@ -256,7 +274,13 @@ func (a *App) paneCard(c *ui.Context, pal *palette, bar ui.TitleBar, shown float
 			dragging = a.paneBrowser(c, pal, bar, shown, s, p, top, left, right, multi, focused, hovered)
 		} else {
 			dragging = a.paneHeader(c, pal, bar, shown, s, p, top, left, right, multi, focused, hovered)
-			a.paneTerminal(c, pal, s, p)
+			if chat {
+				// The session's conversation, as a chat, in the terminal's
+				// place (chat.go).
+				a.chatBody(c, pal, s)
+			} else {
+				a.paneTerminal(c, pal, s, p)
+			}
 		}
 		if multi && !p.Shown() && a.set.DimUnfocused {
 			// The terminals the user is not in fade, text and all.
@@ -527,6 +551,13 @@ func (a *App) paneControls(c *ui.Context, pal *palette, s *proto.Session, p *pro
 		if !show {
 			return
 		}
+		if a.feishuOn() {
+			if a.paneChat[p.ID] {
+				iconButton(c, "chat-toggle", terminalIcon, a.tip(locales.ActionShowTerminal(), "pane.chat"), pal, func() { a.hidePaneChat(s, p.ID) })
+			} else {
+				iconButton(c, "chat-toggle", chatIcon, a.tip(locales.SideChat(), "pane.chat"), pal, func() { a.showPaneChat(s, p.ID) })
+			}
+		}
 		iconButton(c, "split-r", splitRightIcon, a.tip(locales.ActionSplitRight(), "pane.split.right"), pal, func() { a.splitPane(s, p.ID, "right") })
 		iconButton(c, "split-d", splitDownIcon, a.tip(locales.ActionSplitDown(), "pane.split.down"), pal, func() { a.splitPane(s, p.ID, "down") })
 		if multi {
@@ -540,6 +571,35 @@ func (a *App) paneControls(c *ui.Context, pal *palette, s *proto.Session, p *pro
 			iconButton(c, "close", closeIcon, a.tip(locales.PaneClose(), "pane.close"), pal, func() { a.defer_(func() { a.closePane(a.session(sid), pid, true) }) })
 		}
 	})
+}
+
+// feishuOn tells that an app of Feishu is configured, whose chats the
+// panes show (chat.go).
+func (a *App) feishuOn() bool { return a.set.Feishu != nil && a.set.Feishu.App != "" }
+
+// showPaneChat shows the focused pane's chat in its terminal's place:
+// the window shows the pane alone, so that the chat has its place.
+func (a *App) showPaneChat(s *proto.Session, id string) {
+	if a.paneChat == nil {
+		a.paneChat = map[string]bool{}
+	}
+	a.paneChat[id] = true
+	// Zoomed is its own zoom, so the call is the pane's place, not a
+	// toggle of it.
+	if s.Zoomed == "" && (len(s.Panes) > 1 || s.Layout != nil) {
+		s.Zoomed = id
+		a.setFocus(s, id)
+		a.call(s.ID, "zoom", proto.FocusParams{Session: s.ID, Pane: id}, nil)
+	}
+}
+
+// hidePaneChat shows the focused pane's terminal again, and the panes
+// side by side, zoomed only for the chat.
+func (a *App) hidePaneChat(s *proto.Session, id string) {
+	delete(a.paneChat, id)
+	if s.Zoomed == id {
+		a.zoomPane(s, id)
+	}
 }
 
 // paneChips says what the pane is doing. With several panes the title

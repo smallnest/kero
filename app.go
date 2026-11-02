@@ -123,6 +123,7 @@ type App struct {
 	lru        []string
 	refs       map[string]*ui.Handle // panes' terminals, and splits, by id
 	focus      map[string]string     // the pane the user is in, by session
+	paneChat   map[string]bool       // the panes that show their session's chat, not its terminal
 	layoutDrag struct {              // the split whose divider is dragged
 		session, split string
 		ratio          float64 // where the pointer puts it, past its bounds
@@ -269,6 +270,16 @@ func (a *App) update(fn func()) {
 	}
 }
 
+// main runs fn on the main thread, and draws: a test's app, which has no
+// window's loop, runs it as it comes.
+func (a *App) main(fn func()) {
+	if a.win == nil {
+		fn()
+		return
+	}
+	a.update(fn)
+}
+
 func (a *App) event(h *host, cl *client.Client, m proto.Message) {
 	if h.cl != cl {
 		return
@@ -277,6 +288,9 @@ func (a *App) event(h *host, cl *client.Client, m proto.Message) {
 	case "state":
 		if m.State != nil {
 			a.setState(h, *m.State)
+			// The chat windows read their turns as the host's state
+			// changes: a chat's turn ends as the session goes idle.
+			a.chatChanged(h)
 		}
 	case "select":
 		// A host shows its own sessions, none of another machine.

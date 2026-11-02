@@ -246,6 +246,16 @@ func (msgs Messages) ActionZoomPane() string {
 	return Catalog.Format(msgs.locale, "actionZoomPane", nil)
 }
 
+// ActionShowTerminal says "Show Terminal"
+// in the language the app shows.
+func ActionShowTerminal() string { return In(i18n.Locale()).ActionShowTerminal() }
+
+// ActionShowTerminal says "Show Terminal"
+// in the language of msgs.
+func (msgs Messages) ActionShowTerminal() string {
+	return Catalog.Format(msgs.locale, "actionShowTerminal", nil)
+}
+
 // ActionFind says "Find…"
 // in the language the app shows.
 func ActionFind() string { return In(i18n.Locale()).ActionFind() }
@@ -1304,6 +1314,106 @@ func SessionMarkRead() string { return In(i18n.Locale()).SessionMarkRead() }
 // in the language of msgs.
 func (msgs Messages) SessionMarkRead() string {
 	return Catalog.Format(msgs.locale, "sessionMarkRead", nil)
+}
+
+// ChatOpen says "Open Chat"
+// in the language the app shows.
+func ChatOpen() string { return In(i18n.Locale()).ChatOpen() }
+
+// ChatOpen says "Open Chat"
+// in the language of msgs.
+func (msgs Messages) ChatOpen() string {
+	return Catalog.Format(msgs.locale, "chatOpen", nil)
+}
+
+// ChatChooseTitle says "Choose a Feishu Chat"
+// in the language the app shows.
+func ChatChooseTitle() string { return In(i18n.Locale()).ChatChooseTitle() }
+
+// ChatChooseTitle says "Choose a Feishu Chat"
+// in the language of msgs.
+func (msgs Messages) ChatChooseTitle() string {
+	return Catalog.Format(msgs.locale, "chatChooseTitle", nil)
+}
+
+// ChatChoosePlaceholder says "Search the chats"
+// in the language the app shows.
+func ChatChoosePlaceholder() string { return In(i18n.Locale()).ChatChoosePlaceholder() }
+
+// ChatChoosePlaceholder says "Search the chats"
+// in the language of msgs.
+func (msgs Messages) ChatChoosePlaceholder() string {
+	return Catalog.Format(msgs.locale, "chatChoosePlaceholder", nil)
+}
+
+// ChatPlaceholder says "Write to the chat"
+// in the language the app shows.
+func ChatPlaceholder() string { return In(i18n.Locale()).ChatPlaceholder() }
+
+// ChatPlaceholder says "Write to the chat"
+// in the language of msgs.
+func (msgs Messages) ChatPlaceholder() string {
+	return Catalog.Format(msgs.locale, "chatPlaceholder", nil)
+}
+
+// ChatSend says "Send"
+// in the language the app shows.
+func ChatSend() string { return In(i18n.Locale()).ChatSend() }
+
+// ChatSend says "Send"
+// in the language of msgs.
+func (msgs Messages) ChatSend() string {
+	return Catalog.Format(msgs.locale, "chatSend", nil)
+}
+
+// ChatNothing says "Nothing here yet. Write a prompt, or wait for the agent."
+// in the language the app shows.
+func ChatNothing() string { return In(i18n.Locale()).ChatNothing() }
+
+// ChatNothing says "Nothing here yet. Write a prompt, or wait for the agent."
+// in the language of msgs.
+func (msgs Messages) ChatNothing() string {
+	return Catalog.Format(msgs.locale, "chatNothing", nil)
+}
+
+// ChatReadingNow says "Reading…"
+// in the language the app shows.
+func ChatReadingNow() string { return In(i18n.Locale()).ChatReadingNow() }
+
+// ChatReadingNow says "Reading…"
+// in the language of msgs.
+func (msgs Messages) ChatReadingNow() string {
+	return Catalog.Format(msgs.locale, "chatReadingNow", nil)
+}
+
+// ChatSessionNone says "This session is with no Feishu chat. Choose one, or send /new to one."
+// in the language the app shows.
+func ChatSessionNone() string { return In(i18n.Locale()).ChatSessionNone() }
+
+// ChatSessionNone says "This session is with no Feishu chat. Choose one, or send /new to one."
+// in the language of msgs.
+func (msgs Messages) ChatSessionNone() string {
+	return Catalog.Format(msgs.locale, "chatSessionNone", nil)
+}
+
+// ChatHostOffline says "Kero on this session’s host is not connected."
+// in the language the app shows.
+func ChatHostOffline() string { return In(i18n.Locale()).ChatHostOffline() }
+
+// ChatHostOffline says "Kero on this session’s host is not connected."
+// in the language of msgs.
+func (msgs Messages) ChatHostOffline() string {
+	return Catalog.Format(msgs.locale, "chatHostOffline", nil)
+}
+
+// ChatNoChats says "The bot is in no chat yet."
+// in the language the app shows.
+func ChatNoChats() string { return In(i18n.Locale()).ChatNoChats() }
+
+// ChatNoChats says "The bot is in no chat yet."
+// in the language of msgs.
+func (msgs Messages) ChatNoChats() string {
+	return Catalog.Format(msgs.locale, "chatNoChats", nil)
 }
 
 // SessionMoveToProject says "Move to Project"
@@ -3582,6 +3692,458 @@ func SetCliRow() string { return In(i18n.Locale()).SetCliRow() }
 // in the language of msgs.
 func (msgs Messages) SetCliRow() string {
 	return Catalog.Format(msgs.locale, "setCliRow", nil)
+}
+
+// SetFeishuRow says "Drive this window from Feishu"
+// in the language the app shows.
+func SetFeishuRow() string { return In(i18n.Locale()).SetFeishuRow() }
+
+// SetFeishuRow says "Drive this window from Feishu"
+// in the language of msgs.
+func (msgs Messages) SetFeishuRow() string {
+	return Catalog.Format(msgs.locale, "setFeishuRow", nil)
+}
+
+// SetFeishuTitle says "Feishu"
+// in the language the app shows.
+func SetFeishuTitle() string { return In(i18n.Locale()).SetFeishuTitle() }
+
+// SetFeishuTitle says "Feishu"
+// in the language of msgs.
+func (msgs Messages) SetFeishuTitle() string {
+	return Catalog.Format(msgs.locale, "setFeishuTitle", nil)
+}
+
+// SetFeishuConnectedState says "Connected"
+// in the language the app shows.
+func SetFeishuConnectedState() string { return In(i18n.Locale()).SetFeishuConnectedState() }
+
+// SetFeishuConnectedState says "Connected"
+// in the language of msgs.
+func (msgs Messages) SetFeishuConnectedState() string {
+	return Catalog.Format(msgs.locale, "setFeishuConnectedState", nil)
+}
+
+// SetFeishuOffState says "Off"
+// in the language the app shows.
+func SetFeishuOffState() string { return In(i18n.Locale()).SetFeishuOffState() }
+
+// SetFeishuOffState says "Off"
+// in the language of msgs.
+func (msgs Messages) SetFeishuOffState() string {
+	return Catalog.Format(msgs.locale, "setFeishuOffState", nil)
+}
+
+// SetFeishuSetupAction says "kero feishu setup"
+// in the language the app shows.
+func SetFeishuSetupAction() string { return In(i18n.Locale()).SetFeishuSetupAction() }
+
+// SetFeishuSetupAction says "kero feishu setup"
+// in the language of msgs.
+func (msgs Messages) SetFeishuSetupAction() string {
+	return Catalog.Format(msgs.locale, "setFeishuSetupAction", nil)
+}
+
+// SetFeishuDetail says "A chat with your Feishu app runs the coding agents in this machine’s sessions: /new starts one, and other text is a…"
+// in the language the app shows.
+func SetFeishuDetail() string { return In(i18n.Locale()).SetFeishuDetail() }
+
+// SetFeishuDetail says "A chat with your Feishu app runs the coding agents in this machine’s sessions: /new starts one, and other text is a…"
+// in the language of msgs.
+func (msgs Messages) SetFeishuDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuDetail", nil)
+}
+
+// SetFeishuAppId says "App ID"
+// in the language the app shows.
+func SetFeishuAppId() string { return In(i18n.Locale()).SetFeishuAppId() }
+
+// SetFeishuAppId says "App ID"
+// in the language of msgs.
+func (msgs Messages) SetFeishuAppId() string {
+	return Catalog.Format(msgs.locale, "setFeishuAppId", nil)
+}
+
+// SetFeishuSecret says "App Secret"
+// in the language the app shows.
+func SetFeishuSecret() string { return In(i18n.Locale()).SetFeishuSecret() }
+
+// SetFeishuSecret says "App Secret"
+// in the language of msgs.
+func (msgs Messages) SetFeishuSecret() string {
+	return Catalog.Format(msgs.locale, "setFeishuSecret", nil)
+}
+
+// SetFeishuSecretDetail says "Kept in kero’s directory, readable by you only. Kero checks it with Feishu, then connects the bot."
+// in the language the app shows.
+func SetFeishuSecretDetail() string { return In(i18n.Locale()).SetFeishuSecretDetail() }
+
+// SetFeishuSecretDetail says "Kept in kero’s directory, readable by you only. Kero checks it with Feishu, then connects the bot."
+// in the language of msgs.
+func (msgs Messages) SetFeishuSecretDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuSecretDetail", nil)
+}
+
+// SetFeishuSecretPlaceholder says "App Secret"
+// in the language the app shows.
+func SetFeishuSecretPlaceholder() string { return In(i18n.Locale()).SetFeishuSecretPlaceholder() }
+
+// SetFeishuSecretPlaceholder says "App Secret"
+// in the language of msgs.
+func (msgs Messages) SetFeishuSecretPlaceholder() string {
+	return Catalog.Format(msgs.locale, "setFeishuSecretPlaceholder", nil)
+}
+
+// SetFeishuSecretNeeded says "The App ID and the App Secret are both needed."
+// in the language the app shows.
+func SetFeishuSecretNeeded() string { return In(i18n.Locale()).SetFeishuSecretNeeded() }
+
+// SetFeishuSecretNeeded says "The App ID and the App Secret are both needed."
+// in the language of msgs.
+func (msgs Messages) SetFeishuSecretNeeded() string {
+	return Catalog.Format(msgs.locale, "setFeishuSecretNeeded", nil)
+}
+
+// SetFeishuCheck says "Check and Connect"
+// in the language the app shows.
+func SetFeishuCheck() string { return In(i18n.Locale()).SetFeishuCheck() }
+
+// SetFeishuCheck says "Check and Connect"
+// in the language of msgs.
+func (msgs Messages) SetFeishuCheck() string {
+	return Catalog.Format(msgs.locale, "setFeishuCheck", nil)
+}
+
+// SetFeishuConnectingNow says "Checking with Feishu…"
+// in the language the app shows.
+func SetFeishuConnectingNow() string { return In(i18n.Locale()).SetFeishuConnectingNow() }
+
+// SetFeishuConnectingNow says "Checking with Feishu…"
+// in the language of msgs.
+func (msgs Messages) SetFeishuConnectingNow() string {
+	return Catalog.Format(msgs.locale, "setFeishuConnectingNow", nil)
+}
+
+// SetFeishuConnected says "Connected, app {app}"
+// in the language the app shows.
+func SetFeishuConnected(app string) string { return In(i18n.Locale()).SetFeishuConnected(app) }
+
+// SetFeishuConnected says "Connected, app {app}"
+// in the language of msgs.
+func (msgs Messages) SetFeishuConnected(app string) string {
+	return Catalog.Format(msgs.locale, "setFeishuConnected", map[string]any{"app": app})
+}
+
+// SetFeishuNotConnected says "Not connected"
+// in the language the app shows.
+func SetFeishuNotConnected() string { return In(i18n.Locale()).SetFeishuNotConnected() }
+
+// SetFeishuNotConnected says "Not connected"
+// in the language of msgs.
+func (msgs Messages) SetFeishuNotConnected() string {
+	return Catalog.Format(msgs.locale, "setFeishuNotConnected", nil)
+}
+
+// SetFeishuSecretMissing says "The App Secret is not kept"
+// in the language the app shows.
+func SetFeishuSecretMissing() string { return In(i18n.Locale()).SetFeishuSecretMissing() }
+
+// SetFeishuSecretMissing says "The App Secret is not kept"
+// in the language of msgs.
+func (msgs Messages) SetFeishuSecretMissing() string {
+	return Catalog.Format(msgs.locale, "setFeishuSecretMissing", nil)
+}
+
+// SetFeishuStatusFailed says "Cannot read the bot’s state: {error}"
+// in the language the app shows.
+func SetFeishuStatusFailed(error string) string {
+	return In(i18n.Locale()).SetFeishuStatusFailed(error)
+}
+
+// SetFeishuStatusFailed says "Cannot read the bot’s state: {error}"
+// in the language of msgs.
+func (msgs Messages) SetFeishuStatusFailed(error string) string {
+	return Catalog.Format(msgs.locale, "setFeishuStatusFailed", map[string]any{"error": error})
+}
+
+// SetFeishuDisconnect says "Disconnect"
+// in the language the app shows.
+func SetFeishuDisconnect() string { return In(i18n.Locale()).SetFeishuDisconnect() }
+
+// SetFeishuDisconnect says "Disconnect"
+// in the language of msgs.
+func (msgs Messages) SetFeishuDisconnect() string {
+	return Catalog.Format(msgs.locale, "setFeishuDisconnect", nil)
+}
+
+// SetFeishuAllow says "Who may use the bot"
+// in the language the app shows.
+func SetFeishuAllow() string { return In(i18n.Locale()).SetFeishuAllow() }
+
+// SetFeishuAllow says "Who may use the bot"
+// in the language of msgs.
+func (msgs Messages) SetFeishuAllow() string {
+	return Catalog.Format(msgs.locale, "setFeishuAllow", nil)
+}
+
+// SetFeishuOnlySetupAction says "Who may use the bot"
+// in the language the app shows.
+func SetFeishuOnlySetupAction() string { return In(i18n.Locale()).SetFeishuOnlySetupAction() }
+
+// SetFeishuOnlySetupAction says "Who may use the bot"
+// in the language of msgs.
+func (msgs Messages) SetFeishuOnlySetupAction() string {
+	return Catalog.Format(msgs.locale, "setFeishuOnlySetupAction", nil)
+}
+
+// SetFeishuAllowPlaceholder says "open_id or email, comma separated: * for anyone"
+// in the language the app shows.
+func SetFeishuAllowPlaceholder() string { return In(i18n.Locale()).SetFeishuAllowPlaceholder() }
+
+// SetFeishuAllowPlaceholder says "open_id or email, comma separated: * for anyone"
+// in the language of msgs.
+func (msgs Messages) SetFeishuAllowPlaceholder() string {
+	return Catalog.Format(msgs.locale, "setFeishuAllowPlaceholder", nil)
+}
+
+// SetFeishuAgent says "Agent a new session runs"
+// in the language the app shows.
+func SetFeishuAgent() string { return In(i18n.Locale()).SetFeishuAgent() }
+
+// SetFeishuAgent says "Agent a new session runs"
+// in the language of msgs.
+func (msgs Messages) SetFeishuAgent() string {
+	return Catalog.Format(msgs.locale, "setFeishuAgent", nil)
+}
+
+// SetFeishuAgentDefault says "Program of the new session"
+// in the language the app shows.
+func SetFeishuAgentDefault() string { return In(i18n.Locale()).SetFeishuAgentDefault() }
+
+// SetFeishuAgentDefault says "Program of the new session"
+// in the language of msgs.
+func (msgs Messages) SetFeishuAgentDefault() string {
+	return Catalog.Format(msgs.locale, "setFeishuAgentDefault", nil)
+}
+
+// SetFeishuRun says "How a prompt runs"
+// in the language the app shows.
+func SetFeishuRun() string { return In(i18n.Locale()).SetFeishuRun() }
+
+// SetFeishuRun says "How a prompt runs"
+// in the language of msgs.
+func (msgs Messages) SetFeishuRun() string {
+	return Catalog.Format(msgs.locale, "setFeishuRun", nil)
+}
+
+// SetFeishuRunDetail says "In the session’s pane as a user’s turn, or as the agent’s command in the background, which tells the reply only"
+// in the language the app shows.
+func SetFeishuRunDetail() string { return In(i18n.Locale()).SetFeishuRunDetail() }
+
+// SetFeishuRunDetail says "In the session’s pane as a user’s turn, or as the agent’s command in the background, which tells the reply only"
+// in the language of msgs.
+func (msgs Messages) SetFeishuRunDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuRunDetail", nil)
+}
+
+// SetFeishuRunSession says "In the pane"
+// in the language the app shows.
+func SetFeishuRunSession() string { return In(i18n.Locale()).SetFeishuRunSession() }
+
+// SetFeishuRunSession says "In the pane"
+// in the language of msgs.
+func (msgs Messages) SetFeishuRunSession() string {
+	return Catalog.Format(msgs.locale, "setFeishuRunSession", nil)
+}
+
+// SetFeishuRunCommand says "In the background"
+// in the language the app shows.
+func SetFeishuRunCommand() string { return In(i18n.Locale()).SetFeishuRunCommand() }
+
+// SetFeishuRunCommand says "In the background"
+// in the language of msgs.
+func (msgs Messages) SetFeishuRunCommand() string {
+	return Catalog.Format(msgs.locale, "setFeishuRunCommand", nil)
+}
+
+// SetFeishuDir says "Directory of new sessions"
+// in the language the app shows.
+func SetFeishuDir() string { return In(i18n.Locale()).SetFeishuDir() }
+
+// SetFeishuDir says "Directory of new sessions"
+// in the language of msgs.
+func (msgs Messages) SetFeishuDir() string {
+	return Catalog.Format(msgs.locale, "setFeishuDir", nil)
+}
+
+// SetFeishuDirDetail says "Where a new session starts when the message names no project"
+// in the language the app shows.
+func SetFeishuDirDetail() string { return In(i18n.Locale()).SetFeishuDirDetail() }
+
+// SetFeishuDirDetail says "Where a new session starts when the message names no project"
+// in the language of msgs.
+func (msgs Messages) SetFeishuDirDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuDirDetail", nil)
+}
+
+// SetFeishuDirDefault says "The new session directory"
+// in the language the app shows.
+func SetFeishuDirDefault() string { return In(i18n.Locale()).SetFeishuDirDefault() }
+
+// SetFeishuDirDefault says "The new session directory"
+// in the language of msgs.
+func (msgs Messages) SetFeishuDirDefault() string {
+	return Catalog.Format(msgs.locale, "setFeishuDirDefault", nil)
+}
+
+// SetFeishuCards says "Cards"
+// in the language the app shows.
+func SetFeishuCards() string { return In(i18n.Locale()).SetFeishuCards() }
+
+// SetFeishuCards says "Cards"
+// in the language of msgs.
+func (msgs Messages) SetFeishuCards() string {
+	return Catalog.Format(msgs.locale, "setFeishuCards", nil)
+}
+
+// SetFeishuCardsDetail says "Show a turn as a card that updates while the agent works"
+// in the language the app shows.
+func SetFeishuCardsDetail() string { return In(i18n.Locale()).SetFeishuCardsDetail() }
+
+// SetFeishuCardsDetail says "Show a turn as a card that updates while the agent works"
+// in the language of msgs.
+func (msgs Messages) SetFeishuCardsDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuCardsDetail", nil)
+}
+
+// SetFeishuMarkdown says "Markdown in cards"
+// in the language the app shows.
+func SetFeishuMarkdown() string { return In(i18n.Locale()).SetFeishuMarkdown() }
+
+// SetFeishuMarkdown says "Markdown in cards"
+// in the language of msgs.
+func (msgs Messages) SetFeishuMarkdown() string {
+	return Catalog.Format(msgs.locale, "setFeishuMarkdown", nil)
+}
+
+// SetFeishuMarkdownDetail says "The cards’ text as Markdown"
+// in the language the app shows.
+func SetFeishuMarkdownDetail() string { return In(i18n.Locale()).SetFeishuMarkdownDetail() }
+
+// SetFeishuMarkdownDetail says "The cards’ text as Markdown"
+// in the language of msgs.
+func (msgs Messages) SetFeishuMarkdownDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuMarkdownDetail", nil)
+}
+
+// SetFeishuOpenButton says "Open Session button"
+// in the language the app shows.
+func SetFeishuOpenButton() string { return In(i18n.Locale()).SetFeishuOpenButton() }
+
+// SetFeishuOpenButton says "Open Session button"
+// in the language of msgs.
+func (msgs Messages) SetFeishuOpenButton() string {
+	return Catalog.Format(msgs.locale, "setFeishuOpenButton", nil)
+}
+
+// SetFeishuOpenButtonDetail says "A card’s button opens its session in Kero"
+// in the language the app shows.
+func SetFeishuOpenButtonDetail() string { return In(i18n.Locale()).SetFeishuOpenButtonDetail() }
+
+// SetFeishuOpenButtonDetail says "A card’s button opens its session in Kero"
+// in the language of msgs.
+func (msgs Messages) SetFeishuOpenButtonDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuOpenButtonDetail", nil)
+}
+
+// SetFeishuCardBody says "Send cards as their body"
+// in the language the app shows.
+func SetFeishuCardBody() string { return In(i18n.Locale()).SetFeishuCardBody() }
+
+// SetFeishuCardBody says "Send cards as their body"
+// in the language of msgs.
+func (msgs Messages) SetFeishuCardBody() string {
+	return Catalog.Format(msgs.locale, "setFeishuCardBody", nil)
+}
+
+// SetFeishuCardBodyDetail says "Try it if Feishu shows no card or does not update one"
+// in the language the app shows.
+func SetFeishuCardBodyDetail() string { return In(i18n.Locale()).SetFeishuCardBodyDetail() }
+
+// SetFeishuCardBodyDetail says "Try it if Feishu shows no card or does not update one"
+// in the language of msgs.
+func (msgs Messages) SetFeishuCardBodyDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuCardBodyDetail", nil)
+}
+
+// SetFeishuHost says "Machines that share the app"
+// in the language the app shows.
+func SetFeishuHost() string { return In(i18n.Locale()).SetFeishuHost() }
+
+// SetFeishuHost says "Machines that share the app"
+// in the language of msgs.
+func (msgs Messages) SetFeishuHost() string {
+	return Catalog.Format(msgs.locale, "setFeishuHost", nil)
+}
+
+// SetFeishuHostDetail says "Hostnames of other Kero machines on this app, comma separated: one answers each message, the others leave it"
+// in the language the app shows.
+func SetFeishuHostDetail() string { return In(i18n.Locale()).SetFeishuHostDetail() }
+
+// SetFeishuHostDetail says "Hostnames of other Kero machines on this app, comma separated: one answers each message, the others leave it"
+// in the language of msgs.
+func (msgs Messages) SetFeishuHostDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuHostDetail", nil)
+}
+
+// SetFeishuHostPlaceholder says "host1, host2"
+// in the language the app shows.
+func SetFeishuHostPlaceholder() string { return In(i18n.Locale()).SetFeishuHostPlaceholder() }
+
+// SetFeishuHostPlaceholder says "host1, host2"
+// in the language of msgs.
+func (msgs Messages) SetFeishuHostPlaceholder() string {
+	return Catalog.Format(msgs.locale, "setFeishuHostPlaceholder", nil)
+}
+
+// SetFeishuTimeout says "Time limit of a turn"
+// in the language the app shows.
+func SetFeishuTimeout() string { return In(i18n.Locale()).SetFeishuTimeout() }
+
+// SetFeishuTimeout says "Time limit of a turn"
+// in the language of msgs.
+func (msgs Messages) SetFeishuTimeout() string {
+	return Catalog.Format(msgs.locale, "setFeishuTimeout", nil)
+}
+
+// SetFeishuTimeoutDetail says "The longest a turn waits before its reply says it timed out"
+// in the language the app shows.
+func SetFeishuTimeoutDetail() string { return In(i18n.Locale()).SetFeishuTimeoutDetail() }
+
+// SetFeishuTimeoutDetail says "The longest a turn waits before its reply says it timed out"
+// in the language of msgs.
+func (msgs Messages) SetFeishuTimeoutDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuTimeoutDetail", nil)
+}
+
+// SetFeishuStream says "Card update interval"
+// in the language the app shows.
+func SetFeishuStream() string { return In(i18n.Locale()).SetFeishuStream() }
+
+// SetFeishuStream says "Card update interval"
+// in the language of msgs.
+func (msgs Messages) SetFeishuStream() string {
+	return Catalog.Format(msgs.locale, "setFeishuStream", nil)
+}
+
+// SetFeishuStreamDetail says "How often the card of a working turn takes new text"
+// in the language the app shows.
+func SetFeishuStreamDetail() string { return In(i18n.Locale()).SetFeishuStreamDetail() }
+
+// SetFeishuStreamDetail says "How often the card of a working turn takes new text"
+// in the language of msgs.
+func (msgs Messages) SetFeishuStreamDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuStreamDetail", nil)
 }
 
 // SetSkills says "Skills for agents"
@@ -6612,6 +7174,16 @@ func SideInfo() string { return In(i18n.Locale()).SideInfo() }
 // in the language of msgs.
 func (msgs Messages) SideInfo() string {
 	return Catalog.Format(msgs.locale, "sideInfo", nil)
+}
+
+// SideChat says "Chat"
+// in the language the app shows.
+func SideChat() string { return In(i18n.Locale()).SideChat() }
+
+// SideChat says "Chat"
+// in the language of msgs.
+func (msgs Messages) SideChat() string {
+	return Catalog.Format(msgs.locale, "sideChat", nil)
 }
 
 // InfoCopyPath says "Copy Path"
