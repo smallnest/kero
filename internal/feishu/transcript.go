@@ -273,6 +273,11 @@ func (b *Bot) Feed(p proto.FeishuFeedParams) (proto.FeishuFeed, error) {
 		f.Message, f.Evidence = pane.Message, pane.FeishuAnswer
 	}
 	f.Chat = p.Chat
+	// A command of a chat's runs its agent without the pane's terminal to
+	// tell it: the conversation it names is a Claude Code conversation.
+	if len(f.Agent) == 0 && len(f.Conversation) > 0 {
+		f.Agent = "claude"
+	}
 	if f.Chat == "" {
 		f.Chat = b.pinned(s.ID)
 	}

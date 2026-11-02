@@ -58,6 +58,15 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		b.reply(chatID, err.Error())
 		return
 	}
+	// The chat window shows the conversation this turn runs from now on.
+	if key != "" {
+		b.mu.Lock()
+		if c := b.chats[key]; c != nil {
+			c.agent, c.dir, c.cmd, c.sid = agent, dir, "", sid
+		}
+		b.mu.Unlock()
+		b.save()
+	}
 	var card *turnCard
 	prev := ""
 	if cards() && !terminal(agent) {

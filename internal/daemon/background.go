@@ -111,13 +111,18 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 	// wrong. The children go without stdin, which carries nothing.
 	cmd := exec.Command(p.Command[0], p.Command[1:]...)
 	cmd.Dir = dir
+	// A command of a chat's runs no agent of the pane's before it: the
+	// turn ended with the last command.
+	pn.mu.Lock()
+	pn.info.AgentSession, pn.info.AgentSessionID = nil, ""
+	pn.mu.Unlock()
 	if as, ok := conversationOf(p.Command); ok {
 		// The conversation the command runs is the pane's, which a chat
 		// window shows, though the command has no terminal to tell it.
 		pn.mu.Lock()
-		pn.conv = &as
-		pn.info.AgentSessionID = as.ID
+		pn.info.AgentSession, pn.info.AgentSessionID = &as, as.ID
 		pn.mu.Unlock()
+		d.saveState()
 	}
 	cmd.Env = d.environment(p.ID, pn.info.ID, shell, p.Env)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = out, out, nil
