@@ -115,7 +115,9 @@ func (b *Bot) onMessage(clientCtx context.Context, e *larkim.P2MessageReceiveV1)
 	if b.shared() && len(asked) > 0 {
 		response = asked
 	}
-	t := &turnInfo{start: time.Now(), chat: chatID, text: text, event: response, asked: asked}
+	t := &turnInfo{start: time.Now(), chat: chatID, text: text, event: response,
+		asked: asked}
+	_, t.window = windowPrompt(deref(m.Content))
 	b.mu.Lock()
 	c0 := b.chatLocked(key)
 	c0.chat, c0.event, c0.key = chatID, response, key
@@ -325,14 +327,23 @@ func (b *Bot) newSession(chatID, rest string) {
 		b.reply(chatID, fmt.Sprintf("Kero has no agent %q.", agent))
 		return
 	}
-	params := proto.CreateParams{Project: project, Dir: b.cfg.Dir}
-	if agent != "default" {
-		params.Command = agentCommand(b.cfg, agent)
-	}
 	var s proto.Session
-	if err := b.api.Call("create", params, &s); err != nil {
+	cmd := []string{}
+	after := false
+	if agent != "default" {
+		cmd, after = b.sessionCommand(agent)
+	}
+	if err := b.api.Call("create", proto.CreateParams{Project: project, Dir: b.cfg.Dir, Command: cmd}, &s); err != nil {
 		b.reply(chatID, "Kero could not start a session: "+err.Error())
 		return
+	}
+	if after {
+		// The agent's program takes the yolo option, but not its
+		// subcommand, which is all a background turn runs: the chat's
+		// background turns start it with the option after the subcommand.
+		b.mu.Lock()
+		b.chatLocked(chatKey(chatID, "")).cmd = strings.Join(append([]string{cmd[0], agentSubcommand[agent]}, cmd[1:]...), "\x00")
+		b.mu.Unlock()
 	}
 	b.bind(chatID, s)
 	// Its pane's process, if there is one: where it works.
@@ -509,20 +520,26 @@ func (b *Bot) answer(chatID, text string) {
 	}
 	// Its turn keeps kerod at its work, as a connection that stays does.
 	b.api.Call("watch", map[string]bool{"stay": true}, nil)
+	var card *turnCard
 	if cards() && len(text) > 0 {
-		// The turn shows in a card, which /stop ends.
-		var p proto.Pane
-		if err := b.api.Call("pane", proto.IDParams{ID: s.Pane.ID}, &p); err == nil {
-			prev, _ := b.lastCard(chatKey(chatID, ""), s.ID)
-			card := b.newTurnCard(chatID, s.ID, text, prev)
-			b.goTurn(func() {
-				state, body, failed, _ := b.watchCard(card, s.Pane.ID, rows(b.read(s.Pane.ID)), time.Time{})
-				if failed {
-					state = "error"
-				}
-				b.card(card, state, body, "")
-			})
-		}
+		// The turn shows by its message, which /stop ends.
+		card = b.newTurnCard(chatID, b.chat(key).event, langOf(text))
+		b.card(card, "working", "", "")
+	}
+	if card != nil {
+		b.goTurn(func() {
+			state, body, failed, _ := b.watchCard(card, s.Pane.ID, rows(b.read(s.Pane.ID)), time.Time{})
+			if failed {
+				state = "error"
+			}
+			b.react(card.msg, state)
+			if state != "working" {
+				b.drop(card)
+			}
+			if body != "" && (state == "error" || state == "asks") {
+				b.replyAt(key, card.msg, chatID, body)
+			}
+		})
 	}
 	b.reply(chatID, "Sent. /status shows the turn.")
 }
@@ -561,9 +578,8 @@ func (b *Bot) answering(key string, s *proto.Session, t turnInfo) {
 // prompt began, or one that starts at the answer.
 func (b *Bot) followAnswer(key, chatID, agent, answers string, t turnInfo) {
 	var card *turnCard
-	if cards() {
-		prev, _ := b.lastCard(key, "")
-		card = b.newTurnCard(chatID, "", "", prev)
+	if cards() && t.event != "" {
+		card = b.newTurnCard(chatID, t.event, langOf(t.text))
 		b.card(card, "working", "", "")
 	}
 	// The answer continues the prompt's turn, which t notes: drive looks
@@ -582,15 +598,14 @@ func (b *Bot) followAnswer(key, chatID, agent, answers string, t turnInfo) {
 	if r.hook {
 		// The hook's answer is the turn's text, not the terminal's, and
 		// it names the conversation the answer continued.
-		b.card(card, state, r.answer, "")
 		b.mu.Lock()
 		c := b.chatLocked(key)
 		c.sid, c.card = r.conversation, cardMsg{}
 		b.mu.Unlock()
 		b.save()
-	} else {
-		b.card(card, state, "", "")
 	}
+	b.react(card.msg, state)
+	b.drop(card)
 	b.replyAt(key, t.event, chatID, b.replyWith(r))
 }
 
@@ -1039,6 +1054,11 @@ func firstNotEmpty(l ...string) string {
 		}
 	}
 	return ""
+}
+
+// discard closes a session the chat does not take.
+func (b *Bot) discard(id string) {
+	b.api.Call("close", proto.IDParams{ID: id}, nil)
 }
 
 // agentCommand is the command a new session runs the agent by: the

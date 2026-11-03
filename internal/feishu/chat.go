@@ -2,7 +2,9 @@ package feishu
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"html"
 	"time"
 
 	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher/callback"
@@ -11,111 +13,90 @@ import (
 	"kero/internal/settings"
 )
 
-// A turn shows in a chat as a card (feishu-cards): grey while the agent
-// works, its text as it comes, green once done, yellow when it asks, red
-// when it failed; then the next turn replaces it with its own.
+// A turn shows in a chat by the user's own message (feishu-cards): a
+// plain card while the agent works, and a short line once it ends, which
+// a reaction on the message marks as done, or failed. The agent's answer
+// is a card that follows the message.
 
-// stream is how often a card shows a turn's new text: feishu-stream.
-func (b *Bot) stream() time.Duration {
-	d := time.Duration(b.cfg.Stream) * time.Second
-	if d <= 0 {
-		d = time.Duration(settings.FeishuDefaultStream) * time.Second
-	}
-	return d
-}
-
-// turnCard is a turn's card, after an earlier one of its chat, which it
-// replaces where it can.
+// turnCard is a turn's card: the user's message, as it shows while the
+// turn runs.
 type turnCard struct {
 	key     string
 	chatID  string
-	session string
-	turn    string
-	lang    string
-	prev    string // the message of the chat's last card, replaced
-	id      string // the card's message, once sent
-	text    string // the body the card shows
-	state   string // working, done, asks or error
-	rich    bool   // the card's body is Markdown
-	meta    string // the turn's summary, under its text
-	title   bool   // the card's header, in JSON 2.0 as a sent card takes
+	msg     string // the user's message, which the card shows
+	lang    string // the language of the words the card shows
+	state   string // working, done or error
+	text    string // the card's body, as Feishu took it
+	sent    bool   // Feishu took a card for the message
+	dropped bool   // the card went, as the answer came: its updates are none
 }
 
-// newTurnCard makes a turn's card in a chat, which replaces prev, the
-// chat's last card.
-func (b *Bot) newTurnCard(chatID, session, title, prev string) *turnCard {
-	return &turnCard{key: chatKey(chatID, ""), chatID: chatID, session: session, turn: title, prev: prev,
-		lang: langOf(title), state: "working"}
+// newTurnCard makes a turn's card in a chat, which is the message the
+// turn answers.
+func (b *Bot) newTurnCard(chatID, msg, lang string) *turnCard {
+	return &turnCard{key: chatKey(chatID, ""), chatID: chatID, msg: msg, lang: lang, state: "working"}
 }
 
-// card tells the turn's card, as it is now: sent once, then updated. A
-// card is sent as JSON 2.0; an update takes a card's body alone, and the
-// header's color stays.
+// card tells the turn's card, as it is now: sent once, as the message's
+// card. Feishu has no way to remove the card from a message again: the
+// answer never shows in it, so a turn that is done, and has an answer,
+// closes with the card gone (drop) as the answer's card follows.
 func (b *Bot) card(c *turnCard, state, text, note string) {
-	if c == nil || !cards() {
+	if c == nil || !cards() || c.msg == "" || c.dropped {
 		return
 	}
-	body := plainBody(text)
+	body := html.UnescapeString(plainBody(text))
 	if note != "" {
 		body += "\n\n" + note
 	}
-	if body == c.text && state == c.state && c.id != "" {
-		return
-	}
-	c.state = state
-	shown, err := cardJSON(Card{Title: c.turn, Text: body, State: state, Session: c.session, Meta: c.meta}, c.lang)
+	shown, err := stateCard(body, cardState[state])
 	if err != nil {
-		b.logf("feishu: card: %v", err)
+		b.logf("feishu: a card: %v", err)
 		return
 	}
-	shown = titled(shown, c)
-	if c.id == "" {
-		// The card's content is the card's JSON, as Feishu takes it for
-		// the app's first. feishu-card-body: true sends its body's alone.
-		sent := shown
-		if settings.Load().FeishuCardBody {
-			sent = bodyOf(shown)
-		}
-		id, err := b.msgs.SendCard("chat_id", c.chatID, sent)
-		if err != nil {
-			// No card: the reply goes as text.
-			b.logf("feishu: sending a card: %v", err)
-			return
-		}
-		c.id, c.text = id, body
-		b.remember(id, record{Chat: c.key, Session: c.session, Turn: c.turn})
-		// The chat's card, for its next turn's, which a restart keeps.
-		cm := cardMsg{id: id, turn: c.turn, text: shown, seen: state == "working"}
-		b.setCard(c.key, cm)
-		b.saveCard(c.key, cm, c.lang, body, state)
-		// The earlier card goes, once this one is there.
-		if c.prev != "" && c.prev != id {
-			if err := b.msgs.UpdateCard(c.prev, closedCard(c.lang)); err == nil {
-				b.forget(c.prev)
-			}
-		}
+	// An update takes the card's body alone: the header that sent it
+	// stays as it was made.
+	err2 := b.msgs.UpdateCard(c.msg, bodyOf(shown))
+	if err2 != nil {
+		b.logf("feishu: updating a card: %v", err2)
 		return
 	}
-	// An update takes the card's body, whose text is Markdown's.
-	update := bodyOf(shown)
-	if err := b.msgs.UpdateCard(c.id, update); err != nil {
-		b.logf("feishu: updating a card: %v", err)
-		return
-	}
-	c.text = body
+	c.state, c.text, c.sent = state, body, true
 }
 
-// closedCard is a replaced card, as it stays: a line, so that the thread
-// keeps its place without its text twice.
-func closedCard(lang string) string {
-	s, _ := cardJSON(Card{Title: word(lang, "earlier"), Text: "*" + word(lang, "earlierNote") + "*", State: "done"}, lang)
-	return s
+// drop shows the turn's card as a line, so that it takes no room in the
+// thread below the answer, and stops its updates.
+func (b *Bot) drop(c *turnCard) {
+	if c == nil || c.dropped || !c.sent {
+		return
+	}
+	c.dropped = true
+	if s, err := stateCard("*"+word(c.lang, "earlier")+"*", "grey"); err == nil {
+		b.msgs.UpdateCard(c.msg, bodyOf(s))
+	}
+}
+
+// stateCard is a message's card JSON, in its body alone: the turn's
+// text, and its state's color, which the card's header takes.
+func stateCard(body, color string) (string, error) {
+	if color == "" {
+		color = "blue"
+	}
+	card := map[string]any{
+		"schema": "2.0",
+		"config": map[string]any{"update_multi": true, "wide_screen_mode": true},
+		"header": map[string]any{"template": color},
+		"body": map[string]any{"direction": "vertical", "elements": []any{
+			map[string]any{"tag": "markdown", "content": body},
+		}},
+	}
+	data, err := json.Marshal(card)
+	return string(data), err
 }
 
 // watchCard follows a turn of the pane from base on until it ends: the
 // agent idle once seen working, or the pane waiting for the user. The
-// card shows the pane's new rows every stream; state, body and failed
-// are the turn's end.
+// state, body and failed are the turn's end.
 func (b *Bot) watchCard(c *turnCard, id string, base int, stop time.Time) (state, body string, failed, seen bool) {
 	timeout := time.Duration(b.cfg.Timeout)
 	if timeout <= 0 {
@@ -124,16 +105,8 @@ func (b *Bot) watchCard(c *turnCard, id string, base int, stop time.Time) (state
 	if stop.IsZero() {
 		stop = time.Now().Add(timeout)
 	}
-	if c != nil {
-		go func() {
-			time.Sleep(2 * time.Second)
-			b.card(c, "working", textNote+since(b.read(id), base, toolTail), "")
-		}()
-	}
 	var p proto.Pane
 	var last, still time.Time
-	shown := ""
-	textAt := time.Time{}
 	for time.Now().Before(stop) {
 		time.Sleep(waits.poll)
 		if err := b.api.Call("wait", proto.WaitParams{ID: id, Timeout: int64(waits.poll / time.Millisecond)}, &p); err != nil && !timedOut(err) {
@@ -142,14 +115,6 @@ func (b *Bot) watchCard(c *turnCard, id string, base int, stop time.Time) (state
 		now := time.Now()
 		if p.Status == proto.Working {
 			last, still = now, now
-		}
-		if now.Sub(textAt) >= b.stream() {
-			textAt = now
-			t := since(b.read(id), base, toolTail)
-			if t != shown {
-				shown = t
-				b.card(c, "working", textNote+t, "")
-			}
 		}
 		switch {
 		case p.Status == proto.Waiting:
@@ -225,38 +190,20 @@ func (b *Bot) onCardAction(ctx context.Context, e *callback.CardActionTriggerEve
 	return &callback.CardActionTriggerResponse{Toast: &callback.Toast{Type: status, Content: msg}}, nil
 }
 
-// setCard keeps the chat's last card, which its next turn replaces.
-func (b *Bot) setCard(key string, c cardMsg) {
-	b.mu.Lock()
-	b.chatLocked(key).card = c
-	b.mu.Unlock()
-}
+// turnMark is the reaction a turn's message takes as the turn ends: a
+// green check for done, a red cross for a failure.
+var turnMark = map[string]string{"done": "DONE", "error": "CROSS_MARK"}
 
-// lastCard is the chat's last card, and whether its turn was seen to
-// work: the one its last turn showed, or the one the session shows now,
-// which a turn from elsewhere, or from before a restart, sent. A
-// restart's pane is done, and takes no turn.
-func (b *Bot) lastCard(key, session string) (id string, seen bool) {
-	c := b.chat(key)
-	// The card the chat had is the one to replace: the last turn's, or,
-	// for none, one a restart left undone.
-	prev := c.card.id
-	if session == "" || !cards() {
-		return prev, c.card.seen
+// react marks the message of a turn by its end, and returns the emoji,
+// "" when Feishu lets not mark it: a message Feishu marks by one emoji
+// only takes the end's, which the new one replaces.
+func (b *Bot) react(msg, state string) string {
+	if msg == "" || !cards() {
+		return ""
 	}
-	var p proto.Pane
-	if err := b.api.Call("pane", proto.IDParams{ID: session}, &p); err != nil || p.Status == proto.Idle {
-		return "", false
+	emoji := turnMark[state]
+	if emoji == "" || b.msgs.React(msg, emoji) != nil {
+		return ""
 	}
-	shown, err := cardJSON(Card{Title: "", Text: "*" + word("en_us", "earlierNote") + "*", State: "working", Session: session}, "en_us")
-	if err != nil {
-		return "", false
-	}
-	id, err = b.msgs.SendCard("chat_id", key, shown)
-	if err != nil {
-		return "", false
-	}
-	b.remember(id, record{Chat: key, Session: session})
-	b.setCard(key, cardMsg{id: id, text: shown, seen: true})
-	return id, true
+	return emoji
 }

@@ -128,7 +128,7 @@ The conversation reads in a column of a fixed width, in the middle of the pane. 
 
 The view only shows the conversation. It has no field: write your prompts in Feishu. The session's host reads the turns with `feishu.feed` as the chat opens, and again each time that the host's state changes.
 
-In Feishu, each turn shows as two cards (`feishu-cards`). The first card says that the agent works, its text as the work goes, then says that the answer follows. The second card is the answer: its title the first words of the answer, its text the answer as Markdown, and its state under it.
+In Feishu, each turn shows on the user's message and in an answer (`feishu-cards`). While the agent works, the message takes a plain, grey card. When the turn ends, the card becomes one short line, and a reaction on the message marks the end: `DONE` for a done turn, `CROSS_MARK` for a failed one. The answer is a card that follows the message: its text is the answer as Markdown, and its state is under it.
 
 ## Settings
 
@@ -165,10 +165,11 @@ feishu-agent-command = pi=pi
 | `feishu-allow` | empty | Who may send prompts: `open_id`, `user_id` or `email` values. Empty allows only the user who ran `kero feishu setup`. |
 | `feishu-timeout` | `30m` | The longest a turn waits before its card says it timed out. |
 | `feishu-stream` | `2s` | How often a working card takes the new text. |
-| `feishu-cards` | `true` | Every answer shows as a card: the turn's card, then the answer's own card, whose text is Markdown. `false` sends the answers as messages. |
+| `feishu-cards` | `true` | A turn shows on the user's message, with a reaction at its end, and every answer is a card whose text is Markdown. `false` sends the answers as messages, and shows no card or reaction. |
 | `feishu-run` | `session` | How a prompt runs its agent: `command`, as the agent's own command in the background, which tells the reply and no terminal shows; or `session`, in the session's pane, as a user's turn. |
 | `feishu-agent` | `default` | The agent a `/new` session runs: `default`, or a name the detector knows, such as `claude`, `codex`, `opencode` or `pi`. |
 | `feishu-dir` | empty | The directory new sessions start in when the message names no project. Empty uses `new-session-directory`. |
+| `feishu-yolo` | `true` | Run every agent in its yolo mode: no permission prompts, and, where the agent has one, no sandbox. The option is Claude Code's `--dangerously-skip-permissions`, Codex's `--dangerously-bypass-approvals-and-sandbox`, and `--yolo` or `--auto` for the others. `claude=false` turns one agent's off, and `*=true` or `*=false` sets it for every agent. An option in `feishu-agent-command` sets its agent's. |
 | `feishu-agent-command` | empty | `name=command`, by the agent's name: the command that runs the agent. An agent it leaves out runs its program with no arguments. A command can start with `~/`. |
 
 ### The agents' environment
@@ -186,7 +187,7 @@ kero feishu status    # whether the bot is connected
 
 `kero feishu setup` checks the Feishu app, step by step, for the bot capability, the `im:message` and `im:resource` scopes, the `im.message.receive` event, and a published version. If a step fails, it names the step and what to change in the [Feishu Open Platform console](https://open.feishu.cn/app).
 
-The Settings window shows the app's name, the connection state, and who may use it. It never shows the App Secret. Settings › Agents › Feishu shows the app, the connection, who may use it, the run mode, the agent, and the directory. The Info view (⌥⌘I) also shows a Feishu card while `feishu-app` names an app: the App ID, whether the bot is connected, and who may use it.
+The Settings window shows the app's name, the connection state, and who may use it. It never shows the App Secret. Settings › Feishu shows the app, the connection, who may use it, the run mode, the agent, the directory, and the yolo modes. The Info view (⌥⌘I) also shows a Feishu card while `feishu-app` names an app: the App ID, whether the bot is connected, and who may use it.
 
 ## How it fits into Kero
 
@@ -226,7 +227,7 @@ The Settings window shows the app's name, the connection state, and who may use 
 | **M3: the experience** | Groups with @-mentions and threads; images and files copied into the session; `/stop`, `/answer`, `/status`, `/close`; buttons, and Open in Kero | A group uses the same session; a button opens it in the app |
 | **M4: every agent** | An instruction that has each turn's answer written to a file, with hooks for claude, codex, pi and opencode; the terminal text when there is no file | All four agents work, with a script that runs each |
 | **M5: many machines** | How one app's events go to several machines; `/host` | Two machines, each with a bot |
-| **M6: finish** | Streaming cards; Markdown; a Settings › Agents › Feishu; this page in Japanese and Chinese | The tests and a manual checklist pass |
+| **M6: finish** | Streaming cards; Markdown; a Settings › Feishu; this page in Japanese and Chinese | The tests and a manual checklist pass |
 
 ## Risks
 

@@ -74,49 +74,29 @@ func (b *Bot) backgroundRun(session string) (out proto.Output, pane string) {
 	return out, firstNotEmpty(pane, session)
 }
 
-// cardOf is the card of the chat's turn, when its start kept it.
-func (b *Bot) cardOf(c *chat, id, prev, session string) *turnCard {
-	card := b.newTurnCard(id, session, b.wantTurn(id), "")
-	if k := b.kardStateValue(id); k.id != "" {
-		// The card the turn sent, before the restart.
-		card.id, card.prev, card.text = k.id, "", k.body
-		card.state = k.state
-	}
-	return card
-}
-
 // followCommand follows a command in the background, in pane, to its
-// end.
+// end, by the message of the turn that began it.
 func (b *Bot) followCommand(c *chat, out proto.Output, started time.Time, event, text string) {
 	key := c.key
-	card := b.cardOf(c, key, "", c.id)
-	if card.id == "" {
-		card = nil
-	}
+	card := b.newTurnCard(c.chat, b.wantEvent(c.chat), langOf(text))
+	b.card(card, "working", "", "")
 	agent, dir, sid := c.agent, c.dir, c.sid
 	from, answer := out.From, out.Text
 	for !out.Ended {
 		if time.Since(started) >= b.timeout() {
-			if card != nil {
-				b.card(card, "asks", plainBody(answer), "")
-			}
+			b.drop(card)
 			b.reply(c.chat, fmt.Sprintf("Still working after %s. /stop ends it.", b.timeout()))
 			return
 		}
 		time.Sleep(time.Second)
 		var next proto.Output
 		if err := b.api.Call("agent.output", proto.OutputParams{ID: c.id, From: from}, &next); err != nil {
-			if card != nil {
-				b.card(card, "error", err.Error(), "")
-			}
+			b.card(card, "error", "", "")
 			b.reply(c.chat, err.Error())
 			return
 		}
 		out = next
 		from, answer = out.From, answer+out.Text
-		if card != nil {
-			b.card(card, "working", commandText(agent, answer), "")
-		}
 	}
 	b.finished(key, c.id, event, agent, dir, sid, text, out, answer, card)
 }
@@ -124,12 +104,15 @@ func (b *Bot) followCommand(c *chat, out proto.Output, started time.Time, event,
 // followPane follows an agent in the pane, with its card.
 func (b *Bot) followPane(c *chat, started time.Time, event, text string) {
 	key := c.key
-	card := b.cardOf(c, key, "", c.id)
+	card := b.newTurnCard(c.chat, b.wantEvent(c.chat), langOf(text))
+	b.card(card, "working", "", "")
 	lead := leadPaneOf(b, c.id)
-	_, body, _, _ := b.watchCard(card, lead, 0, started.Add(b.timeout()))
+	state, body, _, _ := b.watchCard(card, lead, 0, started.Add(b.timeout()))
 	var p proto.Pane
 	b.api.Call("read", proto.ReadParams{ID: lead}, &p)
 	reply := b.replyWith(&run{status: p, text: body})
+	b.react(card.msg, state)
+	b.drop(card)
 	b.replyAt(key, event, c.chat, reply)
 }
 
@@ -191,6 +174,18 @@ func (b *Bot) wantTurn(chatID string) string {
 		return ""
 	}
 	return t.text
+}
+
+// wantEvent is the message of the chat's turn that runs, which its answer
+// replies to, "" for none.
+func (b *Bot) wantEvent(chatID string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	t := b.chatLocked(chatKey(chatID, "")).running
+	if t.pane != "" && t.start.IsZero() {
+		return ""
+	}
+	return t.event
 }
 
 // beginTurn notes the turn that begins, as the chat's turn until it ends,

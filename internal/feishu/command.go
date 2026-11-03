@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,7 +37,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 	if t.event == "" {
 		t.event = response
 	}
-	session, err := b.backgroundSession(chatID, base.id, agent, dir)
+	session, made, err := b.backgroundSession(chatID, base.id, agent, dir)
 	if err != nil {
 		b.reply(chatID, err.Error())
 		return
@@ -45,7 +46,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 	if sid == "" {
 		sid = newUUID()
 	}
-	cmd := b.backgroundCommand(agent, sid, base.sid, text)
+	cmd := b.backgroundCommand(agent, sid, base.sid, text, true)
 	out := b.outFile(session)
 	if agent == "claude" {
 		// Claude Code asks the program that runs it for each tool beyond
@@ -75,11 +76,18 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		b.mu.Unlock()
 		b.save()
 	}
+	if made && !t.window {
+		// The user's session shows in the app at once, where its chat
+		// window is: not one a prompt of the app's chat window made, which
+		// shows the chat it asked.
+		b.api.Call("select", proto.FocusParams{Session: session}, nil)
+	}
+	// The turn shows by the message it answers, where the chat has
+	// Feishu's cards, and the agent is one that runs its prompt without a
+	// terminal.
 	var card *turnCard
-	prev := ""
-	if cards() && !terminal(agent) {
-		prev, _ = b.lastCard(key, session)
-		card = b.newTurnCard(chatID, session, text, prev)
+	if !terminal(agent) {
+		card = b.newTurnCard(chatID, response, langOf(text))
 		b.card(card, "working", "", "")
 	}
 	stop := time.Now().Add(b.timeout())
@@ -90,8 +98,6 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 	}
 	from := int64(0)
 	answer := ""
-	shown := ""
-	textAt := time.Time{}
 	for {
 		var out proto.Output
 		if err := b.api.Call("agent.output", proto.OutputParams{ID: session, From: from}, &out); err != nil {
@@ -101,10 +107,6 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		}
 		answer += out.Text
 		from = out.From
-		if text := commandText(agent, answer); text != shown && time.Since(textAt) >= b.stream() {
-			shown, textAt = text, time.Now()
-			b.card(card, "working", shown, "")
-		}
 		if out.Ended {
 			b.finished(key, chatID, t.event, agent, dir, sid, text, out, answer, card)
 			return
@@ -114,7 +116,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 			base.agent, base.dir, base.cmd, base.sid = agent, dir, "", sid
 			b.mu.Unlock()
 			b.save()
-			b.card(card, "asks", shown, "")
+			b.drop(card)
 			b.reply(chatID, fmt.Sprintf("Still working after %s. /stop ends it.", b.timeout()))
 			return
 		}
@@ -136,28 +138,24 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	c.card = cardMsg{}
 	b.mu.Unlock()
 	b.save()
+	reply := b.backgroundReply(agent, out)
 	state := "done"
 	if out.Exited != 0 || out.Error != "" {
 		state = "error"
 	}
-	reply := b.backgroundReply(agent, out)
-	if !cards() && terminal(agent) {
-		// Feishu may not show a command's rows as a card's: the answer
-		// goes as a message, and the card says so.
-		b.card(card, state, "", word(langOf(text), "inTerminal"))
-	} else {
-		b.card(card, state, reply, "")
-	}
+	b.react(response, state)
+	b.drop(card)
 	b.replyAt(key, response, chatID, reply)
 }
 
 // backgroundSession makes the chat's session a background one, with the
-// agent's name, or returns it if it is one already.
-func (b *Bot) backgroundSession(chatID, id, agent, dir string) (string, error) {
+// agent's name, or returns it if it is one already, and whether it makes
+// one.
+func (b *Bot) backgroundSession(chatID, id, agent, dir string) (string, bool, error) {
 	if id != "" {
 		var has bool
 		if err := b.api.Call("session.hasBackground", proto.SessionParams{ID: id}, &has); err == nil && has {
-			return id, nil
+			return id, false, nil
 		}
 	}
 	project := ""
@@ -179,22 +177,37 @@ func (b *Bot) backgroundSession(chatID, id, agent, dir string) (string, error) {
 	}
 	var s proto.Session
 	if err := b.api.Call("create", proto.CreateParams{Project: project, Dir: dir, Name: name}, &s); err != nil {
-		return "", fmt.Errorf("Kero could not start a session: %w", err)
+		return "", false, fmt.Errorf("Kero could not start a session: %w", err)
 	}
 	if err := b.api.Call("session.setBackground", proto.SessionParams{ID: s.ID}, nil); err != nil {
-		return "", err
+		return "", false, err
 	}
 	b.bind(chatID, s)
-	return s.ID, nil
+	return s.ID, true, nil
 }
 
 // backgroundCommand is the agent's command with the prompt, and the
 // options that tell the answer and continue the conversation: the first
 // turn starts it with sid, and the others continue it with resume, which
-// is the conversation's ID the first turn gave.
-func (b *Bot) backgroundCommand(agent, sid, resume, text string) []string {
-	cmd := append([]string{}, agentCommand(b.cfg, agent)...)
+// is the conversation's ID the first turn gave. told says whether the
+// turn takes the yolo option as its settings have it, not as its chat
+// told it for a session without it.
+func (b *Bot) backgroundCommand(agent, sid, resume, text string, told bool) []string {
 	again := resume != ""
+	wrote := len(b.cfg.AgentCommand(agent)) > 0
+	// The turn's words: those of feishu-agent-command, with the option
+	// after the subcommand where the turn is on, or else as written; or
+	// the program alone, without the option, since the turn's goes after
+	// it.
+	cmd := append([]string{}, agentCommand(b.cfg, agent)...)
+	// on is whether the turn takes the option: as it told, or as the
+	// settings have it where feishu-agent-command names it.
+	on := told || settings.IsYolo(&b.cfg, b.yolo, agent)
+	flag := slices.Clone(settings.YoloFlag(agent))
+	cmd = cmd[:1]
+	if _, named := settings.AgentYolo(&b.cfg, agent); named {
+		cmd = append(cmd, flag...)
+	}
 	switch agent {
 	case "claude":
 		if again {
@@ -204,6 +217,9 @@ func (b *Bot) backgroundCommand(agent, sid, resume, text string) []string {
 		}
 	case "codex":
 		cmd = append(cmd, "exec")
+		if on {
+			cmd = append(cmd, flag...)
+		}
 		if again {
 			cmd = append(cmd, "resume", resume, "--skip-git-repo-check")
 		}
@@ -226,20 +242,64 @@ func (b *Bot) backgroundCommand(agent, sid, resume, text string) []string {
 			cmd = append(cmd, "-p", "--session-id", sid)
 		}
 	default:
-		if !again && len(cmd) == 1 {
+		if !again && !wrote && len(cmd) == 1 {
 			return nil // no way told to run one prompt and end
 		}
 	}
 	return append(cmd, text)
 }
 
-// claudeStream is a Claude Code command's words as its stream of
-// messages: its prompt before its options, which tell the stream.
+// agentArgs is the command the agent's background turns start by, with
+// the yolo option as the settings set it, or as the turn told it.
+func (b *Bot) agentArgs(agent string, told bool) []string {
+	cmd := append([]string{}, agentCommand(b.cfg, agent)...)
+	on, _ := settings.AgentYolo(&b.cfg, agent)
+	if told || on {
+		return cmd
+	}
+	flag := settings.YoloFlag(agent)
+	return append([]string{cmd[0]}, slices.DeleteFunc(cmd[1:], func(w string) bool { return slices.Contains(flag, w) })...)
+}
+
+// agentSubcommand is the word of the agent's command that runs its
+// prompt and ends, for an agent that runs no prompt without it.
+var agentSubcommand = map[string]string{
+	"codex":    "exec",
+	"opencode": "run",
+}
+
+// sessionCommand is the command a session from Feishu starts the agent
+// by, and whether its yolo option is the program's alone, which its
+// subcommands do not take: its command as feishu-agent-command wrote it
+// where that names the option, or else with the option before its
+// arguments.
+func (b *Bot) sessionCommand(agent string) (cmd []string, programOnly bool) {
+	cmd = b.cfg.AgentArgs(b.yolo, agent)
+	if _, named := settings.AgentYolo(&b.cfg, agent); named || !settings.IsYolo(&b.cfg, b.yolo, agent) {
+		return cmd, false
+	}
+	switch agent {
+	case "codex":
+		return cmd, true
+	case "opencode", "pi", "qwen":
+		// Their programs take the option, their subcommands do not.
+		return cmd, false
+	}
+	return cmd, true
+}
+
+// claudeStream is a Claude Code command's words as it asks the chat for
+// the permissions a terminal would ask for: no -p, which marks its input
+// a prompt's and keeps its asker to its messages alone, and the flags
+// after the prompt, which the prompt would take for its own.
 func claudeStream(cmd []string) []string {
 	i := len(cmd) - 1 // the prompt
 	out := append([]string{}, cmd[:i]...)
 	for j := 0; j < len(out); j++ {
-		if out[j] == "--output-format" && j+1 < len(out) {
+		if out[j] == "-p" || out[j] == "--print" {
+			out = append(out[:j], out[j+1:]...)
+			j--
+		} else if out[j] == "--output-format" {
 			out = append(out[:j], out[j+2:]...)
 			j--
 		}

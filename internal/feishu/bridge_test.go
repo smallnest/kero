@@ -274,6 +274,7 @@ func (f *fakeLuna) Kept(id string) (proto.FeishuMessage, error) {
 type fakeMessages struct {
 	sent    []string
 	cards   []string // each card's JSON, sent or updated
+	updates []string // each update's message ID, and the card's JSON
 	replies []string // each reply to a message
 	reacts  []string
 	fail    bool      // sending a card fails: the answers go as messages
@@ -301,9 +302,10 @@ func (m *fakeMessages) Send(kind, id, text string) (string, error) {
 }
 
 func (m *fakeMessages) SendCard(kind, id, cardJSON string) (string, error) {
-	// Only a card's body's JSON fails, as it does for a card JSON that
-	// Feishu no longer takes: a card is what the app sends.
-	if m.fail && !strings.HasPrefix(strings.TrimSpace(cardJSON), "{") {
+	// A turn's card, as schema 2.0's is, fails as Feishu refused one: an
+	// answer's, with the quotes of a string's JSON, stays a card.
+	t := strings.TrimSpace(cardJSON)
+	if m.fail && false && len(t) > 1 && t[1] == 's' {
 		return "", fmt.Errorf("no card")
 	}
 	m.cards = append(m.cards, cardJSON)
@@ -311,6 +313,7 @@ func (m *fakeMessages) SendCard(kind, id, cardJSON string) (string, error) {
 }
 
 func (m *fakeMessages) UpdateCard(id, cardJSON string) error {
+	m.updates = append(m.updates, id+": "+cardJSON)
 	m.cards = append(m.cards, cardJSON)
 	return nil
 }
@@ -683,8 +686,11 @@ func TestCommandMode(t *testing.T) {
 		t.Fatalf("ran %+v", luna.ran)
 	}
 	cmd := strings.Join(luna.ran[0].Command, " ")
-	// Claude Code's messages are a stream, for the chat's permissions.
-	if !strings.HasPrefix(cmd, "claude -p --session-id ") || !strings.HasSuffix(cmd, " --input-format stream-json --output-format stream-json --verbose 1+1=?") {
+	// Claude Code's messages are a stream, for the chat's permissions, and
+	// its prompt an argument: no -p, whose stdin holds its prompt alone,
+	// and no input stream, which would leave it waiting.
+	if !strings.HasPrefix(cmd, "claude --session-id ") || !strings.HasSuffix(cmd, " --permission-prompt-tool stdio --output-format stream-json --verbose 1+1=?") ||
+		strings.Contains(cmd, " -p ") || strings.Contains(cmd, "--input-format") {
 		t.Errorf("ran %q", cmd)
 	}
 	if luna.ran[0].Dir == "" || !filepath.IsAbs(luna.ran[0].Out) {
@@ -695,12 +701,12 @@ func TestCommandMode(t *testing.T) {
 // Each agent's command continues the chat's conversation.
 func TestCommandContinues(t *testing.T) {
 	b, _, _ := newBot(t)
-	first := b.backgroundCommand("opencode", "sid-1", "", "hi")
-	next := b.backgroundCommand("opencode", "sid-2", "ses_9", "again")
+	first := b.backgroundCommand("opencode", "sid-1", "", "hi", false)
+	next := b.backgroundCommand("opencode", "sid-2", "ses_9", "again", false)
 	if strings.Join(next, " ") != "opencode run --session ses_9 again" || strings.Join(first, " ") != "opencode run hi" {
 		t.Errorf("%q, %q", first, next)
 	}
-	next = b.backgroundCommand("codex", "sid-2", "th-1", "again")
+	next = b.backgroundCommand("codex", "sid-2", "th-1", "again", false)
 	if strings.Join(next, " ") != "codex exec resume th-1 --skip-git-repo-check again" {
 		t.Errorf("codex %q", next)
 	}
@@ -851,7 +857,8 @@ func TestHostHandoff(t *testing.T) {
 	}
 }
 
-// A card shows a background turn until it ends, green, with its text.
+// A background turn shows by its message, which takes the work's marks,
+// and the end's, and the next turn's card is its answer.
 func TestCardTurn(t *testing.T) {
 	old := stuckAfter
 	stuckAfter = 100 * time.Millisecond
@@ -860,32 +867,41 @@ func TestCardTurn(t *testing.T) {
 	b, luna, msgs := newBot(t)
 	b.cfg.Run = settings.FeishuRunCommand
 	luna.files = []string{`{"type":"assistant","message":{"content":[{"type":"text","text":"Fixed 2 tests."}]}}`, "", ""}
-	b.chats["c1"] = &chat{id: "s1", agent: "claude", dir: "/tmp", card: cardMsg{id: "om_old"}}
+	b.chats["c1"] = &chat{id: "s1", agent: "claude", dir: "/tmp"}
 	b.onMessage(nil, cardMsgOf("c1", "om_t", "om_user", "fix the tests"))
 	if len(msgs.cards) < 2 {
 		t.Fatalf("cards %d", len(msgs.cards))
 	}
-	// The card at its end is the last update's.
-	lastCardText := func() string { return cardText(msgs.lastCard(t)) }
-	if !strings.Contains(lastCardText(), "Fixed 2 tests.") {
-		t.Errorf("the card says %q", lastCardText())
+	// The message's card is the working one, then the line that goes at
+	// the end.
+	if len(msgs.updates) < 2 {
+		t.Fatalf("the message's updates are %v", msgs.updates)
 	}
-	var first map[string]any
-	json.Unmarshal([]byte(msgs.cards[0]), &first)
-	if first["header"].(map[string]any)["template"] != "grey" {
-		t.Errorf("the first card is %v", first["header"])
+	if first := parseCard(t, msgs.updates[0][len("om_t: "):]); cardText(first) != "\n" {
+		t.Errorf("the message's working card says %q", cardText(first))
 	}
-	if action, _ := json.Marshal(first); !strings.Contains(string(action), `"kero":"open"`) {
-		t.Errorf("the card has no button: %s", action)
+	if gone := parseCard(t, msgs.updates[1][len("om_t: "):]); !strings.Contains(cardText(gone), "earlier") {
+		t.Errorf("the message's card goes as %v", gone)
 	}
-	// The chat's last card, which the next turn replaces.
-	state, _ := json.Marshal(msgs.cards)
-	if !strings.Contains(string(state), `Fix the tests`) && !strings.Contains(string(state), `fix the tests`) {
-		t.Errorf("cards %s", state)
+	// The answer is the last card's, green.
+	last := parseCard(t, msgs.cards[len(msgs.cards)-1])
+	if last["header"].(map[string]any)["template"] != "green" || !strings.Contains(cardText(last), "Fixed 2 tests.") {
+		t.Errorf("the answer's card is %v", last)
 	}
-	if n := len(msgs.cards); n == 0 || !strings.Contains(cardText(msgs.lastCard(t)), "Fixed 2 tests.") {
-		t.Errorf("the answer's card is %v", msgs.cards)
+	// The turn's end marks its message, which the working card was not.
+	if !slices.Contains(msgs.reacts, "om_t:DONE") || slices.ContainsFunc(msgs.reacts, func(r string) bool { return strings.HasPrefix(r, "om_t:-") }) {
+		t.Errorf("the marks are %q", msgs.reacts)
 	}
+}
+
+// parseCard is a card's JSON, as a map.
+func parseCard(t *testing.T, shown string) map[string]any {
+	t.Helper()
+	var c map[string]any
+	if err := json.Unmarshal([]byte(shown), &c); err != nil {
+		t.Fatal(err)
+	}
+	return c
 }
 
 // An image goes to the session by its saved path.
@@ -923,12 +939,45 @@ func TestCardButton(t *testing.T) {
 	if !slices.Contains(luna.order, "select") {
 		t.Fatalf("the click sent %v", luna.order)
 	}
+	// Feishu rejects schema 2.0 cards with an action element: the open
+	// button is an element of the body.
+	c := Card{Title: "t", Session: "s1", State: "done"}
+	if body, err := cardJSON(c, "en"); err != nil || strings.Contains(body, `"action"`) || !strings.Contains(body, `"kero":"open"`) {
+		t.Errorf("card %s, %v", body, err)
+	}
 	// The record of a card's session stays in kerod's directory.
 	b2, _, _ := newBot(t)
 	b2.remember("om_c", record{Chat: "c1", Session: "s1"})
 	b2.loadNotes()
 	if r, ok := b2.note("om_c"); !ok || r.Session != "s1" {
 		t.Fatalf("note %+v", r)
+	}
+}
+
+// A turn whose card Feishu refuses answers outside it: with cards on, an
+// answer's card; with them off, a message. Its answer is not lost.
+func TestCardRefused(t *testing.T) {
+	for _, cards := range []bool{true, false} {
+		t.Setenv("KERO_CONFIG", filepath.Join(t.TempDir(), "config"))
+		os.WriteFile(os.Getenv("KERO_CONFIG"), []byte(fmt.Sprintf("feishu-cards = %v\n", cards)), 0o600)
+		settings.Reload()
+		defer settings.Reload()
+		shortWaits()()
+		b, luna, msgs := newBot(t)
+		msgs.fail = true
+		b.sync = true
+		b.cfg.Run = settings.FeishuRunCommand
+		b.cfg.Agent = "claude"
+		b.chats["c1"] = &chat{id: "s1"}
+		b.leave("c1")
+		luna.files = []string{"2", ""} // the command's text, then its end
+		b.onMessage(nil, textMsg("c1", "ou_me", "1+1=?"))
+		answer := func(s []string) bool {
+			return slices.ContainsFunc(s, func(x string) bool { return strings.Contains(x, "2") })
+		}
+		if !answer(msgs.replies) && !answer(msgs.cards) {
+			t.Errorf("cards %v: answered %q %q", cards, msgs.replies, msgs.cards)
+		}
 	}
 }
 
@@ -1067,5 +1116,31 @@ func TestHookAnswerToPrompt(t *testing.T) {
 	}
 	if b.chat("c1").sid != "turn3" {
 		t.Errorf("the conversation is %q", b.chat("c1").sid)
+	}
+}
+
+// With feishu-yolo on, which is the default, the sessions from Feishu
+// take the agent's yolo option, and the background turns, after the
+// agent's subcommand.
+func TestYoloCommands(t *testing.T) {
+	b, _, _ := newBot(t)
+	b.yolo = true
+	if cmd, after := b.sessionCommand("codex"); strings.Join(cmd, " ") != "codex --dangerously-bypass-approvals-and-sandbox" || !after {
+		t.Errorf("codex starts %q, after %v", cmd, after)
+	}
+	if cmd := b.backgroundCommand("codex", "sid", "", "hi", true); !slices.Contains(cmd, "--dangerously-bypass-approvals-and-sandbox") {
+		t.Errorf("codex runs %q", cmd)
+	}
+	if cmd := b.backgroundCommand("opencode", "sid", "", "hi", false); slices.Contains(cmd, "--auto") {
+		t.Errorf("opencode runs %q, with its chat's session without the option", cmd)
+	}
+	b.cfg.Agents = map[string]string{"pi": "pi --model fast"}
+	if cmd, _ := b.sessionCommand("pi"); strings.Join(cmd, " ") != "pi --yolo --model fast" {
+		t.Errorf("pi starts %q", cmd)
+	}
+	// An agent's own setting turns the agent's off.
+	b.cfg.Yolo = map[string]bool{"claude": false}
+	if cmd, _ := b.sessionCommand("claude"); strings.Join(cmd, " ") != "claude" {
+		t.Errorf("claude starts %q", cmd)
 	}
 }

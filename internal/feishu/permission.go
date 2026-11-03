@@ -164,11 +164,11 @@ func askCard(a *permissionAsk, state string) (string, error) {
 				"value": map[string]any{"kero": "perm", "ask": a.id, "do": id},
 			}
 		}
-		elems = append(elems, map[string]any{"tag": "action", "actions": []any{
+		elems = append(elems,
 			button("once", word(a.lang, "perm.once"), "primary"),
 			button("always", word(a.lang, "perm.always"), "default"),
 			button("deny", word(a.lang, "perm.deny"), "danger"),
-		}})
+		)
 		elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(word(a.lang, "perm.hint")) + "*"})
 	} else {
 		elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(state) + "*"})
@@ -329,8 +329,11 @@ func toast(lang, msg string) *callback.CardActionTriggerResponse {
 
 // claudeAskFlags make Claude Code ask, on the stream of its messages,
 // for each tool beyond its permissions, which a terminal would ask for:
-// its messages come as JSON lines, and its answer among them.
-var claudeAskFlags = []string{"--input-format", "stream-json", "--output-format", "stream-json", "--verbose"}
+// its messages come as JSON lines, and its answer by its stdin. It runs
+// no -p, so it reads no prompt from its stdin, and no --input-format
+// stream-json: a prompt from that stream, which it does not get, would
+// leave it waiting.
+var claudeAskFlags = []string{"--permission-prompt-tool", "stdio", "--output-format", "stream-json", "--verbose"}
 
 // askPoll is how often a turn looks for the permissions its command asks
 // for, which kerod puts in the second file of its output's pair.

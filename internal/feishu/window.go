@@ -90,14 +90,21 @@ const feedRef = "kero-window"
 // promise, and the bot leaves it to the chat: the window keeps the
 // turns in order.
 func (b *Bot) windowEvent(m *larkim.EventMessage) (leave, ok bool) {
-	l := strings.Split(messageText(deref(m.Content)), "\n")
-	if len(l) < 2 {
+	chatID, ok := windowPrompt(deref(m.Content))
+	if !ok {
 		return false, false
 	}
-	if !strings.HasPrefix(l[0], feedRef+" ") {
-		return false, false
+	return b.claimRef(chatID, deref(m.ChatId)), true
+}
+
+// windowPrompt is the text of a chat window's prompt: the prompt's chat,
+// and whether the text is one.
+func windowPrompt(content string) (chatID string, ok bool) {
+	l := strings.Split(messageText(content), "\n")
+	if len(l) < 2 || !strings.HasPrefix(l[0], feedRef+" ") {
+		return "", false
 	}
-	return b.claimRef(strings.TrimPrefix(l[0], feedRef+" "), deref(m.ChatId)), true
+	return strings.TrimPrefix(l[0], feedRef+" "), true
 }
 
 // claimRef tells whether another host takes the window's event first: the

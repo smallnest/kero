@@ -87,8 +87,8 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 	}
 	var card *turnCard
 	if cards() {
-		prev, _ := b.lastCard(chatKey(chatID, ""), c.id)
-		card = b.newTurnCard(chatID, c.id, text, prev)
+		card = b.newTurnCard(chatID, t.event, langOf(text))
+		b.card(card, "working", "", "")
 	}
 	agent := b.conversationAgent(c, "", c.id)
 	r, err := b.drive(s, text, card, t, agent, "")
@@ -96,16 +96,14 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 		b.replyAt(key, response, chatID, err.Error())
 		return
 	}
-	// A terminal's turn shows as the reply's card: the card says the
-	// prompt ran, and the reply card follows with its answer.
-	if card != nil {
-		b.card(card, "done", word(card.lang, "inTerminal"), "")
-	}
+	// A terminal's turn shows as the reply's card: the answer's card, or
+	// the hook's answer.
 	if r.hook {
 		// The agent's hook wrote the turn's answer, which the terminal's
 		// text would bury in its frames: the answer is the turn's text,
 		// and the conversation is the hook's.
 		b.card(card, "done", r.answer, "")
+		b.drop(card)
 		b.mu.Lock()
 		c := b.chatLocked(key)
 		c.sid, c.card = r.conversation, cardMsg{}
@@ -159,10 +157,6 @@ func (b *Bot) drive(s *proto.Session, text string, card *turnCard, t turnInfo, a
 	prompted := time.Now()
 	var seen, still time.Time // when the agent was first, and last, seen to work
 	before := rd.Text
-	textAt := time.Time{}
-	if card != nil {
-		b.card(card, "working", "", "")
-	}
 
 	// settle reads the pane, and tells whether the turn can end: the
 	// agent waits; or it was seen working, and its pane is quiet; or it
@@ -230,12 +224,6 @@ func (b *Bot) drive(s *proto.Session, text string, card *turnCard, t turnInfo, a
 				break
 			}
 			continue
-		}
-		if card != nil && time.Since(textAt) >= b.stream() {
-			textAt = time.Now()
-			if t := since(b.read(p.ID), r.start, toolTail); t != "" {
-				b.card(card, "working", textNote+t, "")
-			}
 		}
 		done, err := settle()
 		if err != nil {

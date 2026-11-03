@@ -125,7 +125,10 @@ func (a *larkAPI) Get(messageID string) (feishuMessage, error) {
 
 // Bot is one machine's connection to a Feishu app.
 type Bot struct {
-	cfg   settings.Feishu
+	cfg settings.Feishu
+	// yolo is feishu-yolo, the configuration's switch for every agent's
+	// yolo mode, which the agent's own settings set against.
+	yolo  bool
 	env   []string
 	api   myLuna
 	lark  *lark.Client
@@ -222,6 +225,9 @@ type turnInfo struct {
 	// zero: the turn is the answer's, and the prompt's, whose text the
 	// answer ends.
 	pane string
+	// window is a turn a chat window's prompt started, which the app's
+	// chat window shows.
+	window bool
 }
 
 // cardMsg is a card the bot sent, and the turn it shows.
@@ -237,7 +243,10 @@ type Config struct {
 	Settings settings.Feishu
 	Secret   settings.FeishuSecret
 	Luna     Luna
-	Log      func(format string, args ...any)
+	// Yolo is feishu-yolo, the configuration's switch for every agent's
+	// yolo mode, which the agent's own settings set against.
+	Yolo bool
+	Log  func(format string, args ...any)
 	// Env is the environment the app runs in, which the commands it runs
 	// take: kerod's, which runs them, may be a launchd job's.
 	Env []string
@@ -250,6 +259,7 @@ func New(c Config) *Bot {
 	}
 	b := &Bot{
 		cfg:      c.Settings,
+		yolo:     c.Yolo,
 		env:      c.Env,
 		api:      c.Luna,
 		me:       c.Secret.Me,
@@ -275,7 +285,10 @@ func New(c Config) *Bot {
 	b.ws = larkws.NewClient(c.Secret.AppID, c.Secret.AppSecret,
 		larkws.WithEventHandler(event),
 		larkws.WithLogLevel(larkcore.LogLevelError),
-		larkws.WithOnError(func(err error) { b.logf("feishu: %v", err) }))
+		larkws.WithOnError(func(err error) { b.logf("feishu: %v", err) }),
+		larkws.WithOnDisconnected(func() { b.logf("feishu: disconnected") }),
+		larkws.WithOnReconnecting(func() { b.logf("feishu: reconnecting") }),
+		larkws.WithOnReconnected(func() { b.logf("feishu: reconnected") }))
 	return b
 }
 
