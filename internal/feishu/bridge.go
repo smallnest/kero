@@ -717,14 +717,21 @@ func bindFile() string { return filepath.Join(proto.Dir(), "feishu-chats.json") 
 func (b *Bot) save() {
 	b.mu.Lock()
 	w := chatsFile{Turns: maps.Clone(b.times), Pins: maps.Clone(b.pins)}
+	allowed := map[string][]string{}
+	for key, c := range b.chats {
+		for tool := range c.allowed {
+			allowed[key] = append(allowed[key], tool)
+		}
+	}
 	b.mu.Unlock()
 	if err := os.MkdirAll(filepath.Dir(bindFile()), 0o700); err != nil {
 		return
 	}
 	data, _ := json.Marshal(struct {
 		chatsFile
-		Binds map[string]string `json:"binds"`
-	}{w, maps.Clone(b.binds)})
+		Binds   map[string]string   `json:"binds"`
+		Allowed map[string][]string `json:"allowed,omitempty"`
+	}{w, maps.Clone(b.binds), allowed})
 	tmp := bindFile() + ".tmp"
 	if os.WriteFile(tmp, data, 0o600) == nil && os.Rename(tmp, bindFile()) != nil {
 		os.Remove(tmp)
@@ -741,7 +748,8 @@ func (b *Bot) load() {
 	// was before the chats' turns.
 	var w struct {
 		chatsFile
-		Binds map[string]string `json:"binds"`
+		Binds   map[string]string   `json:"binds"`
+		Allowed map[string][]string `json:"allowed"`
 	}
 	if json.Unmarshal(data, &w) != nil {
 		return
@@ -756,6 +764,16 @@ func (b *Bot) load() {
 			b.chats[k] = &chat{id: id}
 		}
 		b.binds[k] = id
+	}
+	for k, tools := range w.Allowed {
+		c := b.chats[k]
+		if c == nil {
+			continue
+		}
+		c.allowed = map[string]bool{}
+		for _, tool := range tools {
+			c.allowed[tool] = true
+		}
 	}
 	for c, t := range w.Turns {
 		b.times[c] = t

@@ -84,6 +84,20 @@ The reply is the command's output. For Claude Code, a command that uses `--outpu
 
 A background command has no pane input: `/answer` in such a session says so.
 
+### Permissions of a turn
+
+A Claude Code turn in command mode runs with the stream of its messages. When the turn needs a permission for a tool, Claude Code asks for it on that stream, and kerod puts the ask in a file beside the turn's output. The bot sends the chat a card with the tool and the command, file, or address that it would use. The card has three buttons:
+
+| Button | Effect |
+| --- | --- |
+| Allow once | The turn runs the tool this time only. |
+| Always allow | The turn runs the tool, and the chat's next turns do not ask for that tool. |
+| Refuse | The turn does not run the tool. A reason under the card's heading goes to the agent. |
+
+The turn waits until you answer. A turn that times out (`feishu-timeout`) or ends without an answer refuses the rest of its permissions.
+
+The other agents in command mode run their tools without a permission prompt.
+
 ### Session mode
 
 The bot types the prompt in the pane, presses Enter, and follows the pane until the turn ends: the agent waits for the user, or its screen and status are quiet after it worked. It can also end a turn whose agent's status never says that it works, once its screen is still:

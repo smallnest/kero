@@ -201,6 +201,9 @@ type chat struct {
 	host string
 	// card is the chat's last card, which a turn's replaces.
 	card cardMsg
+	// allowed are the tools the chat allowed for the session, which its
+	// next turns run without asking.
+	allowed map[string]bool
 }
 
 // turnInfo is the turn that runs in a chat: when it started, its

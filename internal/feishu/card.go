@@ -142,6 +142,11 @@ func word(lang, key string) string {
 			"inTerminal":  "The answer follows in its own card.",
 			"earlier":     "An earlier turn",
 			"earlierNote": "This card is replaced by the next turn's.",
+			"perm.title":  "Permission needed",
+			"perm.once":   "Allow once", "perm.always": "Always allow", "perm.deny": "Refuse",
+			"perm.hint": "Refuse: add the reason under the heading, then take Refuse.",
+			"perm.done": "Allowed.", "perm.settled": "Allowed for this session.",
+			"perm.denied": "Refused.", "perm.answered": "This permission is answered already.",
 		},
 		"zh_cn": {
 			"state.working": "运行中", "state.done": "完成", "state.asks": "等待你回答", "state.error": "出错",
@@ -150,6 +155,11 @@ func word(lang, key string) string {
 			"inTerminal":  "回答在下一张卡片中。",
 			"earlier":     "较早的一轮",
 			"earlierNote": "这张卡片已由下一轮的卡片取代。",
+			"perm.title":  "需要授权",
+			"perm.once":   "允许一次", "perm.always": "始终允许", "perm.deny": "拒绝",
+			"perm.hint": "拒绝时可在标题下写上原因，再点拒绝。",
+			"perm.done": "已允许。", "perm.settled": "本会话已允许。",
+			"perm.denied": "已拒绝。", "perm.answered": "这条授权已经处理过了。",
 		},
 		"ja_jp": {
 			"state.working": "実行中", "state.done": "完了", "state.asks": "回答待ち", "state.error": "エラー",
@@ -158,6 +168,11 @@ func word(lang, key string) string {
 			"inTerminal":  "回答は次のカードにあります。",
 			"earlier":     "以前のターン",
 			"earlierNote": "このカードは次のターンのカードに置き換えられました。",
+			"perm.title":  "許可が必要です",
+			"perm.once":   "1 回だけ許可", "perm.always": "常に許可", "perm.deny": "拒否",
+			"perm.hint": "拒否するときは見出しの下に理由を書いてから拒否を押してください。",
+			"perm.done": "許可しました。", "perm.settled": "このセッションで許可しました。",
+			"perm.denied": "拒否しました。", "perm.answered": "この許可はすでに回答済みです。",
 		},
 	}
 	if v, ok := w[lang][key]; ok {

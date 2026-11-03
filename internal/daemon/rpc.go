@@ -96,6 +96,14 @@ func (d *Daemon) call(c *controlConn, method string, raw json.RawMessage) (any, 
 		d.changed()
 		return info, nil
 
+	case "agent.send":
+		var p proto.InputParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		// The line as the client sends it, which a permission's answer is.
+		return true, d.backgroundWrite(p, raw)
+
 	case "agent.output":
 		var p proto.OutputParams
 		if err := decode(&p); err != nil {

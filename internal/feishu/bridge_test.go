@@ -34,6 +34,8 @@ type fakeLuna struct {
 	busy     bool     // the pane keeps working
 	files    []string // what each agent.output gives: "2" then ""
 	ran      []proto.BackgroundParams
+	input    []string      // what agent.send wrote to a command's input
+	mu       chan struct{} // held while a test reads what a goroutine writes
 	// script is what a pane shows, and its status, each time it is read:
 	// a turn of the agent whose status lags behind its screen, as
 	// Claude Code's for a moment.
@@ -153,6 +155,13 @@ func (f *fakeLuna) Call(method string, params, out any) error {
 		decode(f.sessions[0].Panes[0])
 	case "agent.background":
 		f.ran = append(f.ran, proto.BackgroundParams{ID: p.ID, Out: p.Out, Dir: p.Dir, Command: p.Command})
+		if out != nil {
+			decode(true)
+		}
+	case "agent.send":
+		f.mu <- struct{}{}
+		f.input = append(f.input, p.Text)
+		<-f.mu
 		if out != nil {
 			decode(true)
 		}
@@ -395,6 +404,7 @@ func newBot(t *testing.T) (*Bot, *fakeLuna, *fakeMessages) {
 	luna := &fakeLuna{sessions: []proto.Session{session()}}
 	msgs := &fakeMessages{}
 	luna.calls = map[string]func(){}
+	luna.mu = make(chan struct{}, 1)
 	luna.kept = map[string]string{}
 	luna.took = map[string]string{}
 	luna.byID = map[string]*string{}
@@ -673,7 +683,8 @@ func TestCommandMode(t *testing.T) {
 		t.Fatalf("ran %+v", luna.ran)
 	}
 	cmd := strings.Join(luna.ran[0].Command, " ")
-	if !strings.HasPrefix(cmd, "claude -p --output-format text --session-id ") || !strings.HasSuffix(cmd, " 1+1=?") {
+	// Claude Code's messages are a stream, for the chat's permissions.
+	if !strings.HasPrefix(cmd, "claude -p --session-id ") || !strings.HasSuffix(cmd, " --input-format stream-json --output-format stream-json --verbose 1+1=?") {
 		t.Errorf("ran %q", cmd)
 	}
 	if luna.ran[0].Dir == "" || !filepath.IsAbs(luna.ran[0].Out) {

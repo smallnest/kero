@@ -1,8 +1,11 @@
 package daemon
 
 import (
+	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +27,9 @@ type background struct {
 	ended bool
 	err   string // why it did not start, or what ended it
 	code  int
+	// stdin is the command's input, while it runs, which an answer to
+	// what it asks goes to.
+	stdin io.WriteCloser
 }
 
 // newBackground is the command a pane may run.
@@ -126,17 +132,40 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 	}
 	cmd.Env = d.environment(p.ID, pn.info.ID, shell, p.Env)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = out, out, nil
+	errOut := out
+	// A command whose messages ask its runner for what it runs (a turn's
+	// permission) reads its messages as lines: the asks go to the file
+	// beside the output's, which the bot answers, and the others to the
+	// output, with its errors.
+	var input io.WriteCloser
+	if _, asks, err := proto.AnswerPair(p.Out); err == nil && true {
+		stream, err := streamAsks(out, asks)
+		if err != nil {
+			out.Close()
+			bg.fail(err)
+			pn.bgDone()
+			return err
+		}
+
+		cmd.Stdout = out
+		cmd.Stderr = errOut
+		cmd.Stdin = stream
+		input = stream
+	}
 	if runtime.GOOS != "windows" {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	}
 	if err := cmd.Start(); err != nil {
 		out.Close()
+		if input != nil {
+			input.Close()
+		}
 		bg.fail(fmt.Errorf("starting %s: %w", p.Command[0], err))
 		pn.bgDone()
 		return err
 	}
 	bg.mu.Lock()
-	bg.cmd, bg.out = cmd, p.Out
+	bg.cmd, bg.out, bg.stdin = cmd, p.Out, input
 	bg.ended, bg.err, bg.code = false, "", 0
 	bg.mu.Unlock()
 	pn.setBackground(cmd)
@@ -145,6 +174,7 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 		out.Close()
 		bg.mu.Lock()
 		bg.ended = true
+		bg.stdin = nil
 		bg.code = cmd.ProcessState.ExitCode()
 		if err != nil && bg.err == "" {
 			bg.err = err.Error()
@@ -153,6 +183,79 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 		pn.bgDone()
 	}()
 	return nil
+}
+
+// streamAsks makes a command's output, and its input, go through a pipe,
+// whose text is lines: the lines that ask for a permission go to asks,
+// and the others to out, with the errors. It returns the command's input,
+// which the command's end closes.
+func streamAsks(out io.Writer, asks string) (*os.File, error) {
+	w, err := os.Create(asks)
+	if err != nil {
+		return nil, fmt.Errorf("opening the asks: %w", err)
+	}
+	r, stdin, err := os.Pipe()
+	if err != nil {
+		w.Close()
+		return nil, err
+	}
+	go splitStream(r, out, w)
+	return stdin, nil
+}
+
+// splitStream copies a command's messages, as lines, to out, and the
+// lines that ask its runner for a permission to asks, as they come.
+func splitStream(r *os.File, out, asks io.Writer) {
+	defer r.Close()
+	defer asks.(io.Closer).Close()
+	rd := bufio.NewReader(r)
+	for {
+		line, err := rd.ReadString('\n')
+		if len(line) > 0 {
+			if isAsk([]byte(line)) {
+				asks.Write([]byte(line))
+			} else {
+				out.Write([]byte(line))
+			}
+			continue
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
+// isAsk tells a line of a command's messages that asks for a permission.
+func isAsk(line []byte) bool {
+	var m struct {
+		Type    string `json:"type"`
+		Request struct {
+			Subtype string `json:"subtype"`
+		} `json:"request"`
+	}
+	return json.Unmarshal(line, &m) == nil && m.Type == "control_request" && m.Request.Subtype == "can_use_tool"
+}
+
+// backgroundWrite writes text to the command a session runs, which a
+// reply to what it asks is.
+func (d *Daemon) backgroundWrite(p proto.InputParams, raw json.RawMessage) error {
+	bg, _ := d.backgroundOf(p.ID)
+	if bg == nil {
+		return fmt.Errorf("no session %s runs commands", p.ID)
+	}
+	bg.mu.Lock()
+	w := bg.stdin
+	if w == nil {
+		bg.mu.Unlock()
+		return errors.New("the command takes no input")
+	}
+	defer bg.mu.Unlock()
+	var in struct {
+		Text string `json:"text"`
+	}
+	json.Unmarshal(raw, &in)
+	_, err := io.WriteString(w, in.Text)
+	return err
 }
 
 // backgroundOutput is a command's output from From on, and whether it

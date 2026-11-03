@@ -195,6 +195,9 @@ func (b *Bot) onCardAction(ctx context.Context, e *callback.CardActionTriggerEve
 	if e.Event.Operator != nil {
 		openID = e.Event.Operator.OpenID
 	}
+	if v, ok := e.Event.Action.Value["kero"]; ok && fmt.Sprint(v) == "perm" {
+		return b.onAskAction(e)
+	}
 	if v, ok := e.Event.Action.Value["kero"]; !ok || fmt.Sprint(v) != "open" {
 		return nil, nil
 	}

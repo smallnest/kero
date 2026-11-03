@@ -9,6 +9,7 @@
 package proto
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -1199,4 +1200,21 @@ type Process struct {
 	Age string `json:"age,omitempty"`
 	// Ports are the ports it listens on.
 	Ports []int `json:"ports,omitempty"`
+}
+
+// AnswerPair is a command's output file, and the file beside it for what
+// the command asks its runner: a permission of Claude Code's, a line of
+// its own stream, which leaves the output file's text the turn's.
+func AnswerPair(out string) (main, asks string, err error) {
+	if out == "" {
+		return "", "", errors.New("no output file")
+	}
+	return out, out + ".asks", nil
+}
+
+// InputParams write Text to a command's input, which a session runs in
+// the background: its permission's answer, as JSON.
+type InputParams struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
 }

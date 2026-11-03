@@ -46,9 +46,17 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		sid = newUUID()
 	}
 	cmd := b.backgroundCommand(agent, sid, base.sid, text)
+	out := b.outFile(session)
+	if agent == "claude" {
+		// Claude Code asks the program that runs it for each tool beyond
+		// its permissions, on a stream of its messages, which its stream
+		// gives: its text replaces the one the command's options ask.
+		cmd = claudeStream(cmd)
+		out, _, _ = proto.AnswerPair(out)
+	}
 	// The app's run has its environment, while kerod's, which runs the
 	// command, may have none of the agent's provider's.
-	params := proto.BackgroundParams{ID: session, Command: cmd, Dir: dir, Out: b.outFile(session)}
+	params := proto.BackgroundParams{ID: session, Command: cmd, Dir: dir, Out: out}
 	for _, kv := range b.env {
 		if strings.Contains(kv, "=") {
 			params.Env = append(params.Env, kv)
@@ -74,9 +82,14 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		card = b.newTurnCard(chatID, session, text, prev)
 		b.card(card, "working", "", "")
 	}
+	stop := time.Now().Add(b.timeout())
+	ended := make(chan struct{})
+	defer close(ended)
+	if agent == "claude" {
+		go b.answerAsks(key, chatID, session, stop, ended)
+	}
 	from := int64(0)
 	answer := ""
-	stop := time.Now().Add(b.timeout())
 	shown := ""
 	textAt := time.Time{}
 	for {
@@ -86,7 +99,8 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 			b.reply(chatID, err.Error())
 			return
 		}
-		from, answer = out.From, answer+out.Text
+		answer += out.Text
+		from = out.From
 		if text := commandText(agent, answer); text != shown && time.Since(textAt) >= b.stream() {
 			shown, textAt = text, time.Now()
 			b.card(card, "working", shown, "")
@@ -219,6 +233,21 @@ func (b *Bot) backgroundCommand(agent, sid, resume, text string) []string {
 	return append(cmd, text)
 }
 
+// claudeStream is a Claude Code command's words as its stream of
+// messages: its prompt before its options, which tell the stream.
+func claudeStream(cmd []string) []string {
+	i := len(cmd) - 1 // the prompt
+	out := append([]string{}, cmd[:i]...)
+	for j := 0; j < len(out); j++ {
+		if out[j] == "--output-format" && j+1 < len(out) {
+			out = append(out[:j], out[j+2:]...)
+			j--
+		}
+	}
+	out = append(out, claudeAskFlags...)
+	return append(out, cmd[i])
+}
+
 // conversation is the agent's session that a turn's output names, for
 // the next turn to continue: the one the first turn started, or another
 // its output says, as one the agent chose.
@@ -286,13 +315,16 @@ func commandText(agent, raw string) string {
 					} `json:"content"`
 				} `json:"message"`
 				Result string `json:"result"`
+				// Stream is true of the lines a turn asks the chat to
+				// answer, which a permission's card shows.
+				Stream bool `json:"stream"`
 			}
 			if json.Unmarshal([]byte(line), &m) != nil {
 				t := strings.TrimSpace(line)
 				// Claude Code's own reports to the terminal, such as a
 				// model the gateway does not know, are no part of the
 				// answer.
-				if strings.HasPrefix(t, "[claude-code:") {
+				if strings.HasPrefix(t, "[claude-code:") || m.Stream {
 					continue
 				}
 				if t != "" {
