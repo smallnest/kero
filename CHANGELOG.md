@@ -4,12 +4,28 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
-## Unreleased
+## 2.1.36
 
 - A Feishu card whose answer asks the chat to choose from a list of two or
   more options shows the question and the options as buttons, with a field
   for an answer of its own. A click answers the agent with the option's
   text, as /answer does. A question takes one answer.
+- A message sent to a Feishu chat while a turn there still runs waits for
+  it, one deep, and runs as that turn ends: it is no longer refused with
+  "Kero is still working on the last message there". A command, as /status
+  or /stop, runs at once, and /stop drops the message that waited.
+- A pane that the agent draws as a screen of its own, as OpenCode's, is
+  answered with the turn's text: the bot waits for the turn to end, and
+  replies with the answer under the prompt, without the rows of the
+  agent's thinking and the terminal's.
+- The bot logs each message as it arrives, so a chat that gets no answer
+  tells where it stopped.
+- A pane's chat shows only where it was opened (a session's menu › Open
+  Chat), not in every pane while Feishu is on.
+- A login shell whose profile starts a program that outlives it, as a
+  prompt's, no longer holds kerod at its start: the bot and the sessions
+  come back.
+- The gap between the panes and the side panel is half what it was.
 
 ## 2.1.35
 
