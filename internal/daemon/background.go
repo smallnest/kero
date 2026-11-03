@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"kero/internal/proto"
@@ -133,12 +134,14 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 	// A command whose messages ask its runner for what it runs (a turn's
 	// permission) reads its messages as lines: the asks go to the file
 	// beside the output's, which the bot answers, and the others to the
-	// output, with its errors.
+	// output, with its errors. Such a command reads its answers from its
+	// input, which stays open: another, as OpenCode's run, takes an input
+	// that never ends for a prompt of its own, and waits for it.
 	var input io.WriteCloser
 	var in *stdinWriter
 	var piped, lock *os.File
 	asks := io.Writer(io.Discard)
-	if _, file, err := proto.AnswerPair(p.Out); err == nil && true {
+	if _, file, err := proto.AnswerPair(p.Out); err == nil && asksOnStdin(p.Command) {
 		r, w, err := os.Pipe()
 		if err != nil {
 			out.Close()
@@ -260,6 +263,21 @@ func streamAsks(out io.Writer, asks string) (*os.File, error) {
 		copyLines(r, out, w, isAsk, func(string) {})
 	}()
 	return stdin, nil
+}
+
+// asksOnStdin tells a command that asks its runner for the tools it runs
+// through its input, as Claude Code's --permission-prompt-tool stdio: its
+// messages come as lines, and its input carries the answers.
+func asksOnStdin(cmd []string) bool {
+	for i, w := range cmd {
+		if w == "--permission-prompt-tool" && i+1 < len(cmd) && cmd[i+1] == "stdio" {
+			return true
+		}
+		if v, ok := strings.CutPrefix(w, "--permission-prompt-tool="); ok && v == "stdio" {
+			return true
+		}
+	}
+	return false
 }
 
 // copyLines copies a command's messages, as lines, to out, and the lines
