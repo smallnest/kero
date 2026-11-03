@@ -908,12 +908,16 @@ func TestCardTurn(t *testing.T) {
 	// What the turn used, as the footer shows it: the tokens it took,
 	// with the cached ones, and gave, and the context.
 	u := UsageOf(`{"type":"result","usage":{"input_tokens":4200,"output_tokens":680,"cache_read_input_tokens":12000},` +
-		`"modelUsage":{"m":{"contextWindow":200000}}}`)
-	if u.Input != 16200 || u.Output != 680 || u.Cache != 12000 || u.Context != 16880 || u.MaxContext != 200000 {
+		`"modelUsage":{"m":{"contextWindow":200000,"canonicalModel":"claude-sonnet-5-5"}}}`)
+	if u.Input != 16200 || u.Output != 680 || u.Cache != 12000 || u.Context != 16880 || u.MaxContext != 200000 ||
+		u.Model != "claude-sonnet-5-5" {
 		t.Errorf("the usage is %+v", u)
 	}
 	if got := u.text(); got != "↑16.2k · ↓680 · cache 12k · ctx 16.8k/200k 8%" {
 		t.Errorf("the usage reads %q", got)
+	}
+	if footer := (Card{State: "done", Usage: u, Duration: time.Minute}).footer("en_us"); !strings.HasPrefix(footer, "<text_tag color='green'>Done</text_tag> · `claude-sonnet-5-5` · ↑16.2k") {
+		t.Errorf("the footer reads %q", footer)
 	}
 	if countText(999) != "999" || countText(4240) != "4.2k" || countText(1_500_000) != "1.5m" || countText(200000) != "200k" {
 		t.Errorf("the counts are %q %q", countText(4240), countText(1_500_000))

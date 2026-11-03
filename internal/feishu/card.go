@@ -116,6 +116,10 @@ func cardJSON(c Card, lang string) (string, error) {
 // known; a card with none of them, as a note's, has no footer.
 func (c Card) footer(lang string) string {
 	parts := []string{}
+	if c.Usage.Model != "" {
+		// The model, in its own font, apart from the plain words.
+		parts = append(parts, codeSpan(c.Usage.Model))
+	}
 	if used := c.Usage.text(); used != "" {
 		parts = append(parts, used)
 	}
@@ -161,6 +165,7 @@ func durationText(d time.Duration) string {
 // it took, with the cached ones, and gave, and the conversation's
 // context.
 type Usage struct {
+	Model                string
 	Input, Output, Cache int
 	Context, MaxContext  int
 }
@@ -177,7 +182,8 @@ func UsageOf(raw string) Usage {
 			CacheNew  int `json:"cache_creation_input_tokens"`
 		} `json:"usage"`
 		ModelUsage map[string]struct {
-			ContextWindow int `json:"contextWindow"`
+			ContextWindow int    `json:"contextWindow"`
+			Canonical     string `json:"canonicalModel"`
 		} `json:"modelUsage"`
 	}
 	for _, line := range strings.Split(raw, "\n") {
@@ -186,9 +192,14 @@ func UsageOf(raw string) Usage {
 		}
 		u = Usage{Input: m.Usage.Input + m.Usage.CacheRead + m.Usage.CacheNew,
 			Output: m.Usage.Output, Cache: m.Usage.CacheRead}
-		for _, mu := range m.ModelUsage {
+		for name, mu := range m.ModelUsage {
 			if mu.ContextWindow > u.MaxContext {
 				u.MaxContext = mu.ContextWindow
+			}
+			// The model the turn's answer names, as its gateway names it,
+			// over one the usage does, which the gateway may not know.
+			if u.Model == "" {
+				u.Model = firstNotEmpty(mu.Canonical, name)
 			}
 		}
 		u.Context = u.Input + u.Output
@@ -214,6 +225,15 @@ func (u Usage) text() string {
 			int(math.Round(float64(u.Context)/float64(u.MaxContext)*100))))
 	}
 	return strings.Join(parts, " · ")
+}
+
+// codeSpan is words as Markdown code, which a card shows in its own font.
+func codeSpan(s string) string {
+	ticks := "`"
+	for strings.Contains(s, ticks) {
+		ticks += "`"
+	}
+	return ticks + s + ticks
 }
 
 // countText is a count as a footer shows it: 680, 4.2k, or 1m.

@@ -128,7 +128,7 @@ The conversation reads in a column of a fixed width, in the middle of the pane. 
 
 The view only shows the conversation. It has no field: write your prompts in Feishu. The session's host reads the turns with `feishu.feed` as the chat opens, and again each time that the host's state changes.
 
-In Feishu, each turn shows on the user's message and in an answer (`feishu-cards`). When the turn starts, the message takes the `OnIt` reaction, and while the agent works, it takes a plain, grey card. When the turn ends, the card becomes one short line, and the reaction goes. The answer is a card that follows the message: its text is the answer as Markdown. Its footer is a small line: the state in a colored tag (Done in green, Waiting for you in orange, Error in red), then the usage (↑ input, ↓ output, cache, and ctx used of the limit in percent) and the time the turn took, as `1m24s`. The card does not show a value that it does not know. Only the Claude Code command mode reports the usage and the time.
+In Feishu, each turn shows on the user's message and in an answer (`feishu-cards`). When the turn starts, the message takes the `OnIt` reaction, and while the agent works, it takes a plain, grey card. When the turn ends, the card becomes one short line, and the reaction goes. The answer is a card that follows the message: its text is the answer as Markdown. Its footer is a small line: the state in a colored tag (Done in green, Waiting for you in orange, Error in red), then the model, the usage (↑ input, ↓ output, cache, and ctx used of the limit in percent) and the time the turn took, as `1m24s`. The card does not show a value that it does not know. Only the Claude Code command mode reports the usage and the time.
 
 ## Settings
 
