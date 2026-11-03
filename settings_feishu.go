@@ -42,7 +42,6 @@ type feishuDraft struct {
 	st     proto.FeishuState // the bot, as kerod last told it
 	known  bool              // kerod has told it
 	filled bool              // the fields hold what the settings have
-	run    *string           // the way a prompt runs, as the group sets it
 }
 
 // feishuRead asks this machine's kerod for the bot's state.
@@ -135,10 +134,6 @@ func (a *App) feishuGroup(c *ui.Context, pal *palette) {
 		d.dir = set.Dir
 		d.filled = true
 	}
-	if d.run == nil {
-		d.run = new(string)
-	}
-	*d.run = set.Run
 	d.timeout = settings.FormatDuration(time.Duration(feishuTimeout(set)))
 	d.stream = settings.FormatDuration(time.Duration(feishuStream(set)))
 	note := locales.SetFeishuDetail()
@@ -210,10 +205,16 @@ func (a *App) feishuGroup(c *ui.Context, pal *palette) {
 	})
 }
 
-// feishuRunRow is the row of how a prompt runs its agent.
+// feishuRunRow is the row of how a prompt runs its agent: a setting the
+// app applies and saves as the segment changes, as the pages' other
+// controls do, not a field of the form, which a submit saves.
 func (a *App) feishuRunRow(c *ui.Context, pal *palette) {
+	f := a.set.Feishu
+	if f == nil {
+		return
+	}
 	a.feishuRow(c, pal, locales.SetFeishuRun(), locales.SetFeishuRunDetail(), func() {
-		segmented(c, "feishu-run", a.ss.feishu.run, []string{settings.FeishuRunSession, settings.FeishuRunCommand},
+		segmented(c, "feishu-run", &f.Run, []string{settings.FeishuRunSession, settings.FeishuRunCommand},
 			[]string{locales.SetFeishuRunSession(), locales.SetFeishuRunCommand()})
 	})
 }
@@ -232,9 +233,6 @@ func (a *App) feishuRow(c *ui.Context, pal *palette, label, detail string, build
 func (a *App) feishuRows(d *feishuDraft) {
 	f := a.feishu()
 	f.Allow = splitList(d.allow)
-	if d.run != nil && *d.run != "" {
-		f.Run = *d.run
-	}
 	f.Dir = strings.TrimSpace(d.dir)
 	f.Host = splitList(d.hosts)
 	f.Timeout = timeoutValue(d.timeout, feishuTimeout(f))

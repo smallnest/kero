@@ -107,6 +107,33 @@ func TestSegmentedChoiceSticks(t *testing.T) {
 	}
 }
 
+// Settings › Feishu's way a prompt runs is a setting of its own: a choice
+// sticks, and saves, as the pages' other segments do.
+func TestFeishuRunChoiceSticks(t *testing.T) {
+	a := testApp(t)
+	a.ss.draft = map[string]string{}
+	a.set.Feishu = &settings.Feishu{App: "cli_a", Allow: []string{"*"}, Run: settings.FeishuRunSession}
+	a.applied = a.set.Clone()
+	a.ss.page = "feishu"
+	tt := ui.NewTester(a.settingsView, 820, 900)
+	tt.Frame()
+	if !tt.HasText("In the background") {
+		t.Fatalf("the run's row is not there: %q", tt.Texts())
+	}
+	if err := tt.Click("In the background"); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		tt.Frame()
+	}
+	if got := a.set.Feishu.Run; got != settings.FeishuRunCommand {
+		t.Fatalf("the run is %q after choosing the background", got)
+	}
+	if f := settings.Load().Feishu; f == nil || f.Run != settings.FeishuRunCommand {
+		t.Fatalf("the saved run is %+v", f)
+	}
+}
+
 // Dark pages, and the plain background, for a look ($KERO_SHOTS).
 func TestDarkShots(t *testing.T) {
 	a := testApp(t)
