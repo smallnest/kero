@@ -297,6 +297,9 @@ func word(lang, key string) string {
 			"perm.hint": "Refuse: add the reason under the heading, then take Refuse.",
 			"perm.done": "Allowed.", "perm.settled": "Allowed for this session.",
 			"perm.denied": "Refused.", "perm.answered": "This permission is answered already.",
+			"choice.title": "Please choose", "choice.other": "Other answer", "choice.send": "Send",
+			"choice.sent": "Sent.", "choice.gone": "This question is answered already.",
+			"choice.empty": "Write an answer first.", "choice.answered": "This question is answered already.",
 		},
 		"zh_cn": {
 			"state.working": "运行中", "state.done": "已完成", "state.asks": "等待你回答", "state.error": "出错",
@@ -309,6 +312,9 @@ func word(lang, key string) string {
 			"perm.hint": "拒绝时可在标题下写上原因，再点拒绝。",
 			"perm.done": "已允许。", "perm.settled": "本会话已允许。",
 			"perm.denied": "已拒绝。", "perm.answered": "这条授权已经处理过了。",
+			"choice.title": "请选择", "choice.other": "其他回答", "choice.send": "发送",
+			"choice.sent": "已发送。", "choice.gone": "这个问题已经回答过了。",
+			"choice.empty": "请先填写回答。", "choice.answered": "这个问题已经回答过了。",
 		},
 		"ja_jp": {
 			"state.working": "実行中", "state.done": "完了", "state.asks": "回答待ち", "state.error": "エラー",
@@ -320,6 +326,9 @@ func word(lang, key string) string {
 			"perm.hint": "拒否するときは見出しの下に理由を書いてから拒否を押してください。",
 			"perm.done": "許可しました。", "perm.settled": "このセッションで許可しました。",
 			"perm.denied": "拒否しました。", "perm.answered": "この許可はすでに回答済みです。",
+			"choice.title": "選択してください", "choice.other": "その他の回答", "choice.send": "送信",
+			"choice.sent": "送信しました。", "choice.gone": "この質問はすでに回答済みです。",
+			"choice.empty": "先に回答を書いてください。", "choice.answered": "この質問はすでに回答済みです。",
 		},
 	}
 	if v, ok := w[lang][key]; ok {
@@ -406,7 +415,7 @@ func terminal(agent string) bool { return agent == "opencode" || agent == "codex
 // bodyOf takes a card's body from its JSON, for an update, and keeps the
 // header, which was sent with the card: the header's color stays.
 func bodyOf(shown string) string {
-	var m map[string]map[string]any
+	var m map[string]any
 	if json.Unmarshal([]byte(shown), &m) != nil || m["header"] == nil {
 		return shown
 	}

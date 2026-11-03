@@ -4,6 +4,13 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## Unreleased
+
+- A Feishu card whose answer asks the chat to choose from a list of two or
+  more options shows the question and the options as buttons, with a field
+  for an answer of its own. A click answers the agent with the option's
+  text, as /answer does. A question takes one answer.
+
 ## 2.1.35
 
 - Feishu has its own page in Settings, with a YOLO mode (feishu-yolo). In

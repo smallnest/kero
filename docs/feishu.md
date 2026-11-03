@@ -130,6 +130,14 @@ The view only shows the conversation. It has no field: write your prompts in Fei
 
 In Feishu, each turn shows on the user's message and in an answer (`feishu-cards`). When the turn starts, the message takes the `OnIt` reaction, and while the agent works, it takes a plain, grey card. When the turn ends, the card becomes one short line, and the reaction goes. The answer is a card that follows the message: its text is the answer as Markdown. Its footer is a small line: the state in a colored tag (Done in green, Waiting for you in orange, Error in red), then the model, the usage (↑ input, ↓ output, cache, and ctx used of the limit in percent) and the time the turn took, as `1m24s`. The card does not show a value that it does not know. Only the Claude Code command mode reports the usage and the time.
 
+### Questions with options
+
+When the agent asks you to choose, the turn's card shows the question, and each option is a button. A field under the buttons takes an answer of your own. The bot shows the options for a list of two or more options at the end of the agent's text, where the question before it ends in `:` or `?`. A list counts as options when each line starts with a number (`1.`, `2)`), a letter (`A.`, `B)`), or a bracket (`(Red)`, `（Red）`). Lists of steps, such as "1. Install, 2. Run", are not questions.
+
+When you take a button, the bot sends the question and the option's text to the agent, and the card shows the answer. Other answers work in the same way: the bot sends the question and the text that you write. A question accepts one answer. The agent continues the turn from your answer, and its next answer is a new card.
+
+Only cards show the buttons. With `feishu-cards = false`, answer the agent with `/answer`, or with a message.
+
 ## Settings
 
 ```ini

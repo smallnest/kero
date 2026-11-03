@@ -163,6 +163,9 @@ func (b *Bot) onCardAction(ctx context.Context, e *callback.CardActionTriggerEve
 	if v, ok := e.Event.Action.Value["kero"]; ok && fmt.Sprint(v) == "perm" {
 		return b.onAskAction(e)
 	}
+	if v, ok := e.Event.Action.Value["kero"]; ok && fmt.Sprint(v) == "choice" {
+		return b.onChoiceAction(e)
+	}
 	if v, ok := e.Event.Action.Value["kero"]; !ok || fmt.Sprint(v) != "open" {
 		return nil, nil
 	}

@@ -110,10 +110,19 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 		b.mu.Unlock()
 		b.save()
 	}
+	reply := b.replyWith(r)
+	state := "done"
+	if r.status.Status == proto.Waiting {
+		// The agent asks, and its options go in the card, as buttons.
+		state = "asks"
+		if q, ok := question(reply); ok {
+			reply = q
+		}
+	}
 	b.replyTurn(key, response, chatID, Card{
-		Title:    titleOf(b.replyWith(r)),
-		Text:     b.replyWith(r),
-		State:    "done",
+		Title:    titleOf(reply),
+		Text:     reply,
+		State:    state,
 		Duration: time.Since(t.start),
 	}, "Sent. /status shows the turn.")
 }

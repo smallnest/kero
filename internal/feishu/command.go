@@ -152,7 +152,13 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	b.save()
 	reply := b.backgroundReply(agent, out)
 	b.drop(card)
-	b.replyTurn(key, response, chatID, Card{Title: titleOf(reply), Text: reply, State: "done",
+	// A question of the agent, which the chat may choose to answer, is
+	// the card's: its options are buttons under the question.
+	state := "done"
+	if q, ok := question(reply); ok {
+		reply, state = q, "asks"
+	}
+	b.replyTurn(key, response, chatID, Card{Title: titleOf(reply), Text: reply, State: state,
 		Duration: time.Since(started), Usage: UsageOf(out.Text)}, reply)
 }
 

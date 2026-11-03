@@ -476,6 +476,7 @@ func (b *Bot) stop(chatID string) {
 		return
 	}
 	if has, err := b.hasBackground(s.ID); err == nil && has {
+
 		if turn := b.runningTurn(chatID).text; turn != "" {
 			if err := b.api.Call("agent.stop", proto.SessionParams{ID: s.ID}, nil); err != nil {
 				b.reply(chatID, err.Error())
@@ -629,6 +630,7 @@ func (b *Bot) close(chatID string) {
 // bound is the chat's session, now.
 func (b *Bot) bound(chatID string) (*proto.Session, error) {
 	id := b.chat(chatKey(chatID, "")).id
+
 	if id == "" {
 		return nil, errors.New("no session")
 	}
@@ -846,7 +848,12 @@ func (b *Bot) replyTurn(key, event, chatID string, card Card, text string) {
 		card.State = "done"
 	}
 	if cards() {
-		if err := b.replyCard(chatID, cardWith(card, answer, text)); err == nil && !b.shared() {
+		if msg, err := b.replyCard(chatID, cardWith(card, answer, text)); err == nil && !b.shared() {
+			if card.State == "asks" && askedQuestion(card.Text) {
+				// The agent asks a question, and its options go in the
+				// card, as buttons: its text is the question alone.
+				b.askOptions(newChoice(key, chatID, msg, answer))
+			}
 			return
 		}
 	}
@@ -906,18 +913,19 @@ func cardWith(c Card, text, note string) Card {
 	return c
 }
 
-// replyCard answers a turn in a chat with a card.
-func (b *Bot) replyCard(chatID string, c Card) error {
+// replyCard answers a turn in a chat with a card, and returns the
+// message Feishu took it as.
+func (b *Bot) replyCard(chatID string, c Card) (string, error) {
 	text := c.Text
 	shown, err := cardJSON(c, langOf(text))
 	if err != nil {
-		return err
+		return "", err
 	}
-	_, err = b.msgs.SendCard("chat_id", chatID, shown)
+	msg, err := b.msgs.SendCard("chat_id", chatID, shown)
 	if err != nil {
 		b.logf("feishu: sending a card: %v", err)
 	}
-	return err
+	return msg, err
 }
 
 // shared tells an app that several hosts connect from.
