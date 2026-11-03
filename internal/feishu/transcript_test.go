@@ -202,7 +202,8 @@ func TestKeptTurn(t *testing.T) {
 	b, _, _ := newBot(t)
 	b.keepTurn("opencode", "ses_1", "1+1=?", "2")
 	b.keepTurn("opencode", "ses_1", "and two more?", "4")
-	file := transcriptFile("ses_1", "opencode", "")
+	// The file is the conversation as the turn's command names it.
+	file := transcriptFile(opencodeSession("", "ses_1"), "opencode", "")
 	if file == "" {
 		t.Fatal("the conversation has no file")
 	}
@@ -220,7 +221,7 @@ func TestKeptTurn(t *testing.T) {
 		t.Fatalf("the lines %+v", l)
 	}
 	// A conversation no turn was kept of has no file.
-	if got := transcriptFile("ses_2", "opencode", ""); got != "" {
+	if got := transcriptFile(opencodeSession("", "ses_2"), "opencode", ""); got != "" {
 		t.Errorf("another conversation has %q", got)
 	}
 }

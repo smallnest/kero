@@ -426,10 +426,15 @@ func keroTranscript(data []byte) []proto.FeishuLine {
 	var out []proto.FeishuLine
 	for _, ls := range lines(data) {
 		var e line
-		if json.Unmarshal(ls, &e) != nil || strings.TrimSpace(e.Text) == "" {
+		if json.Unmarshal(ls, &e) != nil {
 			continue
 		}
-		out = append(out, proto.FeishuLine{At: e.At, Kind: e.Kind, Text: e.Text})
+		// A command's text carries the escapes its terminal printed.
+		text := strings.TrimSpace(ansiRe.ReplaceAllString(e.Text, ""))
+		if text == "" {
+			continue
+		}
+		out = append(out, proto.FeishuLine{At: e.At, Kind: e.Kind, Text: text})
 	}
 	return out
 }
@@ -440,6 +445,11 @@ func keroTranscript(data []byte) []proto.FeishuLine {
 func (b *Bot) keepTurn(agent, conversation, prompt, answer string) {
 	if conversation == "" || agent == "" {
 		return
+	}
+	// The conversation as the turn's command names it, which the session's
+	// pane tells the window.
+	if agent == "opencode" {
+		conversation = opencodeSession("", conversation)
 	}
 	file := keroTranscriptFile(agent, conversation)
 	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
