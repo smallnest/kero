@@ -382,9 +382,9 @@ func commandText(agent, raw string) string {
 			if json.Unmarshal([]byte(line), &m) != nil {
 				t := strings.TrimSpace(line)
 				// Claude Code's own reports to the terminal, such as a
-				// model the gateway does not know, are no part of the
-				// answer.
-				if strings.HasPrefix(t, "[claude-code:") || m.Stream {
+				// model the gateway does not know, and its warning that
+				// it got no input, are no part of the answer.
+				if strings.HasPrefix(t, "[claude-code:") || strings.HasPrefix(t, "Warning: no stdin data received") || m.Stream {
 					continue
 				}
 				if t != "" {
