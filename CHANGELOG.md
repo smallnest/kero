@@ -11,12 +11,18 @@ upstream releases it includes follow its own.
   installs, and a turn now continues a session of OpenCode's own, as
   OpenCode asks. On another machine, this works once that host gets
   this update.
-- A chat's window shows the turns Kero ran for it as the agent's lines,
-  also when the agent is OpenCode, whose transcript Kero does not read.
 - A command of a chat gets its input only when it asks for it, as
   Claude Code's permission tool does, so a turn no longer waits for an
   input no one ends. **Settings › Feishu › How a prompt runs** keeps the
   choice it shows.
+- Codex works as the agent a Feishu chat runs. Its turns run with their
+  events, which name the thread the chat continues and hold the agent's
+  messages alone, without the banner and the tokens line. A chat whose
+  thread Codex no longer knows starts anew rather than failing every
+  turn.
+- A chat's window shows the turns Kero ran for it, also when the agent
+  is OpenCode, Codex or Pi, whose own transcripts Kero does not read: it
+  showed none of Codex's and Pi's before.
 
 ## 2.1.36
 
