@@ -195,6 +195,10 @@ func Run(opts Options) error {
 	// The listeners first: Tailscale Serve's socket takes a umask of its
 	// own, which no program kerod starts may get.
 	d.net = d.listen()
+	// A program kerod runs by name, as a chat's background command, is
+	// found by the PATH this one runs with, which launchd's has none of
+	// the account's places in: an agent's installer is one of them.
+	os.Setenv("PATH", withHomePaths(os.Getenv("PATH")))
 	d.startFeishu()
 	d.loadConversations()
 	d.restore()

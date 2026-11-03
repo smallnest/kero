@@ -24,6 +24,8 @@ func homePaths() []string {
 	}
 	paths := []string{
 		filepath.Join(home, ".local", "bin"),
+		// Opencode's installer keeps its program in a place of its own.
+		filepath.Join(home, ".opencode", "bin"),
 		filepath.Join(home, ".bun", "bin"),
 		filepath.Join(home, ".cargo", "bin"),
 	}

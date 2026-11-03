@@ -4,9 +4,13 @@ package daemon
 
 import (
 	"context"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"kero/internal/settings"
 )
 
 // A launchd job's PATH keeps its own places first, and gets the
@@ -35,5 +39,20 @@ func TestShellOutputOfAProgramThatOutlivesIt(t *testing.T) {
 	runShell(ctx, "/bin/sh", "-c", "sleep 4 & printf hi")
 	if took := time.Since(start); took > 2*time.Second {
 		t.Fatalf("the read took %v, waiting for the shell's program", took)
+	}
+}
+
+// The places the agents install to are on the PATH kerod runs its
+// commands with, as a chat's background prompt runs an agent by name.
+func TestHomePathsCoverTheAgents(t *testing.T) {
+	places := homePaths()
+	for _, want := range []string{
+		filepath.Join(settings.UserHome(), ".opencode", "bin"),
+		filepath.Join(settings.UserHome(), ".local", "bin"),
+		"/opt/homebrew/bin",
+	} {
+		if !slices.Contains(places, want) {
+			t.Errorf("%s is not among %q", want, places)
+		}
 	}
 }
