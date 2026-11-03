@@ -54,6 +54,9 @@ func (b *Bot) onMessage(clientCtx context.Context, e *larkim.P2MessageReceiveV1)
 		}
 	}
 	chatID := *m.ChatId
+	// The message as it came, before the checks that may leave it
+	// unanswered: a chat that gets no reply shows where it stopped.
+	b.logf("feishu: message %s in %s, %s, %d bytes", deref(m.MessageId), chatID, deref(m.MessageType), len(deref(m.Content)))
 	if e.EventV2Base != nil && e.EventV2Base.Header != nil {
 		if id := e.EventV2Base.Header.EventID; id != "" && b.seenEvent(id) {
 			return nil

@@ -329,7 +329,7 @@ func turnTail(before, after, prompt string) string {
 	for len(out) > 0 && turnMeta(out[len(out)-1]) {
 		out = out[:len(out)-1]
 	}
-	return strings.Join(out, "\n")
+	return deGutter(out)
 }
 
 // key is a row as a prompt reads in it: without its escapes, the border of
@@ -386,7 +386,7 @@ func (b *Bot) replyWith(r *run) string {
 		return head + a
 	}
 	if tail := clean(since(r.text, r.start, replyTail)); tail != "" {
-		return textNote + head + tail
+		return head + tail
 	}
 	if r.status.Status == proto.Waiting {
 		return head + "The agent asks: " + orDash(r.status.Message)
@@ -409,12 +409,84 @@ func clean(t string) string {
 	ls := strings.Split(t, "\n")
 	out := ls[:0]
 	for _, l := range ls {
-		if s := strings.TrimSpace(l); s != "" && strings.Trim(s, "─━═╌╍┄┈╭╮╰╯│┃┌┐└┘├┤┬┴┼╔╗╚╝║•·-—") == "" {
+		if s := strings.TrimSpace(l); s != "" && strings.Trim(s, borders) == "" {
 			continue
 		}
 		out = append(out, strings.TrimRight(l, " "))
 	}
+	// A shell's prompt alone, at the end of the rows, is where the turn
+	// began again, and no text of its own.
+	for len(out) > 0 && promptOnly(out[len(out)-1]) {
+		out = out[:len(out)-1]
+	}
 	return strings.Trim(strings.Join(out, "\n"), "\n")
+}
+
+// deGutter is a turn's rows in a screen that draws its agent's thinking
+// beside a gutter of its own, and its answer without one: a thought is
+// no word the agent said. A screen whose rows all have a gutter keeps
+// them, without it.
+func deGutter(ls []string) string {
+	plain := false
+	for _, l := range ls {
+		t := strings.TrimLeft(l, " ")
+		if !guttered(t) && t != "" && strings.Trim(strings.TrimSpace(t), borders) != "" {
+			plain = true
+			break
+		}
+	}
+	out := make([]string, 0, len(ls))
+	for _, l := range ls {
+		if guttered(strings.TrimLeft(l, " ")) {
+			if plain {
+				continue
+			}
+			l = unGutter(l)
+		}
+		out = append(out, l)
+	}
+	// The rows keep the margin they share, off their left.
+	indent := -1
+	for _, l := range out {
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		if n := len(l) - len(strings.TrimLeft(l, " ")); indent < 0 || n < indent {
+			indent = n
+		}
+	}
+	for i := range out {
+		if indent > 0 {
+			out[i] = strings.TrimPrefix(out[i], strings.Repeat(" ", indent))
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+// guttered tells a row beside a TUI's gutter.
+func guttered(t string) bool {
+	return strings.HasPrefix(t, "┃") || strings.HasPrefix(t, "│") || strings.HasPrefix(t, "|")
+}
+
+// promptOnly tells a row that is a prompt's mark alone.
+func promptOnly(l string) bool {
+	t := strings.TrimSpace(l)
+	if t == "" || len([]rune(t)) > 2 {
+		return false
+	}
+	return strings.Trim(t, "❯>‹›$%#❱»)") == ""
+}
+
+// borders are the rows of a box, and of a rule: a row of them alone is
+// no text.
+const borders = "─━═╌╍┄┈╭╮╰╯│┃┌┐└┘├┤┬┴┼╔╗╚╝║•·-—"
+
+// unGutter is a row without the gutter a TUI draws beside a thought, or
+// an agent's answer, and the spaces after it.
+func unGutter(l string) string {
+	t := strings.TrimLeft(l, " ")
+	t = strings.TrimLeft(t, "│┃|»")
+	return strings.TrimLeft(t, " ")
 }
 
 // written is the passage between the last row of a horizontal rule and

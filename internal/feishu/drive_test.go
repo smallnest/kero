@@ -103,3 +103,22 @@ func TestTurnTailOfAViewport(t *testing.T) {
 		t.Errorf("a screen that grew took the prompt's rows: %q", got)
 	}
 }
+
+// A TUI draws its agent's thinking beside a gutter of its own: a turn's
+// text keeps the answer's plain rows, without the thought's.
+func TestTurnOfAThoughtAndAnAnswer(t *testing.T) {
+	rows := []string{
+		"     ┃ Thought: 82ms",
+		"     ┃ The user said hello: answer it briefly.",
+		"",
+		"     Hello! Ready when you are.",
+	}
+	if got := clean(deGutter(rows)); got != "Hello! Ready when you are." {
+		t.Errorf("the turn's text is %q", got)
+	}
+	// A screen whose rows all have a gutter keeps them, without it.
+	all := []string{"  ┃ one", "  ┃ two"}
+	if got := clean(deGutter(all)); got != "one\ntwo" {
+		t.Errorf("the turn's text is %q", got)
+	}
+}

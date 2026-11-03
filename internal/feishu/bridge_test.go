@@ -711,7 +711,7 @@ func TestPromptAnsweredWhileIdle(t *testing.T) {
 		status proto.Status
 	}{{"old\n", proto.Working}, {"old\n", proto.Working}, {"old\n", proto.Working}, {"old\n", proto.Working}, {"old\n", proto.Working}}
 	b.onMessage(nil, textMsg("c1", "ou_me", "1+1=?"))
-	if got := last(msgs); !strings.Contains(got, "2") || !strings.Contains(got, "terminal's") {
+	if got := last(msgs); !strings.Contains(got, "2") || strings.Contains(got, "terminal's") {
 		t.Fatalf("replied %q", got)
 	}
 }
