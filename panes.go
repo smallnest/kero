@@ -209,9 +209,11 @@ func (a *App) divider(c *ui.Context, pal *palette, s *proto.Session, l *proto.La
 // window controls elsewhere (windowControls).
 func (a *App) paneCard(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32, s *proto.Session, p *proto.Pane, top, left, right, multi bool) {
 	focused := p.ID == a.focusOf(s)
-	// A pane alone, or the zoomed one, shows its chat in place of its
-	// terminal, which panes lays out the one card for.
-	chat := focused && a.feishuOn() && (len(s.Zoomed) == 0 || s.Zoomed == p.ID)
+	// A pane the user opened its session's chat in, alone or the zoomed
+	// one, shows the chat in its terminal's place, which panes lays out
+	// the one card for. Feishu being on alone says nothing: without the
+	// pane's own choice, its session keeps its terminal.
+	chat := focused && a.feishuOn() && a.paneChat[p.ID] && (len(s.Zoomed) == 0 || s.Zoomed == p.ID)
 	bg := pal.card
 	// A browser's page stays opaque, so its toolbar does too, and neither
 	// fades: a page is read, not typed into, from beside it.
