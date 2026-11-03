@@ -79,14 +79,18 @@ func loginPaths() []string {
 	return login.paths
 }
 
+// loginWait is how long the account's login shell may take: a profile
+// may be slow.
+var loginWait = 3 * time.Second
+
 // readLoginPaths asks a shell, as a terminal starts it, for its PATH.
 func readLoginPaths(shell string) []string {
 	if shell == "" {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), loginWait)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, shell, "-lic", `printf %s "$PATH"`).Output()
+	out, err := runShell(ctx, shell, "-lic", `printf %s "$PATH"`)
 	if err != nil {
 		return nil
 	}
@@ -97,6 +101,15 @@ func readLoginPaths(shell string) []string {
 		}
 	}
 	return paths
+}
+
+// runShell runs a shell's command, and its output. A profile may start a
+// program that outlives the shell and holds that output open, as its
+// prompt's does: the read waits for the shell, and no longer for it.
+func runShell(ctx context.Context, shell string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, shell, args...)
+	cmd.WaitDelay = 500 * time.Millisecond
+	return cmd.Output()
 }
 
 // version is a versioned directory's tag, as "v20.0.0".
