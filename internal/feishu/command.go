@@ -200,6 +200,23 @@ func (b *Bot) backgroundSession(chatID, id, agent, dir string) (string, bool, er
 	return s.ID, true, nil
 }
 
+// opencodeSession is OpenCode's ID of the session a turn continues, or
+// starts: one that carries its prefix is its own, and another, as a
+// chat's, names one it makes.
+func opencodeSession(resume, sid string) string {
+	id := resume
+	if id == "" {
+		id = sid
+	}
+	if id == "" {
+		return ""
+	}
+	if strings.HasPrefix(id, "ses") {
+		return id
+	}
+	return "ses_" + strings.ReplaceAll(id, "-", "")
+}
+
 // backgroundCommand is the agent's command with the prompt, and the
 // options that tell the answer and continue the conversation: the first
 // turn starts it with sid, and the others continue it with resume, which
@@ -253,8 +270,11 @@ func (b *Bot) turnCommand(agent, sid, resume string, told bool) []string {
 		}
 	case "opencode":
 		cmd = append(cmd, "run")
-		if again {
-			cmd = append(cmd, "--session", resume)
+		// OpenCode names a session of its own ses_…, and makes the one
+		// an ID it does not know names: a chat's ID, or a pane's
+		// conversation's, is one of its own, which the turn keeps.
+		if id := opencodeSession(resume, sid); id != "" {
+			cmd = append(cmd, "--session", id)
 		}
 	case "gemini":
 		cmd = append(cmd, "-p")

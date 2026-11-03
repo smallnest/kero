@@ -799,8 +799,13 @@ func TestCommandContinues(t *testing.T) {
 	b, _, _ := newBot(t)
 	first := b.backgroundCommand("opencode", "sid-1", "", "hi", false)
 	next := b.backgroundCommand("opencode", "sid-2", "ses_9", "again", false)
-	if strings.Join(next, " ") != "opencode run --session ses_9 again" || strings.Join(first, " ") != "opencode run hi" {
+	if strings.Join(next, " ") != "opencode run --session ses_9 again" || strings.Join(first, " ") != "opencode run --session ses_sid1 hi" {
 		t.Errorf("%q, %q", first, next)
+	}
+	// A chat's ID is no session of OpenCode's own: its turn makes one
+	// that carries its prefix.
+	if cmd := b.backgroundCommand("opencode", "", "3f2a-1b", "x", false); !slices.Contains(cmd, "ses_3f2a1b") {
+		t.Errorf("opencode %q", cmd)
 	}
 	next = b.backgroundCommand("codex", "sid-2", "th-1", "again", false)
 	if strings.Join(next, " ") != "codex exec resume th-1 --skip-git-repo-check again" {
