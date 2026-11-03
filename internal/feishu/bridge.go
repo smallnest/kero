@@ -806,13 +806,16 @@ func (b *Bot) reply(chatID, text string) {
 
 // replyAt answers a message in a chat as a reply to it, which the hosts
 // that share the app hear and the chat's answers follow: event is the
-// event the message answers, "" for a message of its own.
-func (b *Bot) replyAt(key, event, chatID, text string) { b.replyTurn(key, event, chatID, "", text) }
+// event the message answers, "" for a message of its own. Its card has
+// the answer's own state, and no time or usage.
+func (b *Bot) replyAt(key, event, chatID, text string) {
+	b.replyTurn(key, event, chatID, Card{Title: titleOf(text)}, text)
+}
 
 // replyTurn ends a turn in a chat: text says what the turn did, as
 // "Sent." does, and card is the turn's answer, which its card shows.
 // A card is the turn's answer, and text a note about it.
-func (b *Bot) replyTurn(key, event, chatID, card, text string) {
+func (b *Bot) replyTurn(key, event, chatID string, card Card, text string) {
 	text = truncate(strings.TrimSpace(text), maxText)
 	if text == "" {
 		return
@@ -833,12 +836,17 @@ func (b *Bot) replyTurn(key, event, chatID, card, text string) {
 	// agent runs in shows its turns: no message without one. An app that
 	// several hosts share keeps every answer, which the hosts answer the
 	// next messages with: the card goes beside it.
-	answer := strings.TrimSpace(card)
+	answer := strings.TrimSpace(card.Text)
 	if answer == "" {
 		answer = text
 	}
+	// A card of its own, without an answer, as a note's, has a card of
+	// the answer's state.
+	if card.State == "" {
+		card.State = "done"
+	}
 	if cards() {
-		if err := b.replyCard(chatID, answer, text); err == nil && !b.shared() {
+		if err := b.replyCard(chatID, cardWith(card, answer, text)); err == nil && !b.shared() {
 			return
 		}
 	}
@@ -880,14 +888,28 @@ func titleOf(text string) string {
 	return line
 }
 
-// replyCard answers a turn in a chat with a card: its title the answer's
-// first words, its text the answer, in the done state's color, and note
-// what the turn did under it.
-func (b *Bot) replyCard(chatID, text, note string) error {
-	if strings.TrimSpace(note) == strings.TrimSpace(text) {
+// cardWith is a turn's card as the answer makes it: its title the
+// answer's first words, unless the turn named one, its text the answer,
+// and note what the turn did under it, when it says more.
+func cardWith(c Card, text, note string) Card {
+	if c.Title == "" {
+		c.Title = titleOf(text)
+	}
+	c.Text = strings.TrimSpace(text)
+	if strings.TrimSpace(note) == strings.TrimSpace(c.Text) {
 		note = ""
 	}
-	shown, err := cardJSON(Card{Title: titleOf(text), Text: strings.TrimSpace(text), State: "done", Note: note}, langOf(text))
+	c.Note = note
+	if c.State == "" {
+		c.State = "done"
+	}
+	return c
+}
+
+// replyCard answers a turn in a chat with a card.
+func (b *Bot) replyCard(chatID string, c Card) error {
+	text := c.Text
+	shown, err := cardJSON(c, langOf(text))
 	if err != nil {
 		return err
 	}

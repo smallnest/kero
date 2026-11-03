@@ -389,8 +389,10 @@ func cardText(c map[string]any) string {
 	text := ""
 	for _, e := range elems {
 		m, _ := e.(map[string]any)
-		// The state's line comes first, its text after it.
-		if m["tag"] == "markdown" || m["tag"] == "div" {
+		// The state's line comes first, its text after it; the footer is
+		// no text.
+		size, _ := m["text_size"].(string)
+		if (m["tag"] == "markdown" || m["tag"] == "div") && size != "notation" {
 			s, _ := m["content"].(string)
 			if t, ok := m["text"].(map[string]any); ok {
 				s, _ = t["content"].(string)
@@ -646,7 +648,7 @@ func TestPromptAnsweredWhileIdle(t *testing.T) {
 		status proto.Status
 	}{{"old\n", proto.Working}, {"old\n", proto.Working}, {"old\n", proto.Working}, {"old\n", proto.Working}, {"old\n", proto.Working}}
 	b.onMessage(nil, textMsg("c1", "ou_me", "1+1=?"))
-	if got := last(msgs); !strings.Contains(got, "2") || !strings.Contains(got, "terminal") {
+	if got := last(msgs); !strings.Contains(got, "2") || !strings.Contains(got, "terminal's") {
 		t.Fatalf("replied %q", got)
 	}
 }
@@ -892,16 +894,49 @@ func TestCardTurn(t *testing.T) {
 	if gone := parseCard(t, cardOf(msgs.updates[1])); !strings.Contains(cardText(gone), "earlier") {
 		t.Errorf("the message's card goes as %v", gone)
 	}
-	// The answer is the last card's, green.
+	// The answer is the last card's, green, in a footer of what the turn
+	// used.
 	last := parseCard(t, msgs.cards[len(msgs.cards)-1])
-	if last["header"].(map[string]any)["template"] != "green" || !strings.Contains(cardText(last), "Fixed 2 tests.") {
+	if last["header"].(map[string]any)["template"] != "green" || !strings.Contains(cardText(last), "Fixed 2 tests.") ||
+		!strings.Contains(footerOf(last), "<text_tag color='green'>Done</text_tag>") ||
+		!strings.Contains(footerOf(last), "· ") {
 		t.Errorf("the answer's card is %v", last)
+	}
+	// What the turn used, as the footer shows it: the tokens it took,
+	// with the cached ones, and gave, and the context.
+	u := UsageOf(`{"type":"result","usage":{"input_tokens":4200,"output_tokens":680,"cache_read_input_tokens":12000},` +
+		`"modelUsage":{"m":{"contextWindow":200000}}}`)
+	if u.Input != 16200 || u.Output != 680 || u.Cache != 12000 || u.Context != 16880 || u.MaxContext != 200000 {
+		t.Errorf("the usage is %+v", u)
+	}
+	if got := u.text(); got != "↑16.2k · ↓680 · cache 12k · ctx 16.8k/200k 8%" {
+		t.Errorf("the usage reads %q", got)
+	}
+	if countText(999) != "999" || countText(4240) != "4.2k" || countText(1_500_000) != "1.5m" || countText(200000) != "200k" {
+		t.Errorf("the counts are %q %q", countText(4240), countText(1_500_000))
+	}
+	if durationText(1500*time.Millisecond) != "2s" || durationText(84*time.Second) != "1m24s" || durationText(time.Hour+5*time.Minute+3*time.Second) != "1h5m3s" {
+		t.Errorf("the times are %q", durationText(84*time.Second))
 	}
 	// The message takes the mark as the turn starts, and gives it back as
 	// the answer comes.
 	if !slices.Equal(msgs.reacts, []string{"om_t:OnIt"}) || !slices.Equal(msgs.unreacts, []string{"om_t:OnIt"}) {
 		t.Errorf("the marks are %q, taken back %q", msgs.reacts, msgs.unreacts)
 	}
+}
+
+// footerOf is a card's footer: its last line of notation.
+func footerOf(c map[string]any) string {
+	body, _ := c["body"].(map[string]any)
+	elems, _ := body["elements"].([]any)
+	for i := len(elems) - 1; i >= 0; i-- {
+		m, _ := elems[i].(map[string]any)
+		if m["text_size"] == "notation" {
+			s, _ := m["content"].(string)
+			return s
+		}
+	}
+	return ""
 }
 
 // cardOf is an update's card's JSON, without the marks it notes.

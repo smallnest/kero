@@ -2,23 +2,29 @@ package feishu
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"kero/internal/settings"
 )
 
 // Card is a turn's card: its title, the agent's text, the state it shows,
-// and the session it is about, which its button opens in Kero. Meta is
-// the turn's summary, under the text; Note what it says under it, as an
-// error's words.
+// the time it took, what the agent used, and the session it is about,
+// which its button opens in Kero. Meta is the turn's summary, under the
+// text; Note what it says under it, as an error's words.
 type Card struct {
-	Title   string
-	Text    string
-	State   string // working, done, asks or error
-	Session string
-	Meta    string
-	Note    string
+	Title    string
+	Text     string
+	State    string // working, done, asks or error
+	Duration time.Duration
+	Usage    Usage
+	Session  string
+	Meta     string
+	Note     string
 }
 
 // cardState is a card's header color: grey while the agent works, green
@@ -60,26 +66,27 @@ func cardJSON(c Card, lang string) (string, error) {
 	}
 	var elems []any
 	if body != "" {
+		text := map[string]any{"tag": "markdown", "content": body}
 		if markdown() {
-			elems = append(elems, map[string]any{"tag": "markdown", "content": body})
+			elems = append(elems, text)
 		} else {
 			elems = append(elems, map[string]any{"tag": "div", "text": map[string]any{"tag": "plain_text", "content": body}})
 		}
 	}
-	if c.Note != "" {
-		elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(c.Note) + "*"})
-	}
-	if len(elems) > 0 {
+
+	if len(elems) > 0 && c.Session != "" {
 		elems = append(elems, map[string]any{"tag": "hr"})
 	}
-	note := word(lang, "state."+c.State)
-	if c.Meta != "" {
-		note += " · " + c.Meta
+	// The footer is the card's last, quiet line: its state in colored
+	// words, the time the turn took, and what the agent used. A card with
+	// none of them, as a note's, keeps a line without them.
+	footer := c.footer(lang)
+	elems = append(elems, map[string]any{"tag": "markdown", "content": footer, "text_size": "notation"})
+	// The session, under the footer, only when its button is off: the
+	// button opens it.
+	if c.Session != "" && !settings.Load().FeishuOpenButton {
+		elems = append(elems, map[string]any{"tag": "markdown", "content": escapeMarkdown(c.Session), "text_size": "notation"})
 	}
-	if c.Session != "" {
-		note += " · " + c.Session
-	}
-	elems = append(elems, map[string]any{"tag": "markdown", "content": "*" + escapeMarkdown(note) + "*"})
 	if c.Session != "" && settings.Load().FeishuOpenButton {
 		// Schema 2.0 puts a button in the body itself: it has no action
 		// element to group buttons.
@@ -101,6 +108,130 @@ func cardJSON(c Card, lang string) (string, error) {
 	}
 	data, err := json.Marshal(card)
 	return string(data), err
+}
+
+// footer is a card's last line: its state in colored words, what the
+// agent used, and the time the turn took, each of them only when it is
+// known; a card with none of them, as a note's, has no footer.
+func (c Card) footer(lang string) string {
+	parts := []string{}
+	if used := c.Usage.text(); used != "" {
+		parts = append(parts, used)
+	}
+	if c.Duration > 0 {
+		parts = append(parts, durationText(c.Duration))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	tag := "<text_tag color='" + textTagColor(c.State) + "'>" + escapeMarkdown(word(lang, "state."+c.State)) + "</text_tag>"
+	return strings.Join(append([]string{tag}, parts...), " · ")
+}
+
+// textTagColor is a card's state as a colored tag takes it: green once
+// the agent is done, orange while it asks, red when it failed, and
+// neutral while it works.
+func textTagColor(state string) string {
+	switch state {
+	case "done":
+		return "green"
+	case "asks":
+		return "orange"
+	case "error":
+		return "red"
+	}
+	return "neutral"
+}
+
+// durationText is a time as a card shows it: 32s, 1m24s, or 1h5m3s.
+func durationText(d time.Duration) string {
+	s := int(d.Round(time.Second) / time.Second)
+	h, m, sec := s/3600, s/60%60, s%60
+	switch {
+	case h > 0:
+		return fmt.Sprintf("%dh%dm%ds", h, m, sec)
+	case m > 0:
+		return fmt.Sprintf("%dm%ds", m, sec)
+	}
+	return fmt.Sprintf("%ds", sec)
+}
+
+// Usage is what a turn used, as its agent's result reports it: the tokens
+// it took, with the cached ones, and gave, and the conversation's
+// context.
+type Usage struct {
+	Input, Output, Cache int
+	Context, MaxContext  int
+}
+
+// UsageOf reads what a Claude Code turn used from its stream's result.
+func UsageOf(raw string) Usage {
+	var u Usage
+	var m struct {
+		Type  string `json:"type"`
+		Usage struct {
+			Input     int `json:"input_tokens"`
+			Output    int `json:"output_tokens"`
+			CacheRead int `json:"cache_read_input_tokens"`
+			CacheNew  int `json:"cache_creation_input_tokens"`
+		} `json:"usage"`
+		ModelUsage map[string]struct {
+			ContextWindow int `json:"contextWindow"`
+		} `json:"modelUsage"`
+	}
+	for _, line := range strings.Split(raw, "\n") {
+		if json.Unmarshal([]byte(line), &m) != nil || m.Type != "result" {
+			continue
+		}
+		u = Usage{Input: m.Usage.Input + m.Usage.CacheRead + m.Usage.CacheNew,
+			Output: m.Usage.Output, Cache: m.Usage.CacheRead}
+		for _, mu := range m.ModelUsage {
+			if mu.ContextWindow > u.MaxContext {
+				u.MaxContext = mu.ContextWindow
+			}
+		}
+		u.Context = u.Input + u.Output
+	}
+	return u
+}
+
+// text is what a turn used, as a card's footer shows it: the tokens it
+// took and gave, and the conversation's context, each only when known.
+func (u Usage) text() string {
+	var parts []string
+	if u.Input > 0 {
+		parts = append(parts, "↑"+countText(u.Input))
+	}
+	if u.Output > 0 {
+		parts = append(parts, "↓"+countText(u.Output))
+	}
+	if u.Cache > 0 {
+		parts = append(parts, "cache "+countText(u.Cache))
+	}
+	if u.Context > 0 && u.MaxContext > 0 {
+		parts = append(parts, fmt.Sprintf("ctx %s/%s %d%%", countText(u.Context), countText(u.MaxContext),
+			int(math.Round(float64(u.Context)/float64(u.MaxContext)*100))))
+	}
+	return strings.Join(parts, " · ")
+}
+
+// countText is a count as a footer shows it: 680, 4.2k, or 1m.
+func countText(n int) string {
+	switch {
+	case n >= 1_000_000:
+		return scaledText(float64(n)/1_000_000, "m")
+	case n >= 1_000:
+		return scaledText(float64(n)/1_000, "k")
+	}
+	return strconv.Itoa(n)
+}
+
+// scaledText is a count in thousands or millions, cut down, not up.
+func scaledText(v float64, suffix string) string {
+	if v >= 100 || v == math.Trunc(v) {
+		return fmt.Sprintf("%d%s", int(math.Round(v)), suffix)
+	}
+	return strconv.FormatFloat(math.Floor(v*10)/10, 'f', -1, 64) + suffix
 }
 
 var ruleRe = regexp.MustCompile(`(?m)^[─━═╌╍┄┈]{4,}.*$`)
@@ -135,10 +266,11 @@ func escapeMarkdown(s string) string {
 func word(lang, key string) string {
 	w := map[string]map[string]string{
 		"en_us": {
-			"state.working": "working", "state.done": "done", "state.asks": "waiting for you", "state.error": "error",
+			"state.working": "Working", "state.done": "Done", "state.asks": "Waiting for you", "state.error": "Error",
 			"asks": "The agent waits for your answer. Use /answer, or send a message.",
 			"open": "Open in Kero", "opened": "Kero shows the session.", "gone": "This card's session is gone.",
 			"inTerminal": "The answer follows in its own card.",
+			"sentNote":   "Sent. /status shows the turn.",
 			"earlier":    "An earlier turn",
 			"perm.title": "Permission needed",
 			"perm.once":  "Allow once", "perm.always": "Always allow", "perm.deny": "Refuse",
@@ -147,10 +279,11 @@ func word(lang, key string) string {
 			"perm.denied": "Refused.", "perm.answered": "This permission is answered already.",
 		},
 		"zh_cn": {
-			"state.working": "运行中", "state.done": "完成", "state.asks": "等待你回答", "state.error": "出错",
+			"state.working": "运行中", "state.done": "已完成", "state.asks": "等待你回答", "state.error": "出错",
 			"asks": "代理在等待你回答。用 /answer 回答，或发送一条消息。",
 			"open": "在 Kero 中打开", "opened": "Kero 已打开该会话。", "gone": "这张卡片的会话已不存在。",
 			"inTerminal": "回答在下一张卡片中。",
+			"sentNote":   "已发送。/status 查看这一轮。",
 			"earlier":    "较早的一轮",
 			"perm.title": "需要授权",
 			"perm.once":  "允许一次", "perm.always": "始终允许", "perm.deny": "拒绝",
@@ -160,9 +293,9 @@ func word(lang, key string) string {
 		},
 		"ja_jp": {
 			"state.working": "実行中", "state.done": "完了", "state.asks": "回答待ち", "state.error": "エラー",
-			"asks": "エージェントは回答を待っています。/answer で答えるか、メッセージを送ってください。",
-			"open": "Kero で開く", "opened": "Kero でセッションを開きました。", "gone": "このカードのセッションは終了しました。",
+			"asks":       "エージェントは回答を待っています。/answer で答えるか、メッセージを送ってください。",
 			"inTerminal": "回答は次のカードにあります。",
+			"sentNote":   "送信しました。/status でターンを確認できます。",
 			"earlier":    "以前のターン",
 			"perm.title": "許可が必要です",
 			"perm.once":  "1 回だけ許可", "perm.always": "常に許可", "perm.deny": "拒否",

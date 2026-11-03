@@ -110,7 +110,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		answer += out.Text
 		from = out.From
 		if out.Ended {
-			b.finished(key, chatID, t.event, agent, dir, sid, text, out, answer, card)
+			b.finished(key, chatID, t.event, agent, dir, sid, text, out, answer, card, t.start)
 			return
 		}
 		if time.Now().After(stop) {
@@ -129,7 +129,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 // finished ends a background turn: the chat's conversation continues,
 // the card turns green or red, and the answer goes to the chat in a
 // reply to the event.
-func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out proto.Output, answer string, card *turnCard) {
+func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out proto.Output, answer string, card *turnCard, started time.Time) {
 	out.Text = answer
 	if sid = conversation(agent, answer, sid); sid == "" {
 		sid = b.chat(key).sid
@@ -142,7 +142,8 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	b.save()
 	reply := b.backgroundReply(agent, out)
 	b.drop(card)
-	b.replyAt(key, response, chatID, reply)
+	b.replyTurn(key, response, chatID, Card{Title: titleOf(reply), Text: reply, State: "done",
+		Duration: time.Since(started), Usage: UsageOf(out.Text)}, reply)
 }
 
 // backgroundSession makes the chat's session a background one, with the

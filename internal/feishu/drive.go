@@ -110,7 +110,12 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 		b.mu.Unlock()
 		b.save()
 	}
-	b.replyTurn(key, response, chatID, b.replyWith(r), "Sent. /status shows the turn.")
+	b.replyTurn(key, response, chatID, Card{
+		Title:    titleOf(b.replyWith(r)),
+		Text:     b.replyWith(r),
+		State:    "done",
+		Duration: time.Since(t.start),
+	}, "Sent. /status shows the turn.")
 }
 
 // drive types text into the session's pane, which Enter ends, and follows

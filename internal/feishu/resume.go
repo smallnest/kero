@@ -98,7 +98,7 @@ func (b *Bot) followCommand(c *chat, out proto.Output, started time.Time, event,
 		out = next
 		from, answer = out.From, answer+out.Text
 	}
-	b.finished(key, c.id, event, agent, dir, sid, text, out, answer, card)
+	b.finished(key, c.id, event, agent, dir, sid, text, out, answer, card, started)
 }
 
 // followPane follows an agent in the pane, with its card.
