@@ -158,6 +158,9 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	if q, ok := question(reply); ok {
 		reply, state = q, "asks"
 	}
+	// The conversation a chat window shows keeps the turn's prompt and
+	// answer, which the agent's command left no transcript for.
+	b.keepTurn(agent, sid, text, reply)
 	b.replyTurn(key, response, chatID, Card{Title: titleOf(reply), Text: reply, State: state,
 		Duration: time.Since(started), Usage: UsageOf(out.Text)}, reply)
 }

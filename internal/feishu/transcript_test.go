@@ -194,3 +194,52 @@ func TestReplyCard(t *testing.T) {
 		t.Errorf("a command's note is %q", last(msgs))
 	}
 }
+
+// A turn of a chat's is kept in the conversation its window shows, which
+// an agent's own transcript does not give Kero for every agent.
+func TestKeptTurn(t *testing.T) {
+	t.Setenv("KERO_HOME", t.TempDir())
+	b, _, _ := newBot(t)
+	b.keepTurn("opencode", "ses_1", "1+1=?", "2")
+	b.keepTurn("opencode", "ses_1", "and two more?", "4")
+	file := transcriptFile("ses_1", "opencode", "")
+	if file == "" {
+		t.Fatal("the conversation has no file")
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := transcript("opencode", data)
+	var kinds, texts []string
+	for _, x := range l {
+		kinds, texts = append(kinds, x.Kind), append(texts, x.Text)
+	}
+	if !slices.Equal(kinds, []string{"user", "agent", "user", "agent"}) ||
+		!slices.Equal(texts, []string{"1+1=?", "2", "and two more?", "4"}) {
+		t.Fatalf("the lines %+v", l)
+	}
+	// A conversation no turn was kept of has no file.
+	if got := transcriptFile("ses_2", "opencode", ""); got != "" {
+		t.Errorf("another conversation has %q", got)
+	}
+}
+
+// A chat window shows the turns Kero kept, and the agent the chat runs,
+// which a background session's pane has no terminal to tell.
+func TestFeedShowsKeptTurns(t *testing.T) {
+	b, luna, _ := newBot(t)
+	b.chats["c1"] = &chat{id: "s1", agent: "opencode"}
+	luna.sessions[0].Panes[0].AgentSessionID = "ses_1"
+	b.keepTurn("opencode", "ses_1", "1+1=?", "2")
+	f, err := b.Feed(proto.FeishuFeedParams{Session: "s1", Chat: "c1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Agent != "opencode" {
+		t.Errorf("the agent is %q", f.Agent)
+	}
+	if len(f.Lines) != 2 || f.Lines[0].Text != "1+1=?" || f.Lines[1].Text != "2" {
+		t.Fatalf("the lines are %+v", f.Lines)
+	}
+}

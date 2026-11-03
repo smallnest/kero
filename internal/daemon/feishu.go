@@ -334,12 +334,25 @@ func derefStr(s *string) string {
 // conversationOf returns the conversation an agent's command runs, as
 // the command names it: Claude Code's --session-id, or --resume.
 func conversationOf(cmd []string) (proto.AgentSession, bool) {
-	if len(cmd) == 0 || !strings.HasPrefix(filepath.Base(cmd[0]), "claude") {
+	if len(cmd) == 0 {
 		return proto.AgentSession{}, false
 	}
+	name := filepath.Base(cmd[0])
 	for i, w := range cmd {
-		if (w == "--session-id" || w == "--resume" || w == "--session_id" || w == "-r") && i+1 < len(cmd) && len(cmd[i+1]) > 0 {
+		if i+1 >= len(cmd) || cmd[i+1] == "" {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(name, "claude") && (w == "--session-id" || w == "--resume" || w == "--session_id" || w == "-r"):
 			return proto.AgentSession{Agent: "claude", ID: cmd[i+1]}, true
+		case strings.HasPrefix(name, "opencode") && (w == "--session" || w == "-s"):
+			return proto.AgentSession{Agent: "opencode", ID: cmd[i+1]}, true
+		case strings.HasPrefix(name, "pi") && w == "--session-id":
+			return proto.AgentSession{Agent: "pi", ID: cmd[i+1]}, true
+		case strings.HasPrefix(name, "gemini") && w == "--resume":
+			return proto.AgentSession{Agent: "gemini", ID: cmd[i+1]}, true
+		case strings.HasPrefix(name, "codex") && w == "resume":
+			return proto.AgentSession{Agent: "codex", ID: cmd[i+1]}, true
 		}
 	}
 	return proto.AgentSession{}, false

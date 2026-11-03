@@ -302,22 +302,36 @@ func (b *Bot) Feed(p proto.FeishuFeedParams) (proto.FeishuFeed, error) {
 		f.Message, f.Evidence = pane.Message, pane.FeishuAnswer
 	}
 	f.Chat = p.Chat
-	// A command of a chat's runs its agent without the pane's terminal to
-	// tell it: the conversation it names is a Claude Code conversation.
-	if len(f.Agent) == 0 && len(f.Conversation) > 0 {
-		f.Agent = "claude"
-	}
 	if f.Chat == "" {
 		f.Chat = b.pinned(s.ID)
 	}
 	if f.Chat == "" {
 		f.Chat = b.boundChat(s.ID)
 	}
+	// A command of a chat's runs its agent without the pane's terminal to
+	// tell it: the chat knows it, and the pane's conversation names it.
+	if len(f.Agent) == 0 && len(f.Conversation) > 0 {
+		if a := b.chatAgent(f.Chat); a != "" {
+			f.Agent = a
+		} else {
+			f.Agent = "claude"
+		}
+	}
 	if f.Chat != "" {
 		b.pin(s.ID, f.Chat)
 		f.Lines = b.lines(s, f)
 	}
 	return f, nil
+}
+
+// chatAgent is the agent a chat's turns run, "" when it tells none.
+func (b *Bot) chatAgent(chat string) string {
+	if chat == "" {
+		return ""
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.chatLocked(chatKey(chat, "")).agent
 }
 
 // boundChat is the chat a session's turns go to, "" for none.
@@ -401,6 +415,66 @@ func answersIn(dir string) []proto.FeishuLine {
 	return nil
 }
 
+// keroTranscript is the conversation Kero kept of a chat's turns: a JSON
+// object a line, with the line's kind and its text.
+func keroTranscript(data []byte) []proto.FeishuLine {
+	type line struct {
+		At   string `json:"at"`
+		Kind string `json:"kind"`
+		Text string `json:"text"`
+	}
+	var out []proto.FeishuLine
+	for _, ls := range lines(data) {
+		var e line
+		if json.Unmarshal(ls, &e) != nil || strings.TrimSpace(e.Text) == "" {
+			continue
+		}
+		out = append(out, proto.FeishuLine{At: e.At, Kind: e.Kind, Text: e.Text})
+	}
+	return out
+}
+
+// keepTurn records a turn in the conversation a chat window shows, which
+// the agent's own transcript does not give Kero for every agent: the
+// prompt, and what the turn answered.
+func (b *Bot) keepTurn(agent, conversation, prompt, answer string) {
+	if conversation == "" || agent == "" {
+		return
+	}
+	file := keroTranscriptFile(agent, conversation)
+	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+		return
+	}
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	at := time.Now().Format(time.RFC3339)
+	enc := json.NewEncoder(f)
+	for _, l := range []struct{ Kind, Text string }{{"user", prompt}, {"agent", answer}} {
+		if strings.TrimSpace(l.Text) == "" {
+			continue
+		}
+		enc.Encode(struct {
+			At   string `json:"at"`
+			Kind string `json:"kind"`
+			Text string `json:"text"`
+		}{at, l.Kind, l.Text})
+	}
+}
+
+// keroTranscriptFile is the file Kero keeps of a conversation's turns.
+func keroTranscriptFile(agent, conversation string) string {
+	name := strings.Map(func(r rune) rune {
+		if r == '/' || r == '\\' || r == 0 {
+			return '-'
+		}
+		return r
+	}, conversation)
+	return filepath.Join(proto.Dir(), "feishu-transcripts", agent, name+".jsonl")
+}
+
 // transcript is an agent's transcript from its file.
 func transcript(agent string, data []byte) []proto.FeishuLine {
 	if agent == "" {
@@ -411,6 +485,8 @@ func transcript(agent string, data []byte) []proto.FeishuLine {
 		return claudeTranscript(data)
 	case "codex":
 		return codexTranscript(data)
+	case "opencode":
+		return keroTranscript(data)
 	}
 	return nil
 }
@@ -433,6 +509,13 @@ func sessionDir(s *proto.Session) string {
 // newest file of the directory, which resumes the directory's
 // conversation after kerod loses the ID.
 func transcriptFile(conv, agent, dir string) string {
+	// The conversation Kero kept of a chat's turns, for an agent whose
+	// transcript it does not read.
+	if conv != "" {
+		if file := keroTranscriptFile(agent, conv); exists(file) {
+			return file
+		}
+	}
 	if agent == "claude" {
 		root := filepath.Join(claudeHome(), "projects")
 		if conv != "" {

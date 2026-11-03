@@ -238,3 +238,25 @@ func TestConversationOf(t *testing.T) {
 		t.Error("codex took a conversation")
 	}
 }
+
+// A chat's command names the conversation it runs, which its session's
+// pane tells the window.
+func TestConversationOfCommands(t *testing.T) {
+	for _, c := range []struct {
+		cmd   []string
+		agent string
+		id    string
+	}{
+		{[]string{"opencode", "run", "--session", "ses_1"}, "opencode", "ses_1"},
+		{[]string{"claude", "-p", "--session-id", "u1"}, "claude", "u1"},
+		{[]string{"codex", "exec", "resume", "th-1"}, "codex", "th-1"},
+	} {
+		as, ok := conversationOf(c.cmd)
+		if !ok || as.Agent != c.agent || as.ID != c.id {
+			t.Errorf("%q runs %+v, %v", c.cmd, as, ok)
+		}
+	}
+	if _, ok := conversationOf([]string{"sh", "-c", "true"}); ok {
+		t.Error("sh names no conversation")
+	}
+}

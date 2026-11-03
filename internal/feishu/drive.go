@@ -111,6 +111,16 @@ func (b *Bot) prompt(key, chatID, response, text string, t turnInfo) {
 		b.save()
 	}
 	reply := b.replyWith(r)
+	// The conversation a chat window shows keeps the turn, which the
+	// agent's transcript may not give it.
+	conv := r.conversation
+	if conv == "" {
+		conv = r.status.AgentSessionID
+	}
+	if conv == "" {
+		conv = c.sid
+	}
+	b.keepTurn(agent, conv, text, reply)
 	state := "done"
 	if r.status.Status == proto.Waiting {
 		// The agent asks, and its options go in the card, as buttons.
