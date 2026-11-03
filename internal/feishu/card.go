@@ -74,7 +74,8 @@ func cardJSON(c Card, lang string) (string, error) {
 		}
 	}
 
-	if len(elems) > 0 && c.Session != "" {
+	// A rule keeps the footer apart from the text above it.
+	if len(elems) > 0 {
 		elems = append(elems, map[string]any{"tag": "hr"})
 	}
 	// The footer is the card's last, quiet line: its state in colored
