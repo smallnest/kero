@@ -716,6 +716,28 @@ func TestPromptAnsweredWhileIdle(t *testing.T) {
 	}
 }
 
+// A pane that draws its screen anew, as a TUI does, keeps a turn's text in
+// the rows below its prompt, which the rows of its screen never grow for.
+func TestPromptOfAViewport(t *testing.T) {
+	defer shortWaits()()
+	b, luna, msgs := newBot(t)
+	b.chats["c1"] = &chat{id: "s1"}
+	b.leave("c1")
+	luna.hold = true
+	// The screen before the turn, and after it: as many rows either way.
+	luna.screen = viewportBefore
+	for range 8 {
+		luna.script = append(luna.script, struct {
+			screen string
+			status proto.Status
+		}{viewportAfter, proto.Idle})
+	}
+	b.onMessage(nil, textMsg("c1", "ou_me", "2+2=?"))
+	if got := last(msgs); !strings.Contains(got, "2+2=4") || strings.Contains(got, "printed nothing new") {
+		t.Fatalf("replied %q", got)
+	}
+}
+
 // A status the daemon keeps across a restart, as one a program reported,
 // does not hold a prompt forever.
 func TestPromptStuckWorking(t *testing.T) {

@@ -252,6 +252,12 @@ func (b *Bot) drive(s *proto.Session, text string, card *turnCard, t turnInfo, a
 		return nil, err
 	}
 	r.status, r.text = p, now.Text
+	// A pane of a screen of its own, as a TUI's, keeps what the turn
+	// printed in the rows below its prompt, not in rows the screen added.
+	at := turnTail(rd.Text, now.Text, text)
+	if at != "" {
+		r.text, r.start = at, 0
+	}
 	// The hook writes as the pane's screen is drawn, after the agent
 	// stops: the bot looks once more, and the hook's answer, where there
 	// is one, is the turn's.
@@ -262,7 +268,7 @@ func (b *Bot) drive(s *proto.Session, text string, card *turnCard, t turnInfo, a
 	read()
 	if !r.hook {
 		time.Sleep(waits.poll / 2)
-		if seen.IsZero() && !turnSeen(rd.Text, now.Text) {
+		if seen.IsZero() && at == "" && !turnSeen(rd.Text, now.Text) {
 			// Nothing says where the turn began: /status tells the rest.
 			r.doubted = true
 		} else if r.doubted {
@@ -289,6 +295,71 @@ func (b *Bot) answersTo(pane, agent string) string {
 // agent's answer, under the line "»".
 func turnSeen(before, after string) bool {
 	return after != before && (strings.Count(after, "\n") > strings.Count(before, "\n") || written(after) != "")
+}
+
+// turnTail is a turn's text in a screen that draws its viewport anew and
+// keeps no scrollback, as a TUI does: the rows below the prompt it echoed,
+// up to the rows of its input box. "" when the screen grew from the start
+// of the turn, which since tells, or when the prompt is not in it.
+func turnTail(before, after, prompt string) string {
+	q := key(prompt)
+	if q == "" || rows(after) > rows(before) {
+		return ""
+	}
+	ls := strings.Split(strings.TrimRight(after, "\n"), "\n")
+	at := -1
+	for i := len(ls) - 1; i > 0; i-- {
+		// The prompt in its box: the row above it is the box's border.
+		if strings.Contains(key(ls[i]), q) && borderOnly(ls[i-1]) {
+			at = i
+			break
+		}
+	}
+	if at < 0 {
+		return ""
+	}
+	out := ls[at+1:]
+	for i := 1; i < len(out); i++ {
+		// The input box begins after a blank row: the turn ends there.
+		if borderOnly(out[i]) && strings.TrimSpace(out[i-1]) == "" {
+			out = out[:i]
+			break
+		}
+	}
+	for len(out) > 0 && turnMeta(out[len(out)-1]) {
+		out = out[:len(out)-1]
+	}
+	return strings.Join(out, "\n")
+}
+
+// key is a row as a prompt reads in it: without its escapes, the border of
+// its box, and its spacing, at most keyRun of it.
+func key(s string) string {
+	s = strings.Join(strings.Fields(ansiRe.ReplaceAllString(s, "")), " ")
+	s = strings.TrimSpace(strings.TrimLeft(s, "│|┃»> "))
+	if r := []rune(s); len(r) > keyRun {
+		s = string(r[:keyRun])
+	}
+	return s
+}
+
+// keyRun is how much of a prompt tells it in the pane.
+const keyRun = 24
+
+// borderOnly tells a row of a box's border, and nothing else.
+func borderOnly(l string) bool {
+	t := strings.TrimSpace(l)
+	return t != "" && strings.Trim(t, "─━═╌╍┄┈╭╮╰╯│┃┌┐└┘├┤┬┴┼╔╗╚╝║") == ""
+}
+
+// turnMeta tells a row of a turn's own, which is no part of its text: a
+// program's name and model, its count of tokens, and the bar of its
+// screen.
+func turnMeta(l string) bool {
+	t := strings.TrimSpace(strings.Trim(l, "│|┃"))
+	return t == "" || borderOnly(l) || strings.HasPrefix(t, "Build ·") ||
+		strings.HasPrefix(t, "+ Tokens:") || strings.HasPrefix(t, "Build auto") ||
+		strings.HasPrefix(t, "╹") || strings.HasPrefix(t, "╺")
 }
 
 // replyWith is the reply to a prompt: what the turn printed, and the
