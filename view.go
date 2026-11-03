@@ -1017,7 +1017,7 @@ func (a *App) card(c *ui.Context, pal *palette, bar ui.TitleBar, shown float32) 
 		row.Children(func() {
 			// The gap between the panes and the side panel is this
 			// column's end margin, which the panel's edge drags (side.go).
-			ui.Column(c.Key("panes")).Grow(1).Basis(0).MinWidth(0).AlignItems(ui.Stretch).Padding(0, paneGap, 0, 0).Children(func() {
+			ui.Column(c.Key("panes")).Grow(1).Basis(0).MinWidth(0).AlignItems(ui.Stretch).Padding(0, sideGap, 0, 0).Children(func() {
 				a.panes(c, pal, bar, shown, s, false)
 			})
 			a.sideEdge(c, pal, w)

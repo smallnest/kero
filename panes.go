@@ -14,6 +14,11 @@ import (
 
 const paneGap = 8 // between panes, where the divider is
 
+// sideGap is the visual space between the panes and the side panel: the
+// panes' end margin plus the panel's left margin, half a pane gap on
+// either side.
+const sideGap = paneGap / 2
+
 // paneRef returns the handle a pane's terminal binds, which its focus
 // follows.
 func (a *App) paneRef(id string) *ui.Handle {

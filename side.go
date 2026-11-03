@@ -201,7 +201,7 @@ func (a *App) sideWidth(w float32) float32 {
 	}
 	if w > 0 {
 		// The panel's own gap from the row's edge is its margin.
-		sw = min(sw, w-minPanes-paneGap)
+		sw = min(sw, w-minPanes-sideGap)
 	}
 	return max(sw, minSide)
 }
@@ -210,7 +210,7 @@ func (a *App) sideWidth(w float32) float32 {
 // and whose edge takes the pointer on either side of it, over the panes
 // and the panel too, which would take it from all but its gap.
 func (a *App) sideEdge(c *ui.Context, pal *palette, row float32) {
-	d := ui.Box(c.Key("side-edge")).Absolute().Top(0).Bottom(0).Width(paneGap + 8).Right(a.sideWidth(row) + 4 - paneGap/2).
+	d := ui.Box(c.Key("side-edge")).Absolute().Top(0).Bottom(0).Width(sideGap + 8).Right(a.sideWidth(row)).
 		Cursor(ui.CursorResizeColumn).KeepFocus()
 	if d.Hovered() || d.Pressed() {
 		d.Draw(func(p *ui.Painter, r ui.Rect) {
@@ -246,7 +246,7 @@ func (a *App) sidePanel(c *ui.Context, pal *palette, s *proto.Session, width flo
 	// sidebar does.
 	in := card.AnimateTo("in", b2f(a.rightShown()), sidebarMotion)
 	card.Opacity(in)
-	card.Margin(0, (1-in)*cardGap, 0, paneGap)
+	card.Margin(0, (1-in)*cardGap, 0, sideGap)
 	view, set := a.sideView(), ""
 	card.Children(func() {
 		ui.Row(c.Key("hdr")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 16).Gap(8).Children(func() {
