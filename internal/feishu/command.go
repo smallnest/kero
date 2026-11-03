@@ -47,12 +47,14 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		sid = newUUID()
 	}
 	cmd := b.backgroundCommand(agent, sid, base.sid, text, true)
-	out := b.outFile(session)
-	if agent == "claude" {
+	if agent == "claude" && !b.yoloFor(agent) {
 		// Claude Code asks the program that runs it for each tool beyond
 		// its permissions, on a stream of its messages, which its stream
 		// gives: its text replaces the one the command's options ask.
 		cmd = claudeStream(cmd)
+	}
+	out := b.outFile(session)
+	if agent == "claude" {
 		out, _, _ = proto.AnswerPair(out)
 	}
 	// The app's run has its environment, while kerod's, which runs the
@@ -93,7 +95,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 	stop := time.Now().Add(b.timeout())
 	ended := make(chan struct{})
 	defer close(ended)
-	if agent == "claude" {
+	if agent == "claude" && !b.yoloFor(agent) {
 		go b.answerAsks(key, chatID, session, stop, ended)
 	}
 	from := int64(0)
@@ -188,6 +190,15 @@ func (b *Bot) backgroundSession(chatID, id, agent, dir string) (string, bool, er
 // turn takes the yolo option as its settings have it, not as its chat
 // told it for a session without it.
 func (b *Bot) backgroundCommand(agent, sid, resume, text string, told bool) []string {
+	cmd := b.turnCommand(agent, sid, resume, told)
+	if cmd == nil {
+		return nil
+	}
+	return append(cmd, text)
+}
+
+// turnCommand is a background turn's command without its prompt.
+func (b *Bot) turnCommand(agent, sid, resume string, told bool) []string {
 	again := resume != ""
 	wrote := len(b.cfg.AgentCommand(agent)) > 0
 	// The turn's words: those of feishu-agent-command, with the option
@@ -241,7 +252,7 @@ func (b *Bot) backgroundCommand(agent, sid, resume, text string, told bool) []st
 			return nil // no way told to run one prompt and end
 		}
 	}
-	return append(cmd, text)
+	return cmd
 }
 
 // agentArgs is the command the agent's background turns start by, with
@@ -263,14 +274,26 @@ var agentSubcommand = map[string]string{
 	"opencode": "run",
 }
 
+// yoloFor is whether the agent's turns take its yolo option: as
+// feishu-yolo sets it, or else as feishu-agent-command wrote it.
+func (b *Bot) yoloFor(agent string) bool {
+	if settings.IsYolo(&b.cfg, b.yolo, agent) {
+		return true
+	}
+	_, named := settings.AgentYolo(&b.cfg, agent)
+	return named
+}
+
 // sessionCommand is the command a session from Feishu starts the agent
 // by, and whether its yolo option is the program's alone, which its
 // subcommands do not take: its command as feishu-agent-command wrote it
 // where that names the option, or else with the option before its
 // arguments.
 func (b *Bot) sessionCommand(agent string) (cmd []string, programOnly bool) {
-	cmd = b.cfg.AgentArgs(b.yolo, agent)
-	if _, named := settings.AgentYolo(&b.cfg, agent); named || !settings.IsYolo(&b.cfg, b.yolo, agent) {
+	cmd = b.cfg.AgentArgs(b.yoloFor(agent), agent)
+	// The option the program takes goes before its arguments, and those
+	// of a background turn after the subcommand.
+	if !b.yoloFor(agent) {
 		return cmd, false
 	}
 	switch agent {

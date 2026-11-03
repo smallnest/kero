@@ -1156,4 +1156,7 @@ func TestYoloCommands(t *testing.T) {
 	if cmd, _ := b.sessionCommand("claude"); strings.Join(cmd, " ") != "claude" {
 		t.Errorf("claude starts %q", cmd)
 	}
+	if b.yoloFor("claude") {
+		t.Error("claude's turns ask the chat for permissions with its yolo option off")
+	}
 }
