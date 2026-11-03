@@ -82,6 +82,7 @@ type Settings struct {
 	FeishuMarkdown   bool `json:"feishuMarkdown"`   // cards' text as Markdown
 	FeishuOpenButton bool `json:"feishuOpenButton"` // a card's button opens its session in Kero
 	FeishuCardBody   bool `json:"feishuCardBody"`   // a card is sent as its body's JSON, as an update takes it
+	FeishuYolo       bool `json:"feishuYolo"`       // every agent from Feishu runs in its yolo mode, as feishu-yolo
 
 	// Notifications
 	NotifyWaiting bool `json:"notifyWaiting"` // a session needs you
@@ -227,6 +228,7 @@ func Default() Settings {
 		FeishuCards:      true,
 		FeishuMarkdown:   true,
 		FeishuOpenButton: true,
+		FeishuYolo:       true,
 		GitStatus:        true,
 		DiffLayout:       "auto",
 		WorktreeBase:     "default",

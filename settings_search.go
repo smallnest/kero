@@ -83,8 +83,9 @@ func settingsIndex() []searchEntry {
 		{"notifications", locales.SetDockBadge(), "dock-badge count"},
 		{"notifications", locales.SetDockBounce(), "dock-bounce attention"},
 
+		{"feishu", locales.SetFeishuYolo(), "feishu-yolo yolo permission prompts sandbox skip dangerously auto approve claude codex unsafe dangerous"},
+		{"feishu", locales.SetFeishu(), "feishu lark bot chat app secret feishu-app feishu-allow feishu-agent feishu-run feishu-dir feishu-cards feishu-markdown feishu-open-button feishu-card-body feishu-host feishu-timeout feishu-stream"},
 		{"agents", locales.SetRemoteControlRow(), "remote-control kero do focus browser automation"},
-		{"agents", locales.SetFeishu(), "feishu lark bot chat app secret feishu-app feishu-allow feishu-agent feishu-run feishu-dir feishu-cards feishu-markdown feishu-open-button feishu-card-body feishu-host feishu-timeout feishu-stream"},
 		{"agents", locales.SetCliRow(), "cli command line tool install path"},
 		{"agents", "Claude Code", "skill agents install"},
 		{"agents", "Codex, OpenCode, Pi", "skill agents install"},
@@ -176,6 +177,7 @@ var pageWords = map[string]string{
 	"browser":       "web ad block adblock trackers privacy",
 	"notifications": "alerts sound badge dock notify",
 	"keyboard":      "shortcuts keybindings keys hotkeys",
+	"feishu":        "lark bot chat message im app secret",
 	"agents":        "claude codex ai skill cli remote control",
 	"hosts":         "remote ssh server machine tailscale wsl",
 	"advanced":      "config file daemon kerod log reset",

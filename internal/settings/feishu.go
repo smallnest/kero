@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +32,11 @@ type Feishu struct {
 	Agent  string            `json:"agent,omitempty"` // "default" or an agent's name
 	Dir    string            `json:"dir,omitempty"`
 	Agents map[string]string `json:"agents,omitempty"`
+	// Yolo sets an agent's yolo mode against feishu-yolo, the
+	// configuration's switch for every agent, which is on unless the file
+	// says otherwise: an agent true runs in it, as an agent false does
+	// not, where the switch leaves it.
+	Yolo map[string]bool `json:"yolo,omitempty"`
 	// Run tells how a prompt runs the agent: a session's pane ("session"),
 	// as a user's turn, or the agent's command in the background
 	// ("command"), as claude -p.
@@ -139,6 +145,106 @@ func (f *Feishu) AgentCommand(agent string) []string {
 		cmd = append(cmd, w)
 	}
 	return cmd
+}
+
+// YoloFlag is the option that runs the agent without its permission
+// prompts, which its sessions and commands take, or nil if it has none.
+func YoloFlag(agent string) []string {
+	switch agent {
+	case "claude":
+		return []string{"--dangerously-skip-permissions"}
+	case "codex":
+		return []string{"--dangerously-bypass-approvals-and-sandbox"}
+	case "opencode":
+		return []string{"--auto"}
+	case "pi", "amp", "droid", "cursor-agent":
+		return []string{"--yolo"}
+	case "gemini", "qwen":
+		return []string{"--yolo"}
+	}
+	return nil
+}
+
+// IsYolo says whether the agent runs without its permission prompts: the
+// way sets it, or * sets every agent's.
+func IsYolo(f *Feishu, on bool, agent string) bool {
+	if f == nil {
+		return false
+	}
+	if v, ok := f.Yolo[agent]; ok {
+		return v
+	}
+	if v, ok := f.Yolo["*"]; ok {
+		return v
+	}
+	return on
+}
+
+// AgentYolo tells whether the agent's yolo option is on, as it is named in
+// the agent's command from the start, where the agent takes it before its
+// arguments (claude) and feishu-agent-command wrote it.
+func AgentYolo(f *Feishu, agent string) (on bool, named bool) {
+	if f == nil {
+		return false, false
+	}
+	cmd := f.AgentCommand(agent)
+	if len(cmd) == 0 {
+		return false, false
+	}
+	for _, w := range cmd[1:] {
+		for _, fl := range YoloFlag(agent) {
+			if w == fl {
+				return true, true
+			}
+		}
+	}
+	return false, false
+}
+
+// SetYolo sets the agent's yolo mode, and the others' as they are: *,
+// which sets every agent's, goes when an agent's does.
+func SetYolo(y map[string]bool, agent string, on bool) map[string]bool {
+	out := map[string]bool{}
+	for a, v := range y {
+		if a != "*" && a != agent {
+			out[a] = v
+		}
+	}
+	if on {
+		out[agent] = true
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// AgentArgs is the command a session from Feishu runs the agent by, or
+// its program alone: its command's words when those run the agent, with
+// the yolo option when it is on.
+func (f *Feishu) AgentArgs(yolo bool, agent string) []string {
+	cmd := f.AgentCommand(agent)
+	if len(cmd) == 0 {
+		cmd = []string{agent}
+	}
+	if !IsYolo(f, yolo, agent) || len(YoloFlag(agent)) == 0 {
+		return cmd
+	}
+	for _, w := range cmd[1:] {
+		if w == "--" {
+			break
+		}
+		for _, fl := range YoloFlag(agent) {
+			if w == fl {
+				return cmd
+			}
+		}
+	}
+	flag := YoloFlag(agent)
+	out := make([]string, 0, len(cmd)+len(flag))
+	out = append(out, cmd[0])
+	out = append(out, flag...)
+	return append(out, cmd[1:]...)
 }
 
 // UserHome is the account's home directory, as ~ expands it.
@@ -259,6 +365,9 @@ func normalizeFeishu(f *Feishu) {
 	if len(f.Agents) == 0 {
 		f.Agents = nil
 	}
+	if len(f.Yolo) == 0 {
+		f.Yolo = nil
+	}
 	host := slices.DeleteFunc(append([]string{}, f.Host...), func(h string) bool { return h == "" })
 	f.Host = slices.Compact(slices.Sorted(slices.Values(host)))
 }
@@ -371,6 +480,44 @@ func feishuKeys() []key {
 				f.Allow = slices.DeleteFunc(append([]string{}, v...), func(a string) bool { return strings.TrimSpace(a) == "" })
 				for i := range f.Allow {
 					f.Allow[i] = strings.TrimSpace(f.Allow[i])
+				}
+				return nil
+			}},
+		{name: "feishu-yolo", doc: "whether the agents' sessions and prompts from Feishu run the agent in its yolo mode: no permission prompts, and, where the agent has one, no sandbox (true, and when the key is absent); an agent's name sets its own against it, as claude=false, and *=true sets every agent's", list: true,
+			get: func(s *Settings) []string {
+				out := []string{strconv.FormatBool(s.FeishuYolo)}
+				if s.Feishu == nil {
+					return out
+				}
+				for _, a := range slices.Sorted(maps.Keys(s.Feishu.Yolo)) {
+					out = append(out, a+"="+strconv.FormatBool(s.Feishu.Yolo[a]))
+				}
+				return out
+			},
+			set: func(s *Settings, v []string) error {
+				yolo := map[string]bool{}
+				for _, line := range v {
+					a, on, ok := strings.Cut(strings.TrimSpace(line), "=")
+					on = strings.TrimSpace(on)
+					if !ok || (on != "true" && on != "false") || (a != "*" && !detect.Known(a)) {
+						return fmt.Errorf("%q is not true, false, or an agent's name and true or false, as claude=false", line)
+					}
+					yolo[a] = on == "true"
+				}
+				all := Default().FeishuYolo
+				if v, ok := yolo["*"]; ok {
+					all = v
+				}
+				delete(yolo, "*")
+				if len(yolo) == 0 {
+					yolo = nil
+				}
+				s.FeishuYolo = all
+				if s.Feishu == nil && len(yolo) > 0 {
+					ensure(s)
+				}
+				if s.Feishu != nil {
+					s.Feishu.Yolo = yolo
 				}
 				return nil
 			}},

@@ -1,4 +1,4 @@
-// The messages of Settings › Agents › Feishu that mygo generate names
+// The messages of Settings › Feishu that mygo generate names
 // after their messages, not their keys: its keys stay free for this file.
 
 package locales

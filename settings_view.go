@@ -46,6 +46,7 @@ var settingsPages = []settingsPage{
 	{"browser", locales.PageBrowser, globeIcon, false},
 	{"notifications", locales.PageNotifications, glyph("f7-bell"), false},
 	{"keyboard", locales.PageKeyboard, glyph("f7-keyboard"), false},
+	{"feishu", locales.PageFeishu, glyph("f7-chat-bubble-2"), false},
 	{"agents", locales.PageAgents, glyph("f7-sparkles"), false},
 	{"hosts", locales.PageHosts, hostIcon, true},
 	{"advanced", locales.PageAdvanced, glyph("f7-slider-horizontal-3"), false},
@@ -78,7 +79,7 @@ type settingsState struct {
 	tailcat      tailcatDraft               // and the Tailcat group's
 	hostEdit     hostDraft                  // a host's, as the user edits it
 	tailnet      tailnetLook                // this machine on the tailnet, for the Hosts page
-	feishu       feishuDraft                // the Feishu group's form
+	feishu       feishuDraft                // the Feishu page's form
 	confirm      *confirmation              // a question, asked in this window
 }
 
@@ -104,7 +105,6 @@ func (a *App) openSettings(page string) {
 		}
 	})
 	a.ss.draft = map[string]string{}
-	a.ss.feishu = feishuDraft{}
 	a.ss.feishu = feishuDraft{}
 	a.refreshAgents()
 	a.refreshService()
@@ -269,6 +269,8 @@ func (a *App) settingsView(c *ui.Context) {
 								a.notificationsPage(c, pal)
 							case "keyboard":
 								a.keyboardPage(c, pal)
+							case "feishu":
+								a.feishuPage(c, pal)
 							case "agents":
 								a.agentsPage(c, pal)
 							case "hosts":
@@ -1056,7 +1058,6 @@ func (a *App) agentsPage(c *ui.Context, pal *palette) {
 		})
 	})
 	codeBlock(c, pal, "kero do pane.split.down\nkero do session.attention\nkero actions        # what kero do runs")
-	a.feishuGroup(c, pal)
 	settingsGroup(c, pal, locales.SetCli(), locales.SetCliDetail(), func() {
 		detail := locales.SetCliNotInstalled()
 		if a.ss.cliPath != "" {

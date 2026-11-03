@@ -2048,6 +2048,76 @@ func (msgs Messages) PageKeyboard() string {
 	return Catalog.Format(msgs.locale, "pageKeyboard", nil)
 }
 
+// SetFeishuYolo says "YOLO Mode"
+// in the language the app shows.
+func SetFeishuYolo() string { return In(i18n.Locale()).SetFeishuYolo() }
+
+// SetFeishuYolo says "YOLO Mode"
+// in the language of msgs.
+func (msgs Messages) SetFeishuYolo() string {
+	return Catalog.Format(msgs.locale, "setFeishuYolo", nil)
+}
+
+// SetFeishuYoloCommand says "set by feishu-agent-command"
+// in the language the app shows.
+func SetFeishuYoloCommand() string { return In(i18n.Locale()).SetFeishuYoloCommand() }
+
+// SetFeishuYoloCommand says "set by feishu-agent-command"
+// in the language of msgs.
+func (msgs Messages) SetFeishuYoloCommand() string {
+	return Catalog.Format(msgs.locale, "setFeishuYoloCommand", nil)
+}
+
+// SetFeishuYoloEvery says "Every agent"
+// in the language the app shows.
+func SetFeishuYoloEvery() string { return In(i18n.Locale()).SetFeishuYoloEvery() }
+
+// SetFeishuYoloEvery says "Every agent"
+// in the language of msgs.
+func (msgs Messages) SetFeishuYoloEvery() string {
+	return Catalog.Format(msgs.locale, "setFeishuYoloEvery", nil)
+}
+
+// SetFeishuYoloEveryDetail says "feishu-yolo"
+// in the language the app shows.
+func SetFeishuYoloEveryDetail() string { return In(i18n.Locale()).SetFeishuYoloEveryDetail() }
+
+// SetFeishuYoloEveryDetail says "feishu-yolo"
+// in the language of msgs.
+func (msgs Messages) SetFeishuYoloEveryDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuYoloEveryDetail", nil)
+}
+
+// SetFeishuYoloAll says "Every agent"
+// in the language the app shows.
+func SetFeishuYoloAll() string { return In(i18n.Locale()).SetFeishuYoloAll() }
+
+// SetFeishuYoloAll says "Every agent"
+// in the language of msgs.
+func (msgs Messages) SetFeishuYoloAll() string {
+	return Catalog.Format(msgs.locale, "setFeishuYoloAll", nil)
+}
+
+// SetFeishuYoloDetail says "Run the agents that sessions and prompts from Feishu start without their permission prompts, and where the agent has …"
+// in the language the app shows.
+func SetFeishuYoloDetail() string { return In(i18n.Locale()).SetFeishuYoloDetail() }
+
+// SetFeishuYoloDetail says "Run the agents that sessions and prompts from Feishu start without their permission prompts, and where the agent has …"
+// in the language of msgs.
+func (msgs Messages) SetFeishuYoloDetail() string {
+	return Catalog.Format(msgs.locale, "setFeishuYoloDetail", nil)
+}
+
+// PageFeishu says "Feishu"
+// in the language the app shows.
+func PageFeishu() string { return In(i18n.Locale()).PageFeishu() }
+
+// PageFeishu says "Feishu"
+// in the language of msgs.
+func (msgs Messages) PageFeishu() string {
+	return Catalog.Format(msgs.locale, "pageFeishu", nil)
+}
+
 // PageAgents says "Agents"
 // in the language the app shows.
 func PageAgents() string { return In(i18n.Locale()).PageAgents() }

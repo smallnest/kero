@@ -19,7 +19,12 @@ import (
 // names others.
 var feishuAgents = []string{"default", "claude", "codex", "opencode", "pi", "gemini", "qwen", "kimi", "amp", "droid"}
 
-// feishuDraft is Settings › Agents › Feishu: the form, and the bot of this
+// feishuYoloAgents are the agents Settings › Feishu's yolo modes set:
+// those whose commands take an option that skips their permission
+// prompts, which their sessions and the prompts from Feishu take.
+var feishuYoloAgents = []string{"claude", "codex", "opencode", "pi", "gemini", "qwen", "kimi", "amp", "droid", "cursor-agent"}
+
+// feishuDraft is Settings › Feishu: the form, and the bot of this
 // machine. The form takes what its fields hold, which a frame's elements
 // do not keep beyond it: a field, or a row's button, reads it here.
 type feishuDraft struct {
@@ -68,7 +73,45 @@ func (a *App) feishuState(cl *client.Client) (proto.FeishuState, bool) {
 	return st, true
 }
 
-// feishuGroup is Settings › Agents › Feishu: the app and its secret, who
+// feishuPage is Settings › Feishu.
+func (a *App) feishuPage(c *ui.Context, pal *palette) {
+	a.feishuGroup(c, pal)
+	if settings.FeishuSet(a.applied.Feishu) {
+		a.feishuYoloGroup(c, pal)
+	}
+}
+
+// feishuYoloGroup is Settings › Feishu's yolo modes: every agent runs
+// without its permission prompts or sandbox, as feishu-yolo says, unless
+// an agent's switch turns it off.
+func (a *App) feishuYoloGroup(c *ui.Context, pal *palette) {
+	s := &a.set
+	if s.Feishu == nil {
+		return
+	}
+	settingsGroup(c, pal, locales.SetFeishuYolo(), locales.SetFeishuYoloDetail(), func() {
+		settingRow(c, pal, locales.SetFeishuYoloEvery(), locales.SetFeishuYoloEveryDetail(), func() {
+			toggle(c, &s.FeishuYolo, pal)
+		})
+		for _, agent := range feishuYoloAgents {
+			detail := strings.Join(settings.YoloFlag(agent), " ")
+			if _, named := settings.AgentYolo(s.Feishu, agent); named {
+				// Its command says: an agent's own switch, not every
+				// agent's, offers the mode it names.
+				detail += " · " + locales.SetFeishuYoloCommand()
+			}
+			settingRow(c, pal, agent, detail, func() {
+				on := settings.IsYolo(s.Feishu, s.FeishuYolo, agent)
+				toggle(c, &on, pal)
+				if on != settings.IsYolo(s.Feishu, s.FeishuYolo, agent) {
+					s.Feishu.Yolo = settings.SetYolo(s.Feishu.Yolo, agent, on)
+				}
+			})
+		}
+	})
+}
+
+// feishuGroup is Settings › Feishu: the app and its secret, who
 // may use the bot, how a prompt runs, and what its cards show.
 func (a *App) feishuGroup(c *ui.Context, pal *palette) {
 	d := &a.ss.feishu

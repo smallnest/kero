@@ -56,6 +56,7 @@ func (d *Daemon) startFeishu() {
 	b.cancel = cancel
 	conn := feishu.New(feishu.Config{
 		Settings: *set.Feishu,
+		Yolo:     set.FeishuYolo,
 		Secret:   secret,
 		Luna:     &botLuna{d: d},
 		Log:      func(f string, a ...any) { d.log.Printf(f, a...) },
