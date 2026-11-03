@@ -210,6 +210,19 @@ type chat struct {
 	// allowed are the tools the chat allowed for the session, which its
 	// next turns run without asking.
 	allowed map[string]bool
+	// waiting are the prompts that came while a turn ran: the next one
+	// waits, and the queue's size holds the rest back.
+	waiting []waitingTurn
+}
+
+// waitingTurn is a prompt that came while the chat's turn ran, and the
+// message it came in.
+type waitingTurn struct {
+	chatID string
+	openID string
+	group  bool
+	text   string
+	m      *larkim.EventMessage
 }
 
 // turnInfo is the turn that runs in a chat: when it started, its

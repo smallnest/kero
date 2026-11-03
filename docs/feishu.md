@@ -58,6 +58,8 @@ The bot holds a long-lived WebSocket to Feishu. Feishu calls this "persistent co
 
 Text that is not a command goes to the bound session as a prompt. In a group, only messages that @-mention the bot do this. Each group conversation gets its own thread, or "topic".
 
+One prompt runs in a chat at a time. A prompt that comes while a turn runs waits its turn, one deep, and runs as that turn ends; a command does not wait, so `/stop` reaches a turn that runs. A prompt beyond the one that waits is refused. `/stop` drops the prompt that waits, with the turn it waited for.
+
 ### Command mode
 
 With `feishu-run = command`, kerod runs the agent's own command for each prompt, without a terminal:

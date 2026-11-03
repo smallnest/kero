@@ -518,6 +518,69 @@ func TestPrompt(t *testing.T) {
 	}
 }
 
+// A prompt that comes while a turn runs waits its turn, one deep, and
+// runs as the turn ends; a command does not wait, which /stop needs.
+func TestPromptWaitsItsTurn(t *testing.T) {
+	defer shortWaits()()
+	b, luna, msgs := newBot(t)
+	b.chats["c1"] = &chat{id: "s1"}
+	b.leave("c1")
+	luna.screen = "old\n$ "
+	// The turn another message started, which the chat still runs.
+	if !b.enter("c1") {
+		t.Fatal("the chat took no turn")
+	}
+	b.onMessage(nil, textMsg("c1", "ou_me", "second"))
+	if got := last(msgs); !strings.Contains(got, "Queued") {
+		t.Fatalf("a prompt while a turn runs replies %q", got)
+	}
+	if slices.Contains(luna.sent, proto.SendParams{ID: "p1", Data: "second"}) {
+		t.Fatalf("the prompt ran while a turn ran: %+v", luna.sent)
+	}
+	// One deep: the next prompt is told the one before waits.
+	b.onMessage(nil, textMsg("c1", "ou_me", "third"))
+	if got := last(msgs); !strings.Contains(got, "one waits") {
+		t.Fatalf("a third prompt replies %q", got)
+	}
+	// A command runs while the turn runs, and leaves it running.
+	b.onMessage(nil, textMsg("c1", "ou_me", "/status"))
+	if got := last(msgs); !strings.Contains(got, "idle") {
+		t.Fatalf("/status beside a turn replies %q", got)
+	}
+	if !b.chat("c1").busy {
+		t.Fatal("a command ended the turn that ran")
+	}
+	// The turn ends, and the waiting prompt runs.
+	b.leave("c1")
+	if !slices.Contains(luna.sent, proto.SendParams{ID: "p1", Data: "second"}) {
+		t.Fatalf("the waiting prompt did not run: %+v", luna.sent)
+	}
+	if b.chat("c1").busy {
+		t.Fatal("the chat runs a turn after the queued one ended")
+	}
+}
+
+// /stop ends the turn it comes beside, and the prompt that waited with
+// it.
+func TestStopDropsTheWaitingPrompt(t *testing.T) {
+	b, luna, msgs := newBot(t)
+	b.chats["c1"] = &chat{id: "s1", chat: "c1"}
+	b.leave("c1")
+	b.enter("c1")
+	b.onMessage(nil, textMsg("c1", "ou_me", "second"))
+	if got := last(msgs); !strings.Contains(got, "Queued") {
+		t.Fatalf("a prompt while a turn runs replies %q", got)
+	}
+	b.onMessage(nil, textMsg("c1", "ou_me", "/stop"))
+	if got := last(msgs); !strings.Contains(got, "Interrupted") || !strings.Contains(got, "Dropped") {
+		t.Fatalf("/stop beside a turn replies %q", got)
+	}
+	b.leave("c1")
+	if slices.Contains(luna.sent, proto.SendParams{ID: "p1", Data: "second"}) {
+		t.Fatalf("a stopped turn ran the prompt that waited: %+v", luna.sent)
+	}
+}
+
 // The reply is what the turn added: not the old screen, and the last
 // rows only.
 func TestReplyTail(t *testing.T) {

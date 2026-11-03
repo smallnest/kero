@@ -105,11 +105,24 @@ func (b *Bot) onMessage(clientCtx context.Context, e *larkim.P2MessageReceiveV1)
 	if text == "" {
 		return nil
 	}
-	// One message a chat at a time: the others wait their turn, one deep.
-	if !b.enter(key) {
-		b.reply(chatID, "Kero is still working on the last message there. Wait for it, or send /stop.")
+	// One message a chat at a time: a prompt while one runs waits its turn,
+	// one deep, and a command runs at once, which /stop must, as the turn
+	// it ends keeps the chat.
+	if cmd, _ := splitCommand(text); cmd != "" && !b.enter(key) {
+		b.goTurn(func() { b.turn(key, chatID, deref(m.MessageId), text) })
+		return nil
+	} else if cmd == "" && !b.enter(key) {
+		if !b.hold(key, chatID, group, openID, m, text) {
+			b.reply(chatID, "Kero is still working on the last message there, and one waits. Wait for it, or send /stop.")
+		}
 		return nil
 	}
+	b.takeTurn(key, chatID, group, openID, m, text)
+	return nil
+}
+
+// takeTurn runs a message as the chat's turn, which the caller took.
+func (b *Bot) takeTurn(key, chatID string, group bool, openID string, m *larkim.EventMessage, text string) {
 	response := deref(m.MessageId)
 	asked := parentOf(m) // the answer a follow-up answers
 	if b.shared() && len(asked) > 0 {
@@ -139,7 +152,6 @@ func (b *Bot) onMessage(clientCtx context.Context, e *larkim.P2MessageReceiveV1)
 		defer b.off(m)
 		b.turn(key, chatID, response, text)
 	})
-	return nil
 }
 
 // takeOverOn tells whether a turn takes on a turn before it, which it
@@ -270,8 +282,35 @@ func (b *Bot) enter(key string) bool {
 
 func (b *Bot) leave(key string) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.chatLocked(key).busy = false
+	c := b.chatLocked(key)
+	c.busy = false
+	var next *waitingTurn
+	if len(c.waiting) > 0 {
+		next = &c.waiting[0]
+		c.waiting = c.waiting[1:]
+		// The waiting prompt takes the chat's turn, before another
+		// message could take it.
+		c.busy = true
+	}
+	b.mu.Unlock()
+	if next != nil {
+		b.takeTurn(key, next.chatID, next.group, next.openID, next.m, next.text)
+	}
+}
+
+// hold puts a prompt in a chat's queue, one deep, for its turn's end to
+// run. It reports whether it found room.
+func (b *Bot) hold(key, chatID string, group bool, openID string, m *larkim.EventMessage, text string) bool {
+	b.mu.Lock()
+	c := b.chatLocked(key)
+	if len(c.waiting) >= queue {
+		b.mu.Unlock()
+		return false
+	}
+	c.waiting = append(c.waiting, waitingTurn{chatID: chatID, openID: openID, group: group, m: m, text: text})
+	b.mu.Unlock()
+	b.reply(chatID, "Queued: Kero sends it when the turn there ends.")
+	return true
 }
 
 // goTurn runs a turn, unless the tests take the turns in their own hands
@@ -475,6 +514,12 @@ func (b *Bot) stop(chatID string) {
 		b.reply(chatID, "This chat has no session yet. /new starts one.")
 		return
 	}
+	// A prompt that waited goes with the turn it waited for: it is not
+	// run as the turn it waited for ends.
+	dropped := ""
+	if n := b.dropWaiting(chatID); n > 0 {
+		dropped = " Dropped the prompt that waited."
+	}
 	if has, err := b.hasBackground(s.ID); err == nil && has {
 
 		if turn := b.runningTurn(chatID).text; turn != "" {
@@ -482,17 +527,32 @@ func (b *Bot) stop(chatID string) {
 				b.reply(chatID, err.Error())
 				return
 			}
-			b.reply(chatID, "Ended: "+firstLine(turn))
+			b.reply(chatID, "Ended: "+firstLine(turn)+dropped)
 			return
 		}
-		b.reply(chatID, "Nothing runs there.")
+		b.reply(chatID, "Nothing runs there."+dropped)
 		return
 	}
 	if err := b.api.Call("send", proto.SendParams{ID: s.Pane.ID, Data: "\x03"}, nil); err != nil {
 		b.reply(chatID, err.Error())
 		return
 	}
-	b.reply(chatID, "Interrupted.")
+	b.reply(chatID, "Interrupted."+dropped)
+}
+
+// dropWaiting drops the prompts that waited in a chat, which a stop ends
+// with the turn they waited for, and reports how many did.
+func (b *Bot) dropWaiting(chatID string) int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	n := 0
+	for _, c := range b.chats {
+		if c.chat == chatID {
+			n += len(c.waiting)
+			c.waiting = nil
+		}
+	}
+	return n
 }
 
 // answer sends text to the bound session, and Enter: an answer to the
