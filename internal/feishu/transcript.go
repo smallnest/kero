@@ -317,6 +317,14 @@ func (b *Bot) Feed(p proto.FeishuFeedParams) (proto.FeishuFeed, error) {
 			f.Agent = "claude"
 		}
 	}
+	// A chat whose turn named no conversation yet, as the first Codex
+	// turn's, which only its events name: the chat keeps the one its
+	// next turn continues, and the window shows the turns it kept.
+	if f.Conversation == "" && f.Chat != "" {
+		if c := b.chat(f.Chat); c.sid != "" && c.agent != "" && c.agent != "claude" {
+			f.Conversation, f.Agent = c.sid, c.agent
+		}
+	}
 	if f.Chat != "" {
 		b.pin(s.ID, f.Chat)
 		f.Lines = b.lines(s, f)
@@ -490,15 +498,20 @@ func transcript(agent string, data []byte) []proto.FeishuLine {
 	if agent == "" {
 		agent = "claude" // the newest file of a directory is Claude Code's
 	}
+	var out []proto.FeishuLine
 	switch agent {
 	case "claude":
-		return claudeTranscript(data)
+		out = claudeTranscript(data)
 	case "codex":
-		return codexTranscript(data)
-	case "opencode":
-		return keroTranscript(data)
+		out = codexTranscript(data)
 	}
-	return nil
+	if len(out) == 0 {
+		// The turns Kero kept, which it reads for the agents whose own
+		// transcript it does not read, as Pi's and OpenCode's, and for
+		// a file it read but found none of the agent's own lines in.
+		out = keroTranscript(data)
+	}
+	return out
 }
 
 // sessionDir is a session's directory: its pane's.

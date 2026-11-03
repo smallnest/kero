@@ -224,6 +224,24 @@ func TestKeptTurn(t *testing.T) {
 	if got := transcriptFile(opencodeSession("", "ses_2"), "opencode", ""); got != "" {
 		t.Errorf("another conversation has %q", got)
 	}
+	// Pi and Codex windows read the turns Kero kept too: Pi's own file
+	// Kero does not read, and Codex's is the kept turns, not its events.
+	for _, agent := range []string{"pi", "codex"} {
+		conv := "c-" + agent
+		b.keepTurn(agent, conv, "1+1=?", "2")
+		file := transcriptFile(conv, agent, "")
+		if file == "" {
+			t.Fatalf("%s has no file", agent)
+		}
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		l := transcript(agent, data)
+		if len(l) != 2 || l[0].Text != "1+1=?" || l[1].Text != "2" || l[1].Kind != "agent" {
+			t.Fatalf("%s shows %+v", agent, l)
+		}
+	}
 }
 
 // A chat window shows the turns Kero kept, and the agent the chat runs,
@@ -239,6 +257,23 @@ func TestFeedShowsKeptTurns(t *testing.T) {
 	}
 	if f.Agent != "opencode" {
 		t.Errorf("the agent is %q", f.Agent)
+	}
+	if len(f.Lines) != 2 || f.Lines[0].Text != "1+1=?" || f.Lines[1].Text != "2" {
+		t.Fatalf("the lines are %+v", f.Lines)
+	}
+}
+
+// A Codex chat's first turn names its thread only in its events, which
+// the chat keeps: the window shows it before a turn resumes the thread.
+func TestFeedShowsFirstCodexTurn(t *testing.T) {
+	b, luna, _ := newBot(t)
+	b.chats["c1"] = &chat{id: "s1", agent: "codex", sid: "01a1-th-1"}
+	// The pane names no conversation before a turn resumes it.
+	luna.sessions[0].Panes[0].AgentSessionID = ""
+	b.keepTurn("codex", "01a1-th-1", "1+1=?", "2")
+	f, err := b.Feed(proto.FeishuFeedParams{Session: "s1", Chat: "c1"})
+	if err != nil {
+		t.Fatal(err)
 	}
 	if len(f.Lines) != 2 || f.Lines[0].Text != "1+1=?" || f.Lines[1].Text != "2" {
 		t.Fatalf("the lines are %+v", f.Lines)
