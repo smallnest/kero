@@ -327,13 +327,17 @@ func toast(lang, msg string) *callback.CardActionTriggerResponse {
 	return &callback.CardActionTriggerResponse{Toast: &callback.Toast{Type: "info", Content: msg}}
 }
 
+// claudeStreamFlags make Claude Code's messages a stream, whose result
+// holds what the turn used, and its errors with its text.
+var claudeStreamFlags = []string{"--output-format", "stream-json", "--verbose"}
+
 // claudeAskFlags make Claude Code ask, on the stream of its messages,
 // for each tool beyond its permissions, which a terminal would ask for:
 // its messages come as JSON lines, and its answer by its stdin. It runs
 // no -p, so it reads no prompt from its stdin, and no --input-format
 // stream-json: a prompt from that stream, which it does not get, would
 // leave it waiting.
-var claudeAskFlags = []string{"--permission-prompt-tool", "stdio", "--output-format", "stream-json", "--verbose"}
+var claudeAskFlags = append([]string{"--permission-prompt-tool", "stdio"}, claudeStreamFlags...)
 
 // askPoll is how often a turn looks for the permissions its command asks
 // for, which kerod puts in the second file of its output's pair.

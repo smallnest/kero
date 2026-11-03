@@ -47,11 +47,21 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 		sid = newUUID()
 	}
 	cmd := b.backgroundCommand(agent, sid, base.sid, text, true)
-	if agent == "claude" && !b.yoloFor(agent) {
-		// Claude Code asks the program that runs it for each tool beyond
-		// its permissions, on a stream of its messages, which its stream
-		// gives: its text replaces the one the command's options ask.
-		cmd = claudeStream(cmd)
+	asks := false
+	if agent == "claude" {
+		if b.yoloFor(agent) {
+			// In yolo mode, Claude Code takes its prompt as -p's, whose
+			// answer is its text alone. The stream's holds what the turn
+			// used, for its card's footer.
+			cmd = claudeStream(cmd)
+		} else {
+			// Claude Code asks the program that runs it for each tool
+			// beyond its permissions, on a stream of its messages, which
+			// its stream gives: its text replaces the one the command's
+			// options ask.
+			cmd = claudeStream(cmd)
+			asks = true
+		}
 	}
 	out := b.outFile(session)
 	if agent == "claude" {
@@ -95,7 +105,7 @@ func (b *Bot) background(key, chatID, response, text string, t turnInfo) {
 	stop := time.Now().Add(b.timeout())
 	ended := make(chan struct{})
 	defer close(ended)
-	if agent == "claude" && !b.yoloFor(agent) {
+	if asks {
 		go b.answerAsks(key, chatID, session, stop, ended)
 	}
 	from := int64(0)
@@ -217,8 +227,13 @@ func (b *Bot) turnCommand(agent, sid, resume string, told bool) []string {
 	}
 	switch agent {
 	case "claude":
+		// The option goes before its words, which its prompt would take
+		// for the prompt's own. Only the settings give it: a turn never.
+		if settings.IsYolo(&b.cfg, b.yolo, agent) {
+			cmd = append(cmd, flag...)
+		}
 		if again {
-			cmd = append(cmd, "-p", "--output-format", "text", "--resume", resume)
+			cmd = append(cmd, "-p", "--output-format", "text", "--session-id", resume)
 		} else {
 			cmd = append(cmd, "-p", "--output-format", "text", "--session-id", sid)
 		}
@@ -307,10 +322,10 @@ func (b *Bot) sessionCommand(agent string) (cmd []string, programOnly bool) {
 	return cmd, true
 }
 
-// claudeStream is a Claude Code command's words as it asks the chat for
-// the permissions a terminal would ask for: no -p, which marks its input
-// a prompt's and keeps its asker to its messages alone, and the flags
-// after the prompt, which the prompt would take for its own.
+// claudeStream is a Claude Code command's words as its messages a stream
+// hold what the turn used: no -p, which makes its answer its text alone,
+// and the flags after the prompt, which the prompt would take for its
+// own.
 func claudeStream(cmd []string) []string {
 	i := len(cmd) - 1 // the prompt
 	out := append([]string{}, cmd[:i]...)
@@ -323,7 +338,7 @@ func claudeStream(cmd []string) []string {
 			j--
 		}
 	}
-	out = append(out, claudeAskFlags...)
+	out = append(out, claudeStreamFlags...)
 	return append(out, cmd[i])
 }
 

@@ -681,6 +681,7 @@ func TestCommandMode(t *testing.T) {
 	b, luna, msgs := newBot(t)
 	b.cfg.Run = settings.FeishuRunCommand
 	b.cfg.Agent = "claude"
+	b.yolo = true // feishu-yolo's default
 	b.chats["c1"] = &chat{id: "s1"}
 	b.leave("c1")
 	luna.files = []string{"2", ""}
@@ -694,11 +695,13 @@ func TestCommandMode(t *testing.T) {
 		t.Fatalf("ran %+v", luna.ran)
 	}
 	cmd := strings.Join(luna.ran[0].Command, " ")
-	// Claude Code's messages are a stream, for the chat's permissions, and
-	// its prompt an argument: no -p, whose stdin holds its prompt alone,
-	// and no input stream, which would leave it waiting.
-	if !strings.HasPrefix(cmd, "claude --session-id ") || !strings.HasSuffix(cmd, " --permission-prompt-tool stdio --output-format stream-json --verbose 1+1=?") ||
-		strings.Contains(cmd, " -p ") || strings.Contains(cmd, "--input-format") {
+	// With yolo on, Claude Code asks no program for a permission: the
+	// option that makes each tool ask it alone fails every tool. Its
+	// messages are a stream, which holds what the turn used, and its
+	// prompt an argument: no -p, whose stdin holds its prompt alone.
+	if !strings.HasPrefix(cmd, "claude --dangerously-skip-permissions --session-id ") ||
+		!strings.HasSuffix(cmd, " --output-format stream-json --verbose 1+1=?") ||
+		strings.Contains(cmd, " -p ") || strings.Contains(cmd, "--input-format") || strings.Contains(cmd, "--permission-prompt-tool") {
 		t.Errorf("ran %q", cmd)
 	}
 	if luna.ran[0].Dir == "" || !filepath.IsAbs(luna.ran[0].Out) {
