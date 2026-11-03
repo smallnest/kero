@@ -808,7 +808,7 @@ func TestCommandContinues(t *testing.T) {
 		t.Errorf("opencode %q", cmd)
 	}
 	next = b.backgroundCommand("codex", "sid-2", "th-1", "again", false)
-	if strings.Join(next, " ") != "codex exec resume th-1 --skip-git-repo-check again" {
+	if strings.Join(next, " ") != "codex exec --json resume th-1 --skip-git-repo-check again" {
 		t.Errorf("codex %q", next)
 	}
 	if sid := conversation("opencode", `{"type":"step_start","sessionID":"ses_7"}`, "x"); sid != "ses_7" {

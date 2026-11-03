@@ -63,7 +63,7 @@ claude -p --output-format text --session-id <id> "<prompt>"    # Claude Code
 pi -p --session-id <id> "<prompt>"                              # Pi
 gemini -p "<prompt>"                                            # Gemini CLI
 opencode run "<prompt>"
-codex exec "<prompt>"
+codex exec --json "<prompt>"
 ```
 
 每条命令在聊天的会话中运行，该会话没有终端和 shell：命令运行时侧边栏显示工作中，结束后显示空闲。它在 `feishu-dir` 指定的目录中运行，环境与窗格相同。命令的输出写到 kero 目录下 `feishu-run` 中的文件，其文本就是回复。聊天会继续这段对话。第一轮用 kerod 生成的 ID 开始会话，之后的轮次继续它：
@@ -74,11 +74,11 @@ codex exec "<prompt>"
 | Pi | `--session-id <id>` | `--session-id <id>` |
 | Gemini | `--session-id <id>` | `--resume <id>` |
 | OpenCode | `run "<prompt>"` | `run --session <id>`；输出中给出会话 |
-| Codex | `exec "<prompt>"` | `exec resume <id> --skip-git-repo-check`；输出中给出会话 |
+| Codex | `exec --json "<prompt>"` | `exec --json resume <id> --skip-git-repo-check`；事件中给出会话 |
 
 `/new <项目> <智能体>` 用另一个智能体开始新对话。
 
-回复是命令的输出。对 Claude Code，在 `feishu-agent-command` 中使用 `--output-format stream-json` 的命令给出的是消息的文本，而不是整个流。
+回复是命令的输出。对 Claude Code，在 `feishu-agent-command` 中使用 `--output-format stream-json` 的命令给出的是消息的文本，而不是整个流。对 Codex，事件中给出会话，事件里的消息就是回复。
 
 后台命令没有窗格输入：在这类会话中 `/answer` 会说明这一点。
 

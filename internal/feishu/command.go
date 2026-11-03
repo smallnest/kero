@@ -144,6 +144,12 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	if sid = conversation(agent, answer, sid); sid == "" {
 		sid = b.chat(key).sid
 	}
+	// A session the agent does not know, as one this turn's ID named
+	// before the agent kept it, starts anew next turn: the chat goes on
+	// with no history rather than failing every turn.
+	if agent == "codex" && lostSession(answer) {
+		sid = ""
+	}
 	b.mu.Lock()
 	c := b.chatLocked(key)
 	c.agent, c.dir, c.cmd, c.sid = agent, dir, "", sid
@@ -163,6 +169,17 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	b.keepTurn(agent, sid, text, reply)
 	b.replyTurn(key, response, chatID, Card{Title: titleOf(reply), Text: reply, State: state,
 		Duration: time.Since(started), Usage: UsageOf(out.Text)}, reply)
+}
+
+// lostSession tells whether a Codex turn could not continue the session
+// its ID named: it failed before it ran, and no event named another.
+func lostSession(raw string) bool {
+	for _, t := range []string{"invalid session id", "failed to resolve rollout path"} {
+		if strings.Contains(raw, t) {
+			return true
+		}
+	}
+	return false
 }
 
 // backgroundSession makes the chat's session a background one, with the
@@ -264,7 +281,10 @@ func (b *Bot) turnCommand(agent, sid, resume string, told bool) []string {
 			cmd = append(cmd, "-p", "--output-format", "text", "--session-id", sid)
 		}
 	case "codex":
-		cmd = append(cmd, "exec")
+		// Its events, as JSON lines, name the session it runs, which a
+		// chat continues, and its messages, which are its answer: its
+		// text alone names neither.
+		cmd = append(cmd, "exec", "--json")
 		if on {
 			cmd = append(cmd, flag...)
 		}
@@ -496,6 +516,54 @@ func commandText(agent, raw string) string {
 		}
 		if text.Len() > 0 {
 			return text.String()
+		}
+	case "codex":
+		// The events of --json: an item that completed and is the
+		// agent's message is its answer, and a turn that failed says
+		// why, as its error item or its error's message.
+		var text strings.Builder
+		failure := ""
+		for _, line := range strings.Split(raw, "\n") {
+			var e struct {
+				Type    string `json:"type"`
+				Message string `json:"message"`
+				Item    *struct {
+					Type     string `json:"type"`
+					ItemType string `json:"item_type"`
+					Text     string `json:"text"`
+				} `json:"item"`
+				Error *struct {
+					Message string `json:"message"`
+				} `json:"error"`
+			}
+			if json.Unmarshal([]byte(line), &e) != nil {
+				continue
+			}
+			switch e.Type {
+			case "item.completed":
+				if e.Item == nil || e.Item.Text == "" {
+					continue
+				}
+				if t := firstNotEmpty(e.Item.Type, e.Item.ItemType); t != "" && t != "agent_message" {
+					continue
+				}
+				if text.Len() > 0 {
+					text.WriteString("\n\n")
+				}
+				text.WriteString(e.Item.Text)
+			case "turn.failed", "error":
+				if e.Error != nil && e.Error.Message != "" {
+					failure = e.Error.Message
+				} else if e.Message != "" {
+					failure = e.Message
+				}
+			}
+		}
+		if t := strings.TrimSpace(text.String()); t != "" {
+			return t
+		}
+		if failure != "" {
+			return failure
 		}
 	}
 	return strings.TrimSpace(raw)

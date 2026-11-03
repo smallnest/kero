@@ -13,3 +13,28 @@ Warning: no stdin data received in 3s, proceeding without it. If piping from a s
 		t.Errorf("the answer %q", got)
 	}
 }
+
+// A Codex turn's events give its messages as the answer, and name the
+// session a chat continues.
+func TestCommandTextCodex(t *testing.T) {
+	raw := `{"type":"thread.started","thread_id":"0199-th-1"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"thinking"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Hello."}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"What next?"}}
+{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":2}}
+`
+	if got := commandText("codex", raw); got != "Hello.\n\nWhat next?" {
+		t.Errorf("the answer %q", got)
+	}
+	if sid := conversation("codex", raw, "x"); sid != "0199-th-1" {
+		t.Errorf("codex continues %q", sid)
+	}
+	// A turn that failed says why, rather than its events.
+	failed := `{"type":"turn.started"}
+{"type":"turn.failed","error":{"message":"invalid session id"}}
+`
+	if got := commandText("codex", failed); got != "invalid session id" {
+		t.Errorf("the failure %q", got)
+	}
+}

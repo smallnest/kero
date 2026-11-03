@@ -69,7 +69,7 @@ claude -p --output-format text --session-id <id> "<prompt>"    # Claude Code
 pi -p --session-id <id> "<prompt>"                              # Pi
 gemini -p "<prompt>"                                            # Gemini CLI
 opencode run "<prompt>"
-codex exec "<prompt>"
+codex exec --json "<prompt>"
 ```
 
 Each command runs in the chat's session, which has no terminal and no shell: it shows in the sidebar as working while the command runs, and idle once it ends. It runs in the directory `feishu-dir` names, under the daemon's environment, as a session's pane is. The command's output goes to a file in kero's directory, under `feishu-run`, and its text is the reply. The chat continues the conversation. The first turn starts a session with an ID kerod makes, and the next turns continue it:
@@ -80,9 +80,9 @@ Each command runs in the chat's session, which has no terminal and no shell: it 
 | Pi | `--session-id <id>` | `--session-id <id>` |
 | Gemini | `--session-id <id>` | `--resume <id>` |
 | OpenCode | `run "<prompt>"` | `run --session <id>`; the output names the session |
-| Codex | `exec "<prompt>"` | `exec resume <id> --skip-git-repo-check`; the output names the session | `/new <project> <agent>` starts a new conversation with another agent.
+| Codex | `exec --json "<prompt>"` | `exec --json resume <id> --skip-git-repo-check`; its events name the session | `/new <project> <agent>` starts a new conversation with another agent.
 
-The reply is the command's output. For Claude Code, a command that uses `--output-format stream-json` (in `feishu-agent-command`) gives the text of its messages, not the whole stream.
+The reply is the command's output. For Claude Code, a command that uses `--output-format stream-json` (in `feishu-agent-command`) gives the text of its messages, not the whole stream. For Codex, its events name the session, and their messages are the reply.
 
 A background command has no pane input: `/answer` in such a session says so.
 
