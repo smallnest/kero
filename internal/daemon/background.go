@@ -28,8 +28,10 @@ type background struct {
 	err   string // why it did not start, or what ended it
 	code  int
 	// stdin is the command's input, while it runs, which an answer to
-	// what it asks goes to.
+	// what it asks goes to; input the input of a command whose asks go
+	// to its stream: the answer's writes, and the asks' lines.
 	stdin io.WriteCloser
+	input *stdinWriter
 }
 
 // newBackground is the command a pane may run.
@@ -132,50 +134,88 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 	}
 	cmd.Env = d.environment(p.ID, pn.info.ID, shell, p.Env)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = out, out, nil
-	errOut := out
 	// A command whose messages ask its runner for what it runs (a turn's
 	// permission) reads its messages as lines: the asks go to the file
 	// beside the output's, which the bot answers, and the others to the
 	// output, with its errors.
 	var input io.WriteCloser
-	if _, asks, err := proto.AnswerPair(p.Out); err == nil && true {
-		stream, err := streamAsks(out, asks)
+	var in *stdinWriter
+	var piped, lock *os.File
+	asks := io.Writer(io.Discard)
+	if _, file, err := proto.AnswerPair(p.Out); err == nil && true {
+		r, w, err := os.Pipe()
 		if err != nil {
 			out.Close()
 			bg.fail(err)
 			pn.bgDone()
 			return err
 		}
-
-		cmd.Stdout = out
-		cmd.Stderr = errOut
-		cmd.Stdin = stream
-		input = stream
+		af, err := os.Create(file)
+		if err != nil {
+			r.Close()
+			w.Close()
+			out.Close()
+			bg.fail(fmt.Errorf("opening the asks: %w", err))
+			pn.bgDone()
+			return err
+		}
+		asks, piped, lock = af, r, w
+		// As a file, its reads by os/exec alone, not its io.Copy, which
+		// writes nothing, and ends as the pipe's writes close: the
+		// command's own reads then find the asks at once.
+		cmd.Stdout, cmd.Stderr, cmd.Stdin = w, w, r
+		in = &stdinWriter{r, w}
+		input = in
 	}
 	if runtime.GOOS != "windows" {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	}
 	if err := cmd.Start(); err != nil {
 		out.Close()
-		if input != nil {
+		if piped != nil {
+			piped.Close()
+			lock.Close()
 			input.Close()
+			asks.(*os.File).Close()
 		}
 		bg.fail(fmt.Errorf("starting %s: %w", p.Command[0], err))
 		pn.bgDone()
 		return err
 	}
 	bg.mu.Lock()
-	bg.cmd, bg.out, bg.stdin = cmd, p.Out, input
+	bg.cmd, bg.out, bg.stdin, bg.input = cmd, p.Out, input, in
 	bg.ended, bg.err, bg.code = false, "", 0
 	bg.mu.Unlock()
 	pn.setBackground(cmd)
+	// The command's end is read here, not by Wait, which would wait on an
+	// input that the command's children keep open.
+	done := make(chan error, 1)
+	if piped != nil {
+		go func() {
+			defer asks.(*os.File).Close()
+			lock.Close() // no child of the command keeps the pipe's writes open
+			done <- copyLines(piped, out, asks, isAsk, func(line string) { in.add(line) })
+		}()
+	}
 	go func() {
-		err := cmd.Wait()
+		state, err := cmd.Process.Wait()
+		var copyErr error
+		if piped != nil {
+			// The lines of the command's children, which the command
+			// leaves, go still.
+			copyErr = <-done
+		}
+		if err == nil {
+			err = copyErr
+		}
+		if input != nil {
+			input.Close()
+		}
 		out.Close()
 		bg.mu.Lock()
 		bg.ended = true
-		bg.stdin = nil
-		bg.code = cmd.ProcessState.ExitCode()
+		bg.stdin, bg.input = nil, nil
+		bg.code = state.ExitCode()
 		if err != nil && bg.err == "" {
 			bg.err = err.Error()
 		}
@@ -185,10 +225,31 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 	return nil
 }
 
-// streamAsks makes a command's output, and its input, go through a pipe,
-// whose text is lines: the lines that ask for a permission go to asks,
-// and the others to out, with the errors. It returns the command's input,
-// which the command's end closes.
+// stdinWriter is the command's input, as the bot writes an answer to an
+// ask, and readStdin its asks. The command reads the pipe's other end,
+// as a file: os/exec reads a file's input alone, and an input that its
+// io.Copy reads waits for a read that ends, which Claude Code gives up
+// on after 3s, and warns that it got none of.
+type stdinWriter struct{ r, w *os.File }
+
+func (x *stdinWriter) add(line string) error {
+	_, err := io.WriteString(x.w, line)
+	return err
+}
+
+func (x *stdinWriter) Write(p []byte) (int, error) { return x.w.Write(p) }
+
+// Close ends the input once the command ends, whose own end waits on no
+// read of it.
+func (x *stdinWriter) Close() error {
+	x.r.Close()
+	return x.w.Close()
+}
+
+// streamAsks makes a command's messages, and its input, go through a
+// pipe, whose text is lines: the lines that ask for a permission go to
+// asks, and the others to out, with the errors. It returns the command's
+// input, which the command's end closes.
 func streamAsks(out io.Writer, asks string) (*os.File, error) {
 	w, err := os.Create(asks)
 	if err != nil {
@@ -199,28 +260,41 @@ func streamAsks(out io.Writer, asks string) (*os.File, error) {
 		w.Close()
 		return nil, err
 	}
-	go splitStream(r, out, w)
+	go func() {
+		defer r.Close()
+		defer w.Close()
+		copyLines(r, out, w, isAsk, func(string) {})
+	}()
 	return stdin, nil
 }
 
-// splitStream copies a command's messages, as lines, to out, and the
-// lines that ask its runner for a permission to asks, as they come.
-func splitStream(r *os.File, out, asks io.Writer) {
-	defer r.Close()
-	defer asks.(io.Closer).Close()
+// copyLines copies a command's messages, as lines, to out, and the lines
+// that ask its runner for a permission to asks, as they come, which ask
+// also takes.
+func copyLines(r io.Reader, out, asks io.Writer, isAsk func([]byte) bool, ask func(string)) error {
+	return copyLinesTo(r, out, isAsk, func(line string) {
+		io.WriteString(asks, line)
+		ask(line)
+	})
+}
+
+// copyLinesTo is copyLines, with where an ask goes.
+func copyLinesTo(r io.Reader, out io.Writer, isAsk func([]byte) bool, ask func(string)) error {
 	rd := bufio.NewReader(r)
 	for {
 		line, err := rd.ReadString('\n')
-		if len(line) > 0 {
+		if line != "" {
 			if isAsk([]byte(line)) {
-				asks.Write([]byte(line))
-			} else {
-				out.Write([]byte(line))
+				ask(line)
+			} else if _, werr := io.WriteString(out, line); werr != nil && err == nil {
+				err = werr
 			}
-			continue
 		}
 		if err != nil {
-			return
+			if err == io.EOF {
+				return nil
+			}
+			return err
 		}
 	}
 }
@@ -254,6 +328,10 @@ func (d *Daemon) backgroundWrite(p proto.InputParams, raw json.RawMessage) error
 		Text string `json:"text"`
 	}
 	json.Unmarshal(raw, &in)
+	if x := bg.input; x != nil {
+		_, err := io.WriteString(x.w, in.Text)
+		return err
+	}
 	_, err := io.WriteString(w, in.Text)
 	return err
 }
