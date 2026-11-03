@@ -51,12 +51,26 @@ func (b *background) stop() {
 	if cmd == nil || cmd.Process == nil {
 		return
 	}
+	killGroup(cmd)
+}
+
+// killGroup ends the command and what it started: its process group,
+// which startGroup makes, or the command alone.
+func killGroup(cmd *exec.Cmd) {
 	if runtime.GOOS == "windows" {
 		cmd.Process.Kill()
 		return
 	}
 	if syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) != nil {
 		cmd.Process.Kill()
+	}
+}
+
+// startGroup makes the command start a process group of its own, which
+// killGroup ends.
+func startGroup(cmd *exec.Cmd) {
+	if runtime.GOOS != "windows" {
+		cmd.SysProcAttr = groupAttr()
 	}
 }
 
@@ -167,9 +181,7 @@ func (d *Daemon) runBackground(p proto.BackgroundParams) error {
 		in = &stdinWriter{r, w}
 		input = in
 	}
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	}
+	startGroup(cmd)
 	if err := cmd.Start(); err != nil {
 		out.Close()
 		if piped != nil {
