@@ -107,11 +107,10 @@ func (b *Bot) followPane(c *chat, started time.Time, event, text string) {
 	card := b.newTurnCard(c.chat, b.wantEvent(c.chat), langOf(text))
 	b.card(card, "working", "", "")
 	lead := leadPaneOf(b, c.id)
-	state, body, _, _ := b.watchCard(card, lead, 0, started.Add(b.timeout()))
+	_, body, _, _ := b.watchCard(card, lead, 0, started.Add(b.timeout()))
 	var p proto.Pane
 	b.api.Call("read", proto.ReadParams{ID: lead}, &p)
 	reply := b.replyWith(&run{status: p, text: body})
-	b.react(card.msg, state)
 	b.drop(card)
 	b.replyAt(key, event, c.chat, reply)
 }

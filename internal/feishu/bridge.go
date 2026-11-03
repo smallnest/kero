@@ -133,6 +133,10 @@ func (b *Bot) onMessage(clientCtx context.Context, e *larkim.P2MessageReceiveV1)
 		if takeOverOn && b.takeOver(c) {
 			return
 		}
+		// The message marks the turn before the agent runs it, and once
+		// it answers.
+		m := b.markOn(response)
+		defer b.off(m)
 		b.turn(key, chatID, response, text)
 	})
 	return nil
@@ -532,7 +536,6 @@ func (b *Bot) answer(chatID, text string) {
 			if failed {
 				state = "error"
 			}
-			b.react(card.msg, state)
 			if state != "working" {
 				b.drop(card)
 			}
@@ -591,10 +594,6 @@ func (b *Bot) followAnswer(key, chatID, agent, answers string, t turnInfo) {
 		b.reply(chatID, err.Error())
 		return
 	}
-	state := "done"
-	if r.status.Status == proto.Failed {
-		state = "error"
-	}
 	if r.hook {
 		// The hook's answer is the turn's text, not the terminal's, and
 		// it names the conversation the answer continued.
@@ -604,7 +603,6 @@ func (b *Bot) followAnswer(key, chatID, agent, answers string, t turnInfo) {
 		b.mu.Unlock()
 		b.save()
 	}
-	b.react(card.msg, state)
 	b.drop(card)
 	b.replyAt(key, t.event, chatID, b.replyWith(r))
 }

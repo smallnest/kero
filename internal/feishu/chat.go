@@ -190,20 +190,31 @@ func (b *Bot) onCardAction(ctx context.Context, e *callback.CardActionTriggerEve
 	return &callback.CardActionTriggerResponse{Toast: &callback.Toast{Type: status, Content: msg}}, nil
 }
 
-// turnMark is the reaction a turn's message takes as the turn ends: a
-// green check for done, a red cross for a failure.
-var turnMark = map[string]string{"done": "DONE", "error": "CROSS_MARK"}
+// markOn is the reaction a turn's message takes as the turn starts, which
+// the turn takes back as it ends.
+const markOn = "OnIt"
 
-// react marks the message of a turn by its end, and returns the emoji,
-// "" when Feishu lets not mark it: a message Feishu marks by one emoji
-// only takes the end's, which the new one replaces.
-func (b *Bot) react(msg, state string) string {
+// marked is a message that takes the turn's marks.
+type marked struct{ msg string }
+
+// markOn marks the message of a turn as it starts, as the agent works.
+func (b *Bot) markOn(msg string) *marked {
 	if msg == "" || !cards() {
-		return ""
+		return nil
 	}
-	emoji := turnMark[state]
-	if emoji == "" || b.msgs.React(msg, emoji) != nil {
-		return ""
+	if err := b.msgs.React(msg, markOn); err != nil {
+		b.logf("feishu: marking a message: %v", err)
+		return nil
 	}
-	return emoji
+	return &marked{msg}
+}
+
+// off takes the mark back, as the answer comes.
+func (b *Bot) off(m *marked) {
+	if m == nil {
+		return
+	}
+	if err := b.msgs.Unreact(m.msg, markOn); err != nil {
+		b.logf("feishu: taking a mark back: %v", err)
+	}
 }

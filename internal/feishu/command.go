@@ -139,11 +139,6 @@ func (b *Bot) finished(key, chatID, response, agent, dir, sid, text string, out 
 	b.mu.Unlock()
 	b.save()
 	reply := b.backgroundReply(agent, out)
-	state := "done"
-	if out.Exited != 0 || out.Error != "" {
-		state = "error"
-	}
-	b.react(response, state)
 	b.drop(card)
 	b.replyAt(key, response, chatID, reply)
 }

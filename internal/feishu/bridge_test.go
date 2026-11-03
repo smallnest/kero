@@ -272,15 +272,16 @@ func (f *fakeLuna) Kept(id string) (proto.FeishuMessage, error) {
 }
 
 type fakeMessages struct {
-	sent    []string
-	cards   []string // each card's JSON, sent or updated
-	updates []string // each update's message ID, and the card's JSON
-	replies []string // each reply to a message
-	reacts  []string
-	fail    bool      // sending a card fails: the answers go as messages
-	keep    *fakeLuna // what kerod keeps of what is sent
-	targets []string  // each message's receive ID, "kind id"
-	kept    int       // the messages sent, which the kept ones count
+	sent     []string
+	cards    []string // each card's JSON, sent or updated
+	updates  []string // each update's message ID, and the card's JSON
+	replies  []string // each reply to a message
+	reacts   []string
+	unreacts []string
+	fail     bool      // sending a card fails: the answers go as messages
+	keep     *fakeLuna // what kerod keeps of what is sent
+	targets  []string  // each message's receive ID, "kind id"
+	kept     int       // the messages sent, which the kept ones count
 	// send sends the text of every message, as a chat's does; false when
 	// the tests read the cards alone.
 	send bool
@@ -313,7 +314,7 @@ func (m *fakeMessages) SendCard(kind, id, cardJSON string) (string, error) {
 }
 
 func (m *fakeMessages) UpdateCard(id, cardJSON string) error {
-	m.updates = append(m.updates, id+": "+cardJSON)
+	m.updates = append(m.updates, id+": "+cardJSON+fmt.Sprintf(" [marks %v]", m.reacts))
 	m.cards = append(m.cards, cardJSON)
 	return nil
 }
@@ -349,6 +350,11 @@ func (m *fakeMessages) Get(id string) (feishuMessage, error) {
 
 func (m *fakeMessages) React(id, emoji string) error {
 	m.reacts = append(m.reacts, id+":"+emoji)
+	return nil
+}
+
+func (m *fakeMessages) Unreact(id, emoji string) error {
+	m.unreacts = append(m.unreacts, id+":"+emoji)
 	return nil
 }
 
@@ -877,10 +883,13 @@ func TestCardTurn(t *testing.T) {
 	if len(msgs.updates) < 2 {
 		t.Fatalf("the message's updates are %v", msgs.updates)
 	}
-	if first := parseCard(t, msgs.updates[0][len("om_t: "):]); cardText(first) != "\n" {
+	if first := parseCard(t, cardOf(msgs.updates[0])); cardText(first) != "\n" {
 		t.Errorf("the message's working card says %q", cardText(first))
 	}
-	if gone := parseCard(t, msgs.updates[1][len("om_t: "):]); !strings.Contains(cardText(gone), "earlier") {
+	if !strings.Contains(msgs.updates[0], "[marks [om_t:OnIt]]") {
+		t.Errorf("the mark waits for the turn's start, not before: %s", msgs.updates[0][strings.LastIndex(msgs.updates[0], "["):])
+	}
+	if gone := parseCard(t, cardOf(msgs.updates[1])); !strings.Contains(cardText(gone), "earlier") {
 		t.Errorf("the message's card goes as %v", gone)
 	}
 	// The answer is the last card's, green.
@@ -888,11 +897,15 @@ func TestCardTurn(t *testing.T) {
 	if last["header"].(map[string]any)["template"] != "green" || !strings.Contains(cardText(last), "Fixed 2 tests.") {
 		t.Errorf("the answer's card is %v", last)
 	}
-	// The turn's end marks its message, which the working card was not.
-	if !slices.Contains(msgs.reacts, "om_t:DONE") || slices.ContainsFunc(msgs.reacts, func(r string) bool { return strings.HasPrefix(r, "om_t:-") }) {
-		t.Errorf("the marks are %q", msgs.reacts)
+	// The message takes the mark as the turn starts, and gives it back as
+	// the answer comes.
+	if !slices.Equal(msgs.reacts, []string{"om_t:OnIt"}) || !slices.Equal(msgs.unreacts, []string{"om_t:OnIt"}) {
+		t.Errorf("the marks are %q, taken back %q", msgs.reacts, msgs.unreacts)
 	}
 }
+
+// cardOf is an update's card's JSON, without the marks it notes.
+func cardOf(update string) string { return update[len("om_t: "):strings.Index(update, " [marks")] }
 
 // parseCard is a card's JSON, as a map.
 func parseCard(t *testing.T, shown string) map[string]any {

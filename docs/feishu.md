@@ -128,7 +128,7 @@ The conversation reads in a column of a fixed width, in the middle of the pane. 
 
 The view only shows the conversation. It has no field: write your prompts in Feishu. The session's host reads the turns with `feishu.feed` as the chat opens, and again each time that the host's state changes.
 
-In Feishu, each turn shows on the user's message and in an answer (`feishu-cards`). While the agent works, the message takes a plain, grey card. When the turn ends, the card becomes one short line, and a reaction on the message marks the end: `DONE` for a done turn, `CROSS_MARK` for a failed one. The answer is a card that follows the message: its text is the answer as Markdown, and its state is under it.
+In Feishu, each turn shows on the user's message and in an answer (`feishu-cards`). When the turn starts, the message takes the `OnIt` reaction, and while the agent works, it takes a plain, grey card. When the turn ends, the card becomes one short line, and the reaction goes. The answer is a card that follows the message: its text is the answer as Markdown, and its state is under it.
 
 ## Settings
 
@@ -165,7 +165,7 @@ feishu-agent-command = pi=pi
 | `feishu-allow` | empty | Who may send prompts: `open_id`, `user_id` or `email` values. Empty allows only the user who ran `kero feishu setup`. |
 | `feishu-timeout` | `30m` | The longest a turn waits before its card says it timed out. |
 | `feishu-stream` | `2s` | How often a working card takes the new text. |
-| `feishu-cards` | `true` | A turn shows on the user's message, with a reaction at its end, and every answer is a card whose text is Markdown. `false` sends the answers as messages, and shows no card or reaction. |
+| `feishu-cards` | `true` | A turn shows on the user's message, with a reaction while it runs, and every answer is a card whose text is Markdown. `false` sends the answers as messages, and shows no card or reaction. |
 | `feishu-run` | `session` | How a prompt runs its agent: `command`, as the agent's own command in the background, which tells the reply and no terminal shows; or `session`, in the session's pane, as a user's turn. |
 | `feishu-agent` | `default` | The agent a `/new` session runs: `default`, or a name the detector knows, such as `claude`, `codex`, `opencode` or `pi`. |
 | `feishu-dir` | empty | The directory new sessions start in when the message names no project. Empty uses `new-session-directory`. |

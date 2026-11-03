@@ -80,6 +80,9 @@ type Messages interface {
 	// React marks a message with an emoji, by its Feishu name, as
 	// "OnIt".
 	React(messageID, emoji string) error
+	// Unreact takes back a reaction that React gave, which a message
+	// shows one of each app's at a time.
+	Unreact(messageID, emoji string) error
 	// Download is a message's file or image, by its file_key or
 	// image_key.
 	Download(key string, image bool) ([]byte, error)
@@ -375,6 +378,34 @@ func (a *larkAPI) React(messageID, emoji string) error {
 	}
 	if !res.Success() {
 		return fmt.Errorf("Feishu answered %d %s", res.Code, res.Msg)
+	}
+	return nil
+}
+
+func (a *larkAPI) Unreact(messageID, emoji string) error {
+	list, err := a.c.Im.MessageReaction.List(context.Background(),
+		larkim.NewListMessageReactionReqBuilder().MessageId(messageID).ReactionType(emoji).Build())
+	if err != nil {
+		return err
+	}
+	if !list.Success() {
+		return fmt.Errorf("Feishu answered %d %s", list.Code, list.Msg)
+	}
+	if list.Data == nil {
+		return nil
+	}
+	for _, r := range list.Data.Items {
+		if r == nil || r.ReactionId == nil {
+			continue
+		}
+		res, err := a.c.Im.MessageReaction.Delete(context.Background(),
+			larkim.NewDeleteMessageReactionReqBuilder().MessageId(messageID).ReactionId(*r.ReactionId).Build())
+		if err != nil {
+			return err
+		}
+		if !res.Success() {
+			return fmt.Errorf("Feishu answered %d %s", res.Code, res.Msg)
+		}
 	}
 	return nil
 }
