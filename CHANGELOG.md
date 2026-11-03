@@ -4,6 +4,20 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.37
+
+- OpenCode works as the agent a Feishu chat runs. A prompt in the
+  background found no program, as kerod did not look where OpenCode
+  installs, and a turn now continues a session of OpenCode's own, as
+  OpenCode asks. On another machine, this works once that host gets
+  this update.
+- A chat's window shows the turns Kero ran for it as the agent's lines,
+  also when the agent is OpenCode, whose transcript Kero does not read.
+- A command of a chat gets its input only when it asks for it, as
+  Claude Code's permission tool does, so a turn no longer waits for an
+  input no one ends. **Settings › Feishu › How a prompt runs** keeps the
+  choice it shows.
+
 ## 2.1.36
 
 - A Feishu card whose answer asks the chat to choose from a list of two or
