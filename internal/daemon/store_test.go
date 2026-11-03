@@ -85,8 +85,10 @@ func TestMarkDrawn(t *testing.T) {
 	if d.markDrawn() {
 		t.Error("no mark, yet one is drawn")
 	}
-	d.restoreN = time.Now().UnixMilli()
+	// Drawn after the restore's moment, as a mark the restore wrote is:
+	// the restore's own, read after the mark, is never before it.
 	d.markSettled()
+	d.restoreN = time.Now().UnixMilli()
 	if d.markDrawn() {
 		t.Error("a mark of now is drawn, as the restore's")
 	}

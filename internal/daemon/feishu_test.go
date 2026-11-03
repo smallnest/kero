@@ -36,8 +36,18 @@ func TestBotLuna(t *testing.T) {
 	if err := luna.Call("wait", proto.WaitParams{ID: id, Timeout: 5000}, &pane); err != nil {
 		t.Fatal(err)
 	}
+	// The pane's shell echoes as it reads, a moment after the wait: read
+	// until it has, as a bot polls.
 	var rd proto.ReadResult
-	if err := luna.Call("read", proto.ReadParams{ID: id}, &rd); err != nil || !strings.Contains(rd.Text, "hi") {
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		err = luna.Call("read", proto.ReadParams{ID: id}, &rd)
+		if err != nil || strings.Contains(rd.Text, "hi") || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err != nil || !strings.Contains(rd.Text, "hi") {
 		t.Errorf("read %q, %v", rd.Text, err)
 	}
 	if err := luna.Call("send", proto.SendParams{ID: "nosuch", Data: "x"}, nil); err == nil {
