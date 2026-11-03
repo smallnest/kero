@@ -195,17 +195,21 @@ func (l *botLuna) Call(method string, params, out any) error {
 	}
 	res, err := l.d.call(c, method, raw)
 
+	// A result comes with an error, as a wait that times out brings the
+	// pane: it says what the pane is, which no poll after it would.
+	if out != nil && res != nil {
+		b, merr := json.Marshal(res)
+		if merr != nil {
+			return merr
+		}
+		if uerr := json.Unmarshal(b, out); uerr != nil && err == nil {
+			return uerr
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("%s: %w", method, err)
 	}
-	if out == nil || res == nil {
-		return nil
-	}
-	b, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, out)
+	return nil
 }
 
 // feishuShared runs the methods a bot of several hosts shares with the

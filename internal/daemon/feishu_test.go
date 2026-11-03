@@ -45,6 +45,32 @@ func TestBotLuna(t *testing.T) {
 	}
 }
 
+// A wait that times out still brings the pane back: a bot that polls in
+// timeouts takes a turn's status from it, which no answer after the
+// timeout would give it.
+func TestWaitTimeoutBringsThePane(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no sh")
+	}
+	d := testDaemon(t)
+	s, err := d.create(proto.CreateParams{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := d.findPane(s.Panes[0].ID)
+	p.mu.Lock()
+	p.setStatus(proto.Working)
+	p.mu.Unlock()
+	var pane proto.Pane
+	err = (&botLuna{d: d}).Call("wait", proto.WaitParams{ID: p.info.ID, Timeout: 100}, &pane)
+	if err == nil || !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("a wait on a working pane ended %v", err)
+	}
+	if pane.ID != p.info.ID || pane.Status != proto.Working {
+		t.Errorf("the timed out wait brought %+v, want %s working", pane, p.info.ID)
+	}
+}
+
 // The status says what the keys and the secret make of Feishu.
 func TestFeishuStatus(t *testing.T) {
 	dir := t.TempDir()

@@ -446,11 +446,15 @@ func (c *Client) Call(method string, params, out any) error {
 		return err
 	}
 	res := <-ch
+	// A result comes with an error, as a wait that times out brings the
+	// pane: it says what the pane is, which no poll after it would.
+	if out != nil && len(res.result) > 0 {
+		if err := json.Unmarshal(res.result, out); err != nil && res.err == nil {
+			return err
+		}
+	}
 	if res.err != nil {
 		return res.err
-	}
-	if out != nil && len(res.result) > 0 {
-		return json.Unmarshal(res.result, out)
 	}
 	return nil
 }
