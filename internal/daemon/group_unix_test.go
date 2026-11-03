@@ -13,7 +13,7 @@ import (
 
 // A command that starts a process group of its own, which a stop ends
 // with it.
-func TestKillGroup(t *testing.T) {
+func TestKillProcessGroup(t *testing.T) {
 	out := t.TempDir() + "/pid"
 	cmd := exec.Command("/bin/sh", "-c", "sleep 30 & echo $! > "+out+"; wait")
 	startGroup(cmd)
@@ -35,7 +35,7 @@ func TestKillGroup(t *testing.T) {
 	if child == 0 {
 		t.Fatal("no child")
 	}
-	killGroup(cmd)
+	killProcessGroup(cmd)
 	cmd.Wait()
 	for i := 0; i < 50; i++ {
 		if syscall.Kill(child, 0) != nil {

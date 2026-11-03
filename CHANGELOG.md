@@ -22,8 +22,6 @@ upstream releases it includes follow its own.
   knows.
 - Feishu no longer shows Claude Code's warning that it received no input,
   and no longer fails a tool with "AbortError: Stream closed".
-- A Linux or Windows build, and the mac app's kerod when the app does not
-  build it, has the PATH that it had.
 
 ## 2.1.34
 

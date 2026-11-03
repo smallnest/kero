@@ -9,9 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sync"
-	"syscall"
 
 	"kero/internal/proto"
 )
@@ -51,28 +49,12 @@ func (b *background) stop() {
 	if cmd == nil || cmd.Process == nil {
 		return
 	}
-	killGroup(cmd)
-}
-
-// killGroup ends the command and what it started: its process group,
-// which startGroup makes, or the command alone.
-func killGroup(cmd *exec.Cmd) {
-	if runtime.GOOS == "windows" {
-		cmd.Process.Kill()
-		return
-	}
-	if syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) != nil {
-		cmd.Process.Kill()
-	}
+	killProcessGroup(cmd)
 }
 
 // startGroup makes the command start a process group of its own, which
-// killGroup ends.
-func startGroup(cmd *exec.Cmd) {
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = groupAttr()
-	}
-}
+// killProcessGroup ends.
+func startGroup(cmd *exec.Cmd) { cmd.SysProcAttr = groupAttr() }
 
 // backgroundOf is a session's command, and the pane that runs it: none in
 // a session no command runs in.

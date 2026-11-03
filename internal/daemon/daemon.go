@@ -199,14 +199,17 @@ func Run(opts Options) error {
 	d.loadConversations()
 	d.restore()
 
-	signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE)
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	ignore := ignoreSignals()
+	for _, sig := range ignore {
+		signal.Ignore(sig...)
+	}
+	sigs := stopSignals()
+	signal.Notify(sigs, stopSignal())
 	notifyStop(sigs)
 	go func() {
 		s := <-sigs
 		d.logStop(lg, s)
-		if s == os.Interrupt || s == syscall.SIGTERM {
+		if s == stopSignal() {
 			// No client asked: the next restore draws no new mark, but
 			// not one that drew its own, as kerod that started as the
 			// app connected stops.
@@ -308,7 +311,7 @@ func localPeer(c net.Conn) string {
 // kerod's, which the app sees as it runs and stops as kerod is restarted
 // (client.Settle).
 func (d *Daemon) logStop(lg *log.Logger, s os.Signal) {
-	if sig, ok := s.(syscall.Signal); ok && (sig == syscall.SIGINT || sig == syscall.SIGTERM) {
+	if sig, ok := s.(syscall.Signal); ok && (sig == syscall.SIGINT || sig == stopSignal()) {
 		who := "no client asked"
 		if leftover(os.Getppid()) {
 			who += ", another Kero runs"
