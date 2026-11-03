@@ -4,6 +4,25 @@ This is smallnest's fork of Kero. A fork release takes a number above
 upstream's, so it never takes an upstream tag's number; the notes of the
 upstream releases it includes follow its own.
 
+## 2.1.35
+
+- Feishu has its own page in Settings, with a YOLO mode (feishu-yolo). In
+  YOLO mode, which is on by default, the agents from Feishu run every tool
+  without asking. Settings › Feishu shows the app, the connection, who may
+  use it, the run mode, the agent and the YOLO modes of each agent.
+- In the command mode, Claude Code asks the chat before it runs a tool
+  beyond its permissions: the card names the tool, and its buttons allow
+  it once, allow it for the session, or refuse it. With YOLO on, it asks
+  nothing.
+- A turn shows on the user's message: the message takes an "OnIt"
+  reaction as the turn starts, and gives it back as the answer comes.
+- The answer's card has a footer under a rule: the state in a colored
+  tag, the model, the tokens the turn took and gave, the cached tokens,
+  the context used, and the time. The card shows only the values that it
+  knows.
+- Feishu no longer shows Claude Code's warning that it received no input,
+  and no longer fails a tool with "AbortError: Stream closed".
+
 ## 2.1.34
 
 - The Files tab shows each file and folder with the icon of its kind.
